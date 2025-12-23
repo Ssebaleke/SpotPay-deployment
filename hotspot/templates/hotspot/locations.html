@@ -1,0 +1,143 @@
+<!-- templates/hotspot/locations.html -->
+{% extends 'accounts/base.html' %}
+
+{% block title %}Locations - SpotPay{% endblock %}
+
+{% block page_title %}Hotspot Locations{% endblock %}
+{% block page_subtitle %}Manage your hotspot locations{% endblock %}
+
+{% block content %}
+<!-- Add New Location Button -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h5 class="mb-0">Your Locations</h5>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+        <i class="bi bi-plus-circle me-2"></i> Add New Location
+    </button>
+</div>
+
+<!-- Locations Table -->
+<div class="card">
+    <div class="card-body">
+        {% if locations %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Site Name</th>
+                        <th>Type</th>
+                        <th>Address</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for location in locations %}
+                    <tr>
+                        <td>
+                            <strong>{{ location.site_name }}</strong>
+                            {% if location.is_approved %}
+                            <br><small class="text-muted">{{ location.portal_url }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ location.get_location_type_display }}</td>
+                        <td>{{ location.address|truncatewords:5 }}</td>
+                        <td>
+                            {% if location.status == 'PENDING' %}
+                            <span class="badge bg-warning">Pending Approval</span>
+                            {% elif location.status == 'ACTIVE' %}
+                            <span class="badge bg-success">Active</span>
+                            {% elif location.status == 'REJECTED' %}
+                            <span class="badge bg-danger">Rejected</span>
+                            <small class="d-block text-muted">{{ location.rejection_reason|truncatewords:5 }}</small>
+                            {% elif location.status == 'SUSPENDED' %}
+                            <span class="badge bg-secondary">Suspended</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ location.created_at|date:"M d, Y" }}</td>
+                        <td>
+                            {% if location.is_approved %}
+                            <a href="{% url 'portal_download_page' location.uuid %}"
+                                class="btn btn-sm btn-outline-primary">
+                                     View
+                                     </a>
+
+                            {% else %}
+                            <span class="text-muted">Waiting approval</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-geo-alt" style="font-size: 3rem; color: #ccc;"></i>
+            <h5 class="mt-3">No locations yet</h5>
+            <p class="text-muted">Add your first hotspot location to get started</p>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+                Add First Location
+            </button>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Location Modal -->
+<div class="modal fade" id="addLocationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Hotspot Location</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{% url 'add_location' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Site Name *</label>
+                        <input type="text" class="form-control" name="site_name" required 
+                               placeholder="e.g., SPEEDNET-HOTSPOT">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Location Type *</label>
+                        <select class="form-select" name="location_type" required>
+                            <option value="">Select type...</option>
+                            <option value="CAFE">Cafe/Restaurant</option>
+                            <option value="HOTEL">Hotel/Lodge</option>
+                            <option value="HOSTEL">Student Hostel</option>
+                            <option value="APARTMENT">Apartment Building</option>
+                            <option value="OFFICE">Office/Co-working</option>
+                            <option value="PUBLIC">Public Space</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Town/City *</label>
+                        <input type="text" class="form-control" name="town_city" required 
+                               placeholder="e.g., Entebbe">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Full Address *</label>
+                        <textarea class="form-control" name="address" rows="3" required 
+                                  placeholder="e.g., Kajjansi Entebbe Road"></textarea>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        Location will be reviewed by admin before activation.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit for Approval</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
