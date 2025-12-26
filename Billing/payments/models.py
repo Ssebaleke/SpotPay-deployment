@@ -39,7 +39,7 @@ class PaymentProvider(models.Model):
 # 2. LOCATION BILLING PROFILE (AUTO-CREATED)
 # =====================================================
 # EVERY location has this
-# Admin edits values, never creates manually
+# Created automatically when a location is added
 
 class LocationBillingProfile(models.Model):
     location = models.OneToOneField(
@@ -60,7 +60,10 @@ class LocationBillingProfile(models.Model):
         default=Decimal('50000.00')
     )
 
-    subscription_period_days = models.PositiveIntegerField(default=30)
+    subscription_period_days = models.PositiveIntegerField(
+        default=30,
+        help_text="How long a subscription lasts after payment"
+    )
 
     subscription_expires_at = models.DateTimeField(
         null=True,
@@ -85,6 +88,7 @@ class LocationBillingProfile(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     # ---------- HELPERS ----------
+
     def subscription_valid(self):
         """
         Returns True if:
@@ -98,6 +102,23 @@ class LocationBillingProfile(models.Model):
             return False
 
         return self.subscription_expires_at > timezone.now()
+
+    def extend_subscription(self):
+        """
+        Extend subscription after successful payment.
+        """
+        now = timezone.now()
+
+        if self.subscription_expires_at and self.subscription_expires_at > now:
+            self.subscription_expires_at += timezone.timedelta(
+                days=self.subscription_period_days
+            )
+        else:
+            self.subscription_expires_at = now + timezone.timedelta(
+                days=self.subscription_period_days
+            )
+
+        self.save(update_fields=['subscription_expires_at'])
 
     def __str__(self):
         return f"Billing for {self.location.site_name}"
@@ -171,6 +192,23 @@ class Payment(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # ---------- BUSINESS ACTION ----------
+
+    def mark_successful(self):
+        """
+        Called when payment provider confirms success.
+        """
+        if self.status == self.STATUS_SUCCESS:
+            return
+
+        self.status = self.STATUS_SUCCESS
+        self.save(update_fields=['status'])
+
+        # Apply subscription payment
+        if self.payment_type == 'SUBSCRIPTION':
+            billing = self.location.billing
+            billing.extend_subscription()
+
     def __str__(self):
         return (
             f"{self.reference} | "
@@ -178,3 +216,17 @@ class Payment(models.Model):
             f"{self.amount} | "
             f"{self.status}"
         )
+
+
+# =====================================================
+# 4. HELPERS (USED BY OTHER APPS)
+# =====================================================
+
+def create_default_location_billing(location):
+    """
+    Create billing profile for a newly created location.
+    This is called ONCE when location is added.
+    """
+    return LocationBillingProfile.objects.create(
+        location=location
+    )

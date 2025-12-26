@@ -1,12 +1,16 @@
 # hotspot/views.py
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
+from django.core.exceptions import ValidationError
 
 from .models import HotspotLocation
 from .forms import HotspotLocationForm
 
+# 🔑 PAYMENT LAYER
+from payments.models import create_default_location_billing
 
 @login_required
 def locations_list(request):
@@ -26,19 +30,34 @@ def locations_list(request):
 def add_location(request):
     """
     Add a new hotspot location (PENDING approval)
+    + Automatically attach default subscription (payment-controlled)
     """
     if request.method == 'POST':
         form = HotspotLocationForm(request.POST)
         if form.is_valid():
-            location = form.save(commit=False)
-            location.vendor = request.user.vendor
-            location.save()
+            try:
+                location = form.save(commit=False)
+                location.vendor = request.user.vendor
+                location.save()
 
-            messages.success(
-                request,
-                f'Location "{location.site_name}" submitted for approval. '
-                'Admin will review and activate it soon.'
-            )
+                # 🔑 CREATE DEFAULT SUBSCRIPTION (PAYMENT APP)
+                create_default_location_subscription(location)
+
+                messages.success(
+                    request,
+                    f'Location "{location.site_name}" submitted for approval. '
+                    'Admin will review and activate it soon.'
+                )
+
+            except ValidationError as e:
+                messages.error(request, e.message)
+            except Exception:
+                messages.error(
+                    request,
+                    "Location created, but subscription setup failed. "
+                    "Please contact support."
+                )
+
             return redirect('locations_list')
 
     # No GET rendering here (modal-based UI)
@@ -69,6 +88,6 @@ def location_status(request, location_id):
         'status': location.status,
         'status_display': location.get_status_display(),
         'portal_url': location.portal_url or '',
-        'location_uuid': str(location.uuid),  # ✅ explicit UUID
+        'location_uuid': str(location.uuid),
         'rejection_reason': location.rejection_reason or '',
     })
