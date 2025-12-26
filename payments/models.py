@@ -5,9 +5,8 @@ import uuid
 
 
 # =====================================================
-# 1. PAYMENT PROVIDERS (ADMIN CONFIGURED)
+# PAYMENT PROVIDERS
 # =====================================================
-# API keys & endpoints live in DB (no hardcoding)
 
 class PaymentProvider(models.Model):
     PROVIDER_TYPES = (
@@ -15,45 +14,45 @@ class PaymentProvider(models.Model):
         ('CARD', 'Card / Gateway'),
     )
 
-    name = models.CharField(max_length=50)   # MTN, Airtel, Flutterwave
-    provider_type = models.CharField(
-        max_length=10,
-        choices=PROVIDER_TYPES
-    )
-
+    name = models.CharField(max_length=50)
+    provider_type = models.CharField(max_length=10, choices=PROVIDER_TYPES)
     is_active = models.BooleanField(default=False)
-
-    # Store API keys, secrets, URLs, etc
-    config = models.JSONField(
-        help_text="API credentials & endpoints"
-    )
-
+    config = models.JSONField(help_text="API keys, secrets, endpoints")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        status = "ACTIVE" if self.is_active else "INACTIVE"
-        return f"{self.name} ({status})"
+        return self.name
 
 
 # =====================================================
-# 2. LOCATION BILLING PROFILE (AUTO-CREATED)
+# LOCATION BILLING PROFILE
 # =====================================================
-# EVERY location has this
-# Admin edits values, never creates manually
 
 class LocationBillingProfile(models.Model):
+
+    # 🔑 SUBSCRIPTION MODES (ONLY A & C)
+    MODE_SUBSCRIPTION_ONLY = 'SUB_ONLY'
+    MODE_SUBSCRIPTION_PLUS_PERCENT = 'SUB_PLUS_PERCENT'
+
+    SUBSCRIPTION_MODES = (
+        (MODE_SUBSCRIPTION_ONLY, 'Subscription Only'),
+        (MODE_SUBSCRIPTION_PLUS_PERCENT, 'Subscription + Transaction Percentage'),
+    )
+
     location = models.OneToOneField(
         'hotspot.HotspotLocation',
         on_delete=models.CASCADE,
         related_name='billing'
     )
 
-    # ---------- SUBSCRIPTION ----------
-    subscription_required = models.BooleanField(
-        default=True,
-        help_text="If false, no monthly subscription is required"
+    # ---------- MODE (ADMIN SETS THIS) ----------
+    subscription_mode = models.CharField(
+        max_length=30,
+        choices=SUBSCRIPTION_MODES,
+        default=MODE_SUBSCRIPTION_ONLY
     )
 
+    # ---------- SUBSCRIPTION ----------
     subscription_fee = models.DecimalField(
         max_digits=12,
         decimal_places=2,
@@ -67,51 +66,41 @@ class LocationBillingProfile(models.Model):
         blank=True
     )
 
-    # ---------- TRANSACTION CUT ----------
+    # ---------- TRANSACTION CUT (USED ONLY IN MODE C) ----------
     transaction_percentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        default=Decimal('5.00'),
-        help_text="Platform percentage cut per transaction"
+        default=Decimal('0.00'),
+        help_text="Used ONLY when mode is Subscription + Percentage"
     )
 
     # ---------- CONTROL ----------
-    is_active = models.BooleanField(
-        default=True,
-        help_text="Disable all platform services for this location"
-    )
+    is_active = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     # ---------- HELPERS ----------
     def subscription_valid(self):
-        """
-        Returns True if:
-        - subscription is NOT required, OR
-        - subscription is required and still valid
-        """
-        if not self.subscription_required:
-            return True
-
         if not self.subscription_expires_at:
             return False
-
         return self.subscription_expires_at > timezone.now()
 
+    def platform_cut_enabled(self):
+        return self.subscription_mode == self.MODE_SUBSCRIPTION_PLUS_PERCENT
+
     def __str__(self):
-        return f"Billing for {self.location.site_name}"
+        return f"{self.location.site_name} Billing"
 
 
 # =====================================================
-# 3. PAYMENTS (SOURCE OF TRUTH)
+# PAYMENTS
 # =====================================================
-# ALL money events go through here
 
 class Payment(models.Model):
-    STATUS_PENDING = 'pending'
-    STATUS_SUCCESS = 'success'
-    STATUS_FAILED = 'failed'
+    STATUS_PENDING = 'PENDING'
+    STATUS_SUCCESS = 'SUCCESS'
+    STATUS_FAILED = 'FAILED'
 
     STATUS_CHOICES = (
         (STATUS_PENDING, 'Pending'),
@@ -120,14 +109,14 @@ class Payment(models.Model):
     )
 
     PAYMENT_TYPES = (
+        ('SUBSCRIPTION', 'Subscription'),
         ('VOUCHER', 'Voucher Purchase'),
-        ('SUBSCRIPTION', 'Subscription Payment'),
     )
 
-    reference = models.CharField(
-        max_length=100,
+    reference = models.UUIDField(
+        default=uuid.uuid4,
         unique=True,
-        default=uuid.uuid4
+        editable=False
     )
 
     payment_type = models.CharField(
@@ -135,15 +124,8 @@ class Payment(models.Model):
         choices=PAYMENT_TYPES
     )
 
-    phone_number = models.CharField(
-        max_length=15,
-        help_text="Phone number used to pay"
-    )
-
-    amount = models.DecimalField(
-        max_digits=12,
-        decimal_places=2
-    )
+    phone_number = models.CharField(max_length=15)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
 
     status = models.CharField(
         max_length=10,
@@ -172,9 +154,4 @@ class Payment(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return (
-            f"{self.reference} | "
-            f"{self.payment_type} | "
-            f"{self.amount} | "
-            f"{self.status}"
-        )
+        return f"{self.reference} | {self.payment_type} | {self.status}"
