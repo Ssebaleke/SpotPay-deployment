@@ -9,18 +9,38 @@
 
 {% block content %}
 <!-- Stats Row -->
+{% if subscription_warnings %}
+<div class="row mb-4">
+    <div class="col-12">
+        {% for warning in subscription_warnings %}
+            <div class="alert alert-{{ warning.level }} d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    {{ warning.message }}
+                </div>
+
+                <a href="{% url 'pay_subscription' %}" class="btn btn-sm btn-danger">
+                    Pay Subscription
+                </a>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
 <div class="row mb-4">
     <div class="col-xl-3 col-md-6 mb-4">
         <div class="stat-card">
             <div class="stat-icon icon-sms">
                 <i class="bi bi-chat-text"></i>
             </div>
-            <h3 class="mb-1">{{ vendor.sms_balance|default:"0" }}</h3>
+            <h3 class="mb-1">{{ sms_balance }}</h3>
             <p class="text-muted mb-2">SMS Balance</p>
-            <a href="#" class="btn btn-sm btn-outline-primary">Buy SMS</a>
+            <a href="{% url 'sms:sms_topup' %}" class="btn btn-sm btn-outline-primary">
+                Buy SMS
+            </a>                                
         </div>
     </div>
-    
     <div class="col-xl-3 col-md-6 mb-4">
         <div class="stat-card">
             <div class="stat-icon icon-wallet">

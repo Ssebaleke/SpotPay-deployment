@@ -14,7 +14,7 @@
 
     <button class="btn btn-primary"
             data-bs-toggle="modal"
-            data-bs-target="#addPackageModal"
+            data-bs-target="#packageModal"
             onclick="resetPackageForm()">
       <i class="bi bi-plus-circle"></i> Add New Package
     </button>
@@ -39,9 +39,7 @@
           {% for package in packages %}
             <tr>
               <td><strong>{{ package.name }}</strong></td>
-
               <td>{{ package.location.site_name }}</td>
-
               <td>UGX {{ package.price|intcomma }}</td>
 
               <td>
@@ -53,17 +51,31 @@
               </td>
 
               <td class="text-end">
-                <a href="#"
-                   class="btn btn-sm btn-outline-primary"
-                   onclick="editPackage(
-                     '{{ package.id }}',
-                     '{{ package.name|escapejs }}',
-                     '{{ package.price }}',
-                     '{{ package.location.id }}',
-                     
-                   )">
+
+                <!-- EDIT -->
+                <button type="button"
+                        class="btn btn-sm btn-outline-primary edit-btn"
+                        data-id="{{ package.id }}"
+                        data-name="{{ package.name }}"
+                        data-price="{{ package.price }}"
+                        data-location="{{ package.location.id }}"
+                        data-active="{{ package.is_active|yesno:'true,false' }}">
                   Edit
-                </a>
+                </button>
+
+                <!-- DELETE (SOFT DELETE) -->
+                <form method="post" class="d-inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="package_id" value="{{ package.id }}">
+              
+                  <button type="submit"
+                          class="btn btn-sm btn-outline-danger"
+                          onclick="return confirm('Disable this package?')">
+                      Delete
+                  </button>
+              </form>              
+
               </td>
             </tr>
           {% empty %}
@@ -83,12 +95,15 @@
 </div>
 
 <!-- ADD / EDIT PACKAGE MODAL -->
-<div class="modal fade" id="addPackageModal" tabindex="-1">
+<div class="modal fade" id="packageModal" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0">
 
       <form method="post">
         {% csrf_token %}
+
+        <!-- CONTROL FIELDS -->
+        <input type="hidden" name="action" id="form_action" value="create">
         <input type="hidden" name="package_id" id="package_id">
 
         <div class="modal-header">
@@ -146,29 +161,43 @@
 
 <!-- JAVASCRIPT -->
 <script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    // Handle EDIT button
+    document.querySelectorAll('.edit-btn').forEach(button => {
+        button.addEventListener('click', function () {
+
+            document.getElementById('package_id').value = this.dataset.id;
+            document.getElementById('form_action').value = 'edit';
+
+            document.querySelector('input[name="name"]').value = this.dataset.name;
+            document.querySelector('input[name="price"]').value = this.dataset.price;
+            document.querySelector('select[name="location"]').value = this.dataset.location;
+            document.querySelector('input[name="is_active"]').checked = (this.dataset.active === 'true');
+
+            document.querySelector('#packageModal .modal-title').innerText = 'Edit Package';
+            document.querySelector('#packageModal button[type="submit"]').innerText = 'Update Package';
+
+            const modal = new bootstrap.Modal(
+                document.getElementById('packageModal')
+            );
+            modal.show();
+        });
+    });
+
+});
+
 function resetPackageForm() {
     document.getElementById('package_id').value = '';
+    document.getElementById('form_action').value = 'create';
+
     document.querySelector('input[name="name"]').value = '';
     document.querySelector('input[name="price"]').value = '';
     document.querySelector('select[name="location"]').value = '';
     document.querySelector('input[name="is_active"]').checked = true;
 
-    document.querySelector('#addPackageModal .modal-title').innerText = 'Add Package';
-    document.querySelector('#addPackageModal button[type="submit"]').innerText = 'Save Package';
-}
-
-function editPackage(id, name, price, locationId, isActive) {
-    document.getElementById('package_id').value = id;
-    document.querySelector('input[name="name"]').value = name;
-    document.querySelector('input[name="price"]').value = price;
-    document.querySelector('select[name="location"]').value = locationId;
-    document.querySelector('input[name="is_active"]').checked = (isActive === 'true');
-
-    document.querySelector('#addPackageModal .modal-title').innerText = 'Edit Package';
-    document.querySelector('#addPackageModal button[type="submit"]').innerText = 'Update Package';
-
-    const modal = new bootstrap.Modal(document.getElementById('addPackageModal'));
-    modal.show();
+    document.querySelector('#packageModal .modal-title').innerText = 'Add Package';
+    document.querySelector('#packageModal button[type="submit"]').innerText = 'Save Package';
 }
 </script>
 

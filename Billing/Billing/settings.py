@@ -23,6 +23,8 @@ INSTALLED_APPS = [
     "portal_api.apps.PortalApiConfig",
     'vouchers',
     'wallets',
+    'sms.apps.SmsConfig',
+
 ]
 
 MIDDLEWARE = [

@@ -7,5 +7,6 @@ urlpatterns = [
     path('register/', views.vendor_register, name='vendor_register'),
     path('logout/', views.vendor_logout, name='vendor_logout'),  # ✅ ADD THIS
     path('dashboard/', views.vendor_dashboard, name='vendor_dashboard'),
+    path("pay-subscription/", views.pay_subscription, name="pay_subscription"),
 ]
 

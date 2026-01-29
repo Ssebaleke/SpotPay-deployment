@@ -1,5 +1,3 @@
-# hotspot/views.py
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -9,14 +7,13 @@ from django.core.exceptions import ValidationError
 from .models import HotspotLocation
 from .forms import HotspotLocationForm
 
-# 🔑 PAYMENT LAYER
-from payments.models import create_default_location_billing
+
+# =====================================================
+# LIST LOCATIONS
+# =====================================================
 
 @login_required
 def locations_list(request):
-    """
-    List all hotspot locations for the logged-in vendor
-    """
     vendor = request.user.vendor
     locations = vendor.locations.all().order_by('-created_at')
 
@@ -26,57 +23,70 @@ def locations_list(request):
     })
 
 
+# =====================================================
+# ADD LOCATION
+# =====================================================
+
 @login_required
 def add_location(request):
-    """
-    Add a new hotspot location (PENDING approval)
-    + Automatically attach default subscription (payment-controlled)
-    """
     if request.method == 'POST':
         form = HotspotLocationForm(request.POST)
+
         if form.is_valid():
-            try:
-                location = form.save(commit=False)
-                location.vendor = request.user.vendor
-                location.save()
+            location = form.save(commit=False)
+            location.vendor = request.user.vendor
 
-                # 🔑 CREATE DEFAULT SUBSCRIPTION (PAYMENT APP)
-                create_default_location_subscription(location)
+            if not location.hotspot_dns:
+                location.hotspot_dns = "hot.spot"
 
-                messages.success(
-                    request,
-                    f'Location "{location.site_name}" submitted for approval. '
-                    'Admin will review and activate it soon.'
-                )
+            location.save()
 
-            except ValidationError as e:
-                messages.error(request, e.message)
-            except Exception:
-                messages.error(
-                    request,
-                    "Location created, but subscription setup failed. "
-                    "Please contact support."
-                )
+            messages.success(
+                request,
+                f'Location "{location.site_name}" submitted for approval.'
+            )
 
-            return redirect('locations_list')
+        return redirect('locations_list')
 
-    # No GET rendering here (modal-based UI)
     return redirect('locations_list')
 
 
+# =====================================================
+# EDIT LOCATION (DNS ONLY)
+# =====================================================
+
+@login_required
+def edit_location(request, location_id):
+    vendor = request.user.vendor
+
+    location = get_object_or_404(
+        HotspotLocation,
+        id=location_id,
+        vendor=vendor
+    )
+
+    if request.method == "POST":
+        hotspot_dns = request.POST.get("hotspot_dns", "hot.spot").strip()
+        location.hotspot_dns = hotspot_dns
+        location.save(update_fields=["hotspot_dns"])
+
+        messages.success(request, "Hotspot DNS updated successfully.")
+        return redirect("locations_list")
+
+    return render(
+        request,
+        "hotspot/location_form.html",
+        {"location": location}
+    )
+
+
+# =====================================================
+# LOCATION STATUS (AJAX)
+# =====================================================
+
 @login_required
 def location_status(request, location_id):
-    """
-    AJAX endpoint to check location status
-    (Vendor-only, internal use)
-    """
-    try:
-        vendor = request.user.vendor
-    except Exception:
-        return JsonResponse(
-            {'error': 'You are not registered as a vendor.'},
-            status=403
-        )
+    vendor = request.user.vendor
 
     location = get_object_or_404(
         HotspotLocation,

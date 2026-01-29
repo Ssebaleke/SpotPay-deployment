@@ -21,6 +21,8 @@ class HotspotLocationAdmin(admin.ModelAdmin):
         'short_uuid',
         'location_type',
         'status_badge',
+        'subscription_mode',
+        'subscription_active',
         'created_at',
         'row_actions',
     )
@@ -28,6 +30,8 @@ class HotspotLocationAdmin(admin.ModelAdmin):
     list_filter = (
         'status',
         'location_type',
+        'subscription_mode',
+        'subscription_active',
         'created_at',
         'vendor__company_name',
     )
@@ -77,6 +81,14 @@ class HotspotLocationAdmin(admin.ModelAdmin):
                 'location_slug',
                 'max_concurrent_users',
                 'is_active',
+            )
+        }),
+        (_('Subscription Settings'), {
+            'fields': (
+                'subscription_mode',
+                'subscription_percentage',
+                'subscription_active',
+                'subscription_expires_at',
             )
         }),
         (_('Approval Status'), {

@@ -1,0 +1,37 @@
+{% extends "accounts/base.html" %}
+{% block title %}Pay Subscription{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="mb-3">Activate Location Subscription</h5>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Mobile Money Number</label>
+                        <input
+                            type="text"
+                            name="phone"
+                            class="form-control"
+                            placeholder="e.g. 077xxxxxxx"
+                            required
+                        >
+                    </div>
+
+                    <button class="btn btn-primary w-100">
+                        Pay Subscription
+                    </button>
+                </form>
+
+                <p class="text-muted mt-3 mb-0">
+                    You will receive a payment prompt on your phone.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+<div class="mb-3">
+    <label class="form-label">Hotspot DNS</label>
+    <input
+        type="text"
+        name="hotspot_dns"
+        class="form-control"
+        placeholder="hot.spot"
+        value="{{ location.hotspot_dns|default:'hot.spot' }}"
+        required
+    >
+    <small class="text-muted">
+        DNS name configured on your MikroTik hotspot (default: hot.spot)
+    </small>
+</div>

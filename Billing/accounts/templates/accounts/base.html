@@ -171,8 +171,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'devices' in request.path %}active{% endif %}" href="#">
-                        <i class="bi bi-router"></i> Devices
+                    <a class="nav-link {% if 'locations' in request.path %}active{% endif %}"
+                       href="{% url 'locations_list' %}">
+                        <i class="bi bi-router"></i> DNS-SETUP
                     </a>
                 </li>
                 <li class="nav-item">
