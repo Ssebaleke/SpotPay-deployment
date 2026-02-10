@@ -1,17 +1,36 @@
-# vouchers/services/issue_voucher.py
+from django.db import transaction
+from django.utils import timezone
 
 from vouchers.models import Voucher
 
 
-def issue_voucher(*, vendor, package):
+class NoAvailableVouchers(Exception):
+    pass
+
+
+@transaction.atomic
+def issue_voucher(vendor, package):
     """
-    Automatically issues a voucher after payment success
+    Reserve ONE UNUSED voucher for a given package.
+    Safe under high traffic:
+    - locks row with SELECT ... FOR UPDATE
+    - prevents two users from receiving same voucher
     """
 
-    voucher = Voucher.objects.create(
-        vendor=vendor,
-        package=package,
-        is_used=False,
+    # lock a single unused voucher
+    voucher = (
+        Voucher.objects
+        .select_for_update(skip_locked=True)
+        .filter(package=package, status="UNUSED")
+        .order_by("id")
+        .first()
     )
+
+    if not voucher:
+        raise NoAvailableVouchers("No unused vouchers available for this package.")
+
+    # reserve it immediately
+    voucher.status = "RESERVED"
+    voucher.save(update_fields=["status"])
 
     return voucher

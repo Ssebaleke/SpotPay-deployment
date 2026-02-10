@@ -43,11 +43,12 @@ INSTALLED_APPS = [
     "ads",
     "hotspot",
     "packages",
-    "payments",
     "portal_api.apps.PortalApiConfig",
     "vouchers",
     "wallets",
     "sms.apps.SmsConfig",
+    "payments.apps.PaymentsConfig",
+
 ]
 
 # ==================================================

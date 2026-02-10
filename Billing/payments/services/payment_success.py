@@ -1,33 +1,51 @@
-# payments/services/payment_success.py
+from django.db import transaction
 
 from vouchers.services.issue_voucher import issue_voucher
 from sms.services.voucher_pay import send_voucher_sms
+from payments.models import PaymentVoucher
 
 
 def handle_payment_success(payment):
     """
-    Called immediately AFTER an end-user payment is successful
+    Called AFTER a payment is SUCCESS.
+    Issues voucher ONCE, links it to payment, sends SMS.
     """
 
-    # Only handle voucher purchases
-    if payment.purpose != "VOUCHER_PURCHASE":
+    # Hotspot client purchase
+    if payment.purpose != "TRANSACTION":
+        return
+
+    if not payment.vendor_id or not payment.package_id:
+        return
+
+    # idempotency: if already issued, do nothing
+    if PaymentVoucher.objects.filter(payment=payment).exists():
         return
 
     vendor = payment.vendor
-    phone = payment.phone          # end user phone
+    phone = payment.phone
     package = payment.package
 
-    # 1️⃣ Issue voucher automatically
-    voucher = issue_voucher(
-        vendor=vendor,
-        package=package,
-    )
+    with transaction.atomic():
+        # double-check inside lock
+        if PaymentVoucher.objects.select_for_update().filter(payment=payment).exists():
+            return
 
-    # 2️⃣ Send voucher to end user via SMS
-    send_voucher_sms(
-        vendor=vendor,
-        phone=phone,
-        voucher_code=voucher.code,
-        package_name=package.name,
-    )
+        voucher = issue_voucher(
+            vendor=vendor,
+            package=package,
+        )
 
+        PaymentVoucher.objects.create(
+            payment=payment,
+            voucher=voucher
+        )
+
+    # send sms outside transaction
+    if phone:
+        send_voucher_sms(
+            vendor=vendor,
+            phone=phone,
+            voucher_code=voucher.code,
+            package_name=package.name,
+        )
