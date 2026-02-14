@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-
 from dotenv import load_dotenv
 import dj_database_url
 
@@ -10,7 +9,7 @@ import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# .env is located at: SpotPay/.env  (one level above Billing/)
+# .env is one level above billing-system (SpotPay/.env)
 load_dotenv(BASE_DIR.parent / ".env")
 
 # ==================================================
@@ -18,11 +17,12 @@ load_dotenv(BASE_DIR.parent / ".env")
 # ==================================================
 
 SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-secret-key-change-me")
-DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "yes", "y")
 
-# Allow comma-separated hosts from .env OR fall back to localhost
-_env_hosts = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1")
-ALLOWED_HOSTS = [h.strip() for h in _env_hosts.split(",") if h.strip()]
+DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "yes")
+
+ALLOWED_HOSTS = os.getenv(
+    "ALLOWED_HOSTS", "127.0.0.1,localhost"
+).split(",")
 
 # ==================================================
 # APPLICATIONS
@@ -43,12 +43,11 @@ INSTALLED_APPS = [
     "ads",
     "hotspot",
     "packages",
-    "portal_api.apps.PortalApiConfig",
+    "portal_api",          # safer than portal_api.apps.PortalApiConfig
     "vouchers",
     "wallets",
-    "sms.apps.SmsConfig",
-    "payments.apps.PaymentsConfig",
-
+    "sms",
+    "payments",
 ]
 
 # ==================================================
@@ -91,41 +90,50 @@ TEMPLATES = [
 ]
 
 # ==================================================
-# DATABASE — SUPABASE TRANSACTION POOLER (IMPORTANT)
+# DATABASE
 # ==================================================
-# Transaction pooler prefers short-lived connections:
-# - conn_max_age=0 prevents keeping connections open
-# - prepare_threshold=0 disables prepared statements (needed for poolers)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is missing. Put it in SpotPay/.env")
 
-DATABASES = {
-    "default": dj_database_url.parse(
-        DATABASE_URL,
-        conn_max_age=0,       # IMPORTANT for transaction pooler
-        ssl_require=True,
-    )
-}
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=0,      # good for poolers
+            ssl_require=True,
+        )
+    }
 
-# Psycopg3-specific options for poolers (safe to keep)
-DATABASES["default"].setdefault("OPTIONS", {})
-DATABASES["default"]["OPTIONS"].update({
-    "prepare_threshold": 0,  # disables prepared statements
-})
+    # psycopg3 pooler safe options
+    DATABASES["default"].setdefault("OPTIONS", {})
+    DATABASES["default"]["OPTIONS"].update({
+        "prepare_threshold": 0,
+    })
+
+else:
+    # Fallback to SQLite (local development)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 # ==================================================
-# AUTH / SESSIONS
+# PASSWORD VALIDATION
 # ==================================================
 
 AUTH_PASSWORD_VALIDATORS = []
+
+# ==================================================
+# SESSIONS
+# ==================================================
 
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_SAVE_EVERY_REQUEST = True
 
 # ==================================================
-# I18N / TIME
+# INTERNATIONALIZATION
 # ==================================================
 
 LANGUAGE_CODE = "en-us"
@@ -138,6 +146,8 @@ USE_TZ = True
 # ==================================================
 
 STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -148,10 +158,17 @@ MEDIA_ROOT = BASE_DIR / "media"
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # ==================================================
-# PROJECT CONSTANTS
+# DEFAULT FIELD
 # ==================================================
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+# ==================================================
+# PROJECT CONSTANTS
+# ==================================================
+
 SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000")
-PORTAL_API_BASE = os.getenv("PORTAL_API_BASE", "http://127.0.0.1:8000/api/portal/")
+PORTAL_API_BASE = os.getenv(
+    "PORTAL_API_BASE",
+    "http://127.0.0.1:8000/api/portal/"
+)
