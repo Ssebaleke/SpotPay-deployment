@@ -1,148 +1,140 @@
 from django.db import models
 from django.utils import timezone
-from decimal import Decimal
 import uuid
 
 
 # =====================================================
-# PAYMENT PROVIDERS
+# PAYMENT PROVIDERS (ADMIN CONFIGURED)
 # =====================================================
 
 class PaymentProvider(models.Model):
     PROVIDER_TYPES = (
-        ('MOMO', 'Mobile Money'),
-        ('CARD', 'Card / Gateway'),
+        ("MOMO", "Mobile Money"),
+        ("CARD", "Card / Gateway"),
+    )
+
+    ENVIRONMENTS = (
+        ("SANDBOX", "Sandbox"),
+        ("LIVE", "Live"),
     )
 
     name = models.CharField(max_length=50)
     provider_type = models.CharField(max_length=10, choices=PROVIDER_TYPES)
+
+    # e.g. https://wire-api.makylegacy.com
+    base_url = models.URLField()
+
+    # for MakyPay: api_key = public_key, api_secret = secret_key
+    api_key = models.CharField(max_length=255)
+    api_secret = models.CharField(max_length=255, blank=True)
+
+    environment = models.CharField(
+        max_length=10,
+        choices=ENVIRONMENTS,
+        default="SANDBOX"
+    )
+
+    # Only one provider should be active at a time
     is_active = models.BooleanField(default=False)
-    config = models.JSONField(help_text="API keys, secrets, endpoints")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # ensure only one active provider at a time
+        if self.is_active:
+            PaymentProvider.objects.exclude(pk=self.pk).update(is_active=False)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.name} ({self.environment})"
+
+
+# =====================================================
+# GLOBAL SYSTEM CONFIG (ONE ROW ONLY)
+# =====================================================
+
+class PaymentSystemConfig(models.Model):
+    base_system_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        help_text="Base commission applied to ALL transactions (e.g. 5%)"
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.name
+        return "System Payment Configuration"
 
 
 # =====================================================
-# LOCATION BILLING PROFILE
+# PAYMENT (SINGLE SOURCE OF TRUTH)
 # =====================================================
 
-class LocationBillingProfile(models.Model):
-
-    # 🔑 SUBSCRIPTION MODES (ONLY A & C)
-    MODE_SUBSCRIPTION_ONLY = 'SUB_ONLY'
-    MODE_SUBSCRIPTION_PLUS_PERCENT = 'SUB_PLUS_PERCENT'
-
-    SUBSCRIPTION_MODES = (
-        (MODE_SUBSCRIPTION_ONLY, 'Subscription Only'),
-        (MODE_SUBSCRIPTION_PLUS_PERCENT, 'Subscription + Transaction Percentage'),
+class Payment(models.Model):
+    PURPOSES = (
+        ("SUBSCRIPTION", "Location Subscription"),
+        ("TRANSACTION", "Client Internet Purchase"),   # hotspot end-user purchase
+        ("SMS_PURCHASE", "SMS Purchase"),
     )
 
-    location = models.OneToOneField(
-        'hotspot.HotspotLocation',
-        on_delete=models.CASCADE,
-        related_name='billing'
+    PAYER_TYPES = (
+        ("VENDOR", "Vendor"),
+        ("CLIENT", "Client"),
     )
 
-    # ---------- MODE (ADMIN SETS THIS) ----------
-    subscription_mode = models.CharField(
-        max_length=30,
-        choices=SUBSCRIPTION_MODES,
-        default=MODE_SUBSCRIPTION_ONLY
+    STATUSES = (
+        ("PENDING", "Pending"),
+        ("SUCCESS", "Success"),
+        ("FAILED", "Failed"),
     )
 
-    # ---------- SUBSCRIPTION ----------
-    subscription_fee = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=Decimal('50000.00')
-    )
+    uuid = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
 
-    subscription_period_days = models.PositiveIntegerField(default=30)
+    payer_type = models.CharField(max_length=10, choices=PAYER_TYPES)
+    purpose = models.CharField(max_length=20, choices=PURPOSES)
 
-    subscription_expires_at = models.DateTimeField(
+    # ---- Who/Where (your existing links) ----
+    vendor = models.ForeignKey(
+        "accounts.Vendor",
+        on_delete=models.SET_NULL,
         null=True,
         blank=True
     )
 
-    # ---------- TRANSACTION CUT (USED ONLY IN MODE C) ----------
-    transaction_percentage = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=Decimal('0.00'),
-        help_text="Used ONLY when mode is Subscription + Percentage"
-    )
-
-    # ---------- CONTROL ----------
-    is_active = models.BooleanField(default=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    # ---------- HELPERS ----------
-    def subscription_valid(self):
-        if not self.subscription_expires_at:
-            return False
-        return self.subscription_expires_at > timezone.now()
-
-    def platform_cut_enabled(self):
-        return self.subscription_mode == self.MODE_SUBSCRIPTION_PLUS_PERCENT
-
-    def __str__(self):
-        return f"{self.location.site_name} Billing"
-
-
-# =====================================================
-# PAYMENTS
-# =====================================================
-
-class Payment(models.Model):
-    STATUS_PENDING = 'PENDING'
-    STATUS_SUCCESS = 'SUCCESS'
-    STATUS_FAILED = 'FAILED'
-
-    STATUS_CHOICES = (
-        (STATUS_PENDING, 'Pending'),
-        (STATUS_SUCCESS, 'Success'),
-        (STATUS_FAILED, 'Failed'),
-    )
-
-    PAYMENT_TYPES = (
-        ('SUBSCRIPTION', 'Subscription'),
-        ('VOUCHER', 'Voucher Purchase'),
-    )
-
-    reference = models.UUIDField(
-        default=uuid.uuid4,
-        unique=True,
-        editable=False
-    )
-
-    payment_type = models.CharField(
-        max_length=20,
-        choices=PAYMENT_TYPES
-    )
-
-    phone_number = models.CharField(max_length=15)
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
-
-    status = models.CharField(
-        max_length=10,
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING
-    )
-
-    vendor = models.ForeignKey(
-        'accounts.Vendor',
-        on_delete=models.CASCADE
-    )
-
     location = models.ForeignKey(
-        'hotspot.HotspotLocation',
-        on_delete=models.CASCADE
+        "hotspot.HotspotLocation",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
     )
 
+    # =================================================
+    # HOTSPOT PURCHASE DETAILS
+    # =================================================
+    # payer phone number (MTN/Airtel)
+    phone = models.CharField(max_length=20, null=True, blank=True)
+
+    # package / plan purchased
+    package = models.ForeignKey(
+        "packages.Package",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    # optional but useful for hotspot flows
+    mac_address = models.CharField(max_length=32, null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+    # =================================================
+    # MONEY
+    # =================================================
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=10, default="UGX")
+
+    # =================================================
+    # PROVIDER / GATEWAY TRACKING
+    # =================================================
     provider = models.ForeignKey(
         PaymentProvider,
         on_delete=models.SET_NULL,
@@ -150,8 +142,109 @@ class Payment(models.Model):
         blank=True
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # The "reference" returned by MakyPay request-to-pay
+    # and later sent back in webhook
+    provider_reference = models.CharField(
+        max_length=255,
+        unique=True,
+        null=True,
+        blank=True
+    )
+
+    # Provider transaction id / external_reference (optional)
+    external_reference = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
+
+    # Human-readable processor message (optional)
+    processor_message = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
+
+    status = models.CharField(
+        max_length=10,
+        choices=STATUSES,
+        default="PENDING"
+    )
+
+    initiated_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Save raw webhook data for audit/debugging
+    raw_callback_data = models.JSONField(null=True, blank=True)
+
+    # =================================================
+    # HELPERS (IDEMPOTENT)
+    # =================================================
+    def mark_success(self, data=None):
+        if self.status == "SUCCESS":
+            return
+        self.status = "SUCCESS"
+        self.completed_at = timezone.now()
+        if data is not None:
+            self.raw_callback_data = data
+        self.save(update_fields=["status", "completed_at", "raw_callback_data"])
+
+    def mark_failed(self, data=None):
+        if self.status == "FAILED":
+            return
+        self.status = "FAILED"
+        if data is not None:
+            self.raw_callback_data = data
+        self.save(update_fields=["status", "raw_callback_data"])
 
     def __str__(self):
-        return f"{self.reference} | {self.payment_type} | {self.status}"
+        return f"{self.purpose} | {self.amount} {self.currency} | {self.status}"
+
+
+# =====================================================
+# TRANSACTION SPLIT (AUDIT SAFE)
+# =====================================================
+
+class PaymentSplit(models.Model):
+    payment = models.OneToOneField(
+        Payment,
+        on_delete=models.CASCADE,
+        related_name="split"
+    )
+
+    base_system_percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    subscription_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+
+    admin_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    vendor_amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Split for {self.payment.uuid}"
+
+
+# =====================================================
+# VOUCHER ASSIGNMENT (RECOMMENDED FOR HOTSPOT)
+# =====================================================
+# Guarantees:
+# - One payment -> one voucher
+# - prevents issuing multiple vouchers if webhook retries
+# - keeps auditing clean
+class PaymentVoucher(models.Model):
+    payment = models.OneToOneField(
+        Payment,
+        on_delete=models.CASCADE,
+        related_name="issued_voucher"
+    )
+
+    voucher = models.OneToOneField(
+        "vouchers.Voucher",
+        on_delete=models.PROTECT,
+        related_name="payment_voucher"
+    )
+
+    issued_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.payment.uuid} -> {self.voucher}"

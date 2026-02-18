@@ -1,175 +1,230 @@
-import uuid
 from decimal import Decimal
+import json
+from datetime import timedelta
 
-from django.shortcuts import get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
-from django.http import HttpResponseForbidden, JsonResponse
-from django.utils import timezone
+from django.http import JsonResponse, HttpResponse
+from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
+from django.db import transaction
 
-from .models import Payment, PaymentProvider, LocationBillingProfile
-from hotspot.models import HotspotLocation
-from packages.models import Package
-from vouchers.models import Voucher
+from .models import Payment, PaymentSystemConfig, PaymentSplit
+from .utils import get_active_provider, load_provider_adapter
+from .services.payment_success import handle_payment_success
 
-
-# =====================================================
-# SUBSCRIPTION PAYMENT (MODE A ONLY)
-# =====================================================
-
-@login_required
-def initiate_subscription_payment(request, location_id):
-    vendor = request.user.vendor
-
-    location = get_object_or_404(
-        HotspotLocation,
-        id=location_id,
-        vendor=vendor
-    )
-
-    billing = location.billing
-
-    # ❌ Mode C → no subscription allowed
-    if not billing.subscription_required:
-        return HttpResponseForbidden(
-            "This location uses percentage-only billing (no subscription)."
-        )
-
-    # Already active
-    if billing.subscription_valid():
-        return redirect('vendor_dashboard')
-
-    payment = Payment.objects.create(
-        reference=str(uuid.uuid4()),
-        payment_type=Payment.SUBSCRIPTION,
-        phone_number=request.user.phone_number,
-        amount=billing.subscription_fee,
-        vendor=vendor,
-        location=location,
-        provider=PaymentProvider.objects.filter(is_active=True).first(),
-    )
-
-    # Mock success for now
-    return redirect('subscription_payment_success', payment.reference)
+from wallets.models import VendorWallet
 
 
-@login_required
-def subscription_payment_success(request, reference):
-    payment = get_object_or_404(
-        Payment,
-        reference=reference,
-        payment_type=Payment.SUBSCRIPTION
-    )
+def _parse_body(request):
+    ct = (request.content_type or "").lower()
+    if "application/json" in ct:
+        try:
+            return json.loads(request.body.decode("utf-8") or "{}")
+        except json.JSONDecodeError:
+            return {}
+    return request.POST.dict()
 
-    if payment.status == Payment.STATUS_SUCCESS:
-        return redirect('vendor_dashboard')
-
-    payment.status = Payment.STATUS_SUCCESS
-    payment.confirmed_at = timezone.now()
-    payment.save(update_fields=['status', 'confirmed_at'])
-
-    billing = payment.location.billing
-    billing.subscription_expires_at = (
-        timezone.now() +
-        timezone.timedelta(days=billing.subscription_period_days)
-    )
-    billing.save(update_fields=['subscription_expires_at'])
-
-    return redirect('vendor_dashboard')
-
-
-# =====================================================
-# CLIENT VOUCHER PAYMENT (MODE A & MODE C)
-# =====================================================
 
 @csrf_exempt
-def initiate_voucher_payment(request, location_uuid):
-    """
-    Called by captive portal
-    """
-    if request.method != 'POST':
-        return JsonResponse({"error": "Invalid request"}, status=405)
+def initiate_payment(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
 
-    location = get_object_or_404(
-        HotspotLocation,
-        uuid=location_uuid,
-        is_active=True
-    )
+    provider = get_active_provider()
+    if not provider:
+        return JsonResponse({"error": "No payment provider configured"}, status=400)
 
-    billing = location.billing
+    data = _parse_body(request)
 
-    # ❌ Mode A requires active subscription
-    if billing.subscription_required and not billing.subscription_valid():
-        return JsonResponse(
-            {"error": "Subscription inactive"},
-            status=403
-        )
+    try:
+        amount = Decimal(str(data.get("amount")))
+    except Exception:
+        return JsonResponse({"error": "Invalid amount"}, status=400)
 
-    package_id = request.POST.get('package_id')
-    phone = request.POST.get('phone')
+    payer_type = data.get("payer_type")
+    purpose = data.get("purpose")
+    phone = data.get("phone")
 
-    if not package_id or not phone:
-        return JsonResponse({"error": "Missing data"}, status=400)
+    if not payer_type or not purpose or not phone:
+        return JsonResponse({"error": "payer_type, purpose, phone are required"}, status=400)
 
-    package = get_object_or_404(
-        Package,
-        id=package_id,
-        location=location,
-        is_active=True
-    )
+    # normalize legacy value
+    if purpose == "VOUCHER_PURCHASE":
+        purpose = "TRANSACTION"
 
     payment = Payment.objects.create(
-        reference=str(uuid.uuid4()),
-        payment_type=Payment.VOUCHER,
-        phone_number=phone,
-        amount=package.price,
-        vendor=location.vendor,
-        location=location,
-        provider=PaymentProvider.objects.filter(is_active=True).first(),
+        payer_type=payer_type,
+        purpose=purpose,
+        vendor_id=data.get("vendor_id") or None,
+        location_id=data.get("location_id") or None,
+        amount=amount,
+        provider=provider,
+        phone=phone,
+        package_id=data.get("package_id") or None,
+        mac_address=data.get("mac_address") or None,
+        ip_address=data.get("ip_address") or None,
+        currency=data.get("currency") or "UGX",
     )
 
+    adapter = load_provider_adapter(provider)
+    ref = adapter.charge(payment, data)
+
+    payment.provider_reference = ref
+    payment.save(update_fields=["provider_reference"])
+
     return JsonResponse({
-        "reference": payment.reference,
-        "amount": str(payment.amount)
+        "success": True,
+        "payment_uuid": str(payment.uuid),
+        "reference": ref,
+        "status": payment.status,
+        "status_url": f"/payments/status/{ref}/",
+        "success_url": f"/payments/success/{payment.uuid}/",
+        "message": "Please approve the payment on your phone."
     })
 
 
-# =====================================================
-# PAYMENT CALLBACK (SHARED)
-# =====================================================
+def payment_status(request, reference):
+    payment = get_object_or_404(Payment, provider_reference=reference)
+
+    resp = {
+        "success": True,
+        "reference": payment.provider_reference,
+        "payment_uuid": str(payment.uuid),
+        "status": payment.status,
+    }
+
+    if payment.status == "SUCCESS":
+        voucher_code = None
+        if hasattr(payment, "issued_voucher"):
+            try:
+                voucher_code = payment.issued_voucher.voucher.code
+            except Exception:
+                voucher_code = None
+        resp["voucher"] = voucher_code
+
+    return JsonResponse(resp)
+
 
 @csrf_exempt
 def payment_callback(request):
-    if request.method != 'POST':
-        return JsonResponse({"error": "Invalid method"}, status=405)
+    data = _parse_body(request)
 
-    reference = request.POST.get('reference')
-    status = request.POST.get('status')
+    reference = data.get("reference") or data.get("provider_reference")
+    status_raw = (data.get("status") or "").lower()
 
-    if not reference or not status:
-        return JsonResponse({"error": "Invalid payload"}, status=400)
+    if not reference:
+        return HttpResponse("MISSING_REFERENCE", status=400)
 
-    payment = get_object_or_404(Payment, reference=reference)
+    is_success = status_raw in ("completed", "success", "successful", "paid")
+    is_failed = status_raw in ("failed", "cancelled", "canceled", "rejected", "expired")
 
-    if payment.status == Payment.STATUS_SUCCESS:
-        return JsonResponse({"ok": True})
+    payment_id = None
+    run_success_handler = False
 
-    if status.lower() == 'success':
-        payment.status = Payment.STATUS_SUCCESS
-        payment.confirmed_at = timezone.now()
-        payment.save(update_fields=['status', 'confirmed_at'])
+    with transaction.atomic():
+        try:
+            payment = Payment.objects.select_for_update().get(provider_reference=reference)
+        except Payment.DoesNotExist:
+            return HttpResponse("INVALID_PAYMENT", status=404)
 
-        # Voucher generation ONLY for voucher payments
-        if payment.payment_type == Payment.VOUCHER:
-            Voucher.objects.create(
-                code=Voucher.generate_code(),
-                package=payment.package,
-                phone_number=payment.phone_number,
-                payment=payment
-            )
+        if payment.status == "SUCCESS":
+            return HttpResponse("OK")
 
-    else:
-        payment.status = Payment.STATUS_FAILED
-        payment.save(update_fields=['status'])
+        payment.raw_callback_data = data
 
-    return JsonResponse({"ok": True})
+        if is_success:
+            payment.external_reference = data.get("external_reference") or payment.external_reference
+            payment.processor_message = data.get("processor_message") or payment.processor_message
+            payment.mark_success(data)
+
+            if payment.purpose == "SUBSCRIPTION" and payment.location_id:
+                location = payment.location
+                duration_days = 30
+
+                if location.subscription_expires_at and location.subscription_expires_at > timezone.now():
+                    location.subscription_expires_at += timedelta(days=duration_days)
+                else:
+                    location.subscription_expires_at = timezone.now() + timedelta(days=duration_days)
+
+                location.subscription_active = True
+                location.is_active = True
+                location.save(update_fields=[
+                    "subscription_expires_at",
+                    "subscription_active",
+                    "is_active"
+                ])
+
+            if payment.purpose == "TRANSACTION" and payment.vendor_id:
+                system_cfg = PaymentSystemConfig.objects.first()
+                base_pct = system_cfg.base_system_percentage if system_cfg else Decimal("0.00")
+                subscription_pct = getattr(payment.vendor, "subscription_percentage", Decimal("0.00"))
+
+                admin_pct = base_pct + subscription_pct
+                admin_amount = (payment.amount * admin_pct) / Decimal("100")
+                vendor_amount = payment.amount - admin_amount
+
+                PaymentSplit.objects.get_or_create(
+                    payment=payment,
+                    defaults=dict(
+                        base_system_percentage=base_pct,
+                        subscription_percentage=subscription_pct,
+                        admin_amount=admin_amount,
+                        vendor_amount=vendor_amount,
+                    )
+                )
+
+                VendorWallet.credit(
+                    vendor=payment.vendor,
+                    amount=vendor_amount,
+                    reference=payment.uuid
+                )
+
+            payment_id = payment.id
+            run_success_handler = True
+
+        elif is_failed:
+            payment.external_reference = data.get("external_reference") or payment.external_reference
+            payment.processor_message = data.get("processor_message") or payment.processor_message
+            payment.mark_failed(data)
+
+        else:
+            payment.save(update_fields=["raw_callback_data"])
+
+    # after commit
+    if run_success_handler and payment_id:
+        payment = Payment.objects.get(id=payment_id)
+        handle_payment_success(payment)
+
+    return HttpResponse("OK")
+
+
+def payment_success_redirect(request, uuid):
+    payment = get_object_or_404(Payment, uuid=uuid)
+
+    if payment.status != "SUCCESS":
+        return HttpResponse("Payment not completed", status=400)
+
+    if payment.purpose != "TRANSACTION":
+        return HttpResponse("OK")
+
+    voucher_code = None
+    if hasattr(payment, "issued_voucher"):
+        try:
+            voucher_code = payment.issued_voucher.voucher.code
+        except Exception:
+            voucher_code = None
+
+    if not voucher_code:
+        return HttpResponse("No voucher issued for this payment", status=500)
+
+    if not payment.location_id:
+        return HttpResponse("No hotspot location attached to payment", status=400)
+
+    location = payment.location
+
+    auto_login_url = (
+        f"http://{location.hotspot_dns}/login"
+        f"?username={voucher_code}"
+        f"&password={voucher_code}"
+    )
+    return redirect(auto_login_url)

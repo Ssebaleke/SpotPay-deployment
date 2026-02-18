@@ -1,26 +1,24 @@
-from django.http import JsonResponse, HttpResponse
-from django.shortcuts import get_object_or_404
+from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
+from django.shortcuts import render, get_object_or_404
 from django.conf import settings
-from hotspot.models import HotspotLocation
-from portal_api.models import PortalTemplate
+from django.contrib.auth.decorators import login_required
+
+from pathlib import Path
 import zipfile
 import io
 import tempfile
-from pathlib import Path
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required
-from django.shortcuts import render, get_object_or_404
+
 from hotspot.models import HotspotLocation
+from portal_api.models import PortalTemplate
+from packages.models import Package
+from payments.services_utils import initiate_payment
 
 
-
+# =====================================================
+# PORTAL DATA API (used by portal.js)
+# =====================================================
 
 def portal_data(request, uuid):
-    """
-    API consumed by portal.js
-    Provides location name, packages, and ads
-    """
     location = get_object_or_404(
         HotspotLocation,
         uuid=uuid,
@@ -28,36 +26,41 @@ def portal_data(request, uuid):
         vendor__status="ACTIVE"
     )
 
-    packages = location.packages.filter(is_active=True)
+    # ✅ Show ONLY packages that still have UNUSED vouchers
+    packages = location.packages.filter(
+        is_active=True,
+        vouchers__status='UNUSED'
+    ).distinct()
+
     ads = location.ads.filter(is_active=True)
 
     return JsonResponse({
         "location": {
-            "name": location.site_name
+            "name": location.site_name,
         },
         "packages": [
             {
                 "id": p.id,
                 "name": p.name,
-                "price": p.price
+                "price": p.price,
             }
             for p in packages
         ],
         "ads": [
             {
                 "type": ad.ad_type,
-                "url": request.build_absolute_uri(ad.file.url)
+                "url": request.build_absolute_uri(ad.file.url),
             }
             for ad in ads
-        ]
+        ],
     })
 
 
+# =====================================================
+# DOWNLOAD PORTAL ZIP (Vendor)
+# =====================================================
+
 def download_portal_zip(request, location_uuid):
-    """
-    Generates a MikroTik captive portal ZIP from the
-    admin-uploaded portal template
-    """
     location = get_object_or_404(
         HotspotLocation,
         uuid=location_uuid,
@@ -65,21 +68,16 @@ def download_portal_zip(request, location_uuid):
         vendor__status="ACTIVE"
     )
 
-    template = get_object_or_404(
-        PortalTemplate,
-        is_active=True
-    )
+    template = get_object_or_404(PortalTemplate, is_active=True)
 
     buffer = io.BytesIO()
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
 
-        # Extract uploaded template ZIP
         with zipfile.ZipFile(template.zip_file.path, "r") as zip_ref:
             zip_ref.extractall(tmpdir)
 
-        # Rebuild ZIP with injected values
         with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zip_out:
             for file_path in tmpdir.rglob("*"):
                 if file_path.is_dir():
@@ -108,6 +106,11 @@ def download_portal_zip(request, location_uuid):
     )
     return response
 
+
+# =====================================================
+# VENDOR PORTAL PAGES
+# =====================================================
+
 @login_required
 def portal_download_page(request, location_uuid):
     vendor = request.user.vendor
@@ -124,6 +127,7 @@ def portal_download_page(request, location_uuid):
         {"location": location}
     )
 
+
 @login_required
 def location_portal_view(request, uuid):
     vendor = request.user.vendor
@@ -134,6 +138,112 @@ def location_portal_view(request, uuid):
         vendor=vendor
     )
 
-    return render(request, "portal_api/location_portal.html", {
-        "location": location
-    })
+    return render(
+        request,
+        "portal_api/location_portal.html",
+        {"location": location}
+    )
+
+
+# =====================================================
+# FALLBACK / ALTERNATIVE BUY PAGE (NO JS)
+# =====================================================
+
+def portal_buy(request, uuid):
+    """
+    Fallback voucher purchase page.
+    Server-rendered. Walled-garden safe.
+    """
+
+    location = get_object_or_404(
+        HotspotLocation,
+        uuid=uuid,
+        status="ACTIVE"
+    )
+
+    # 🔒 ENFORCE SUBSCRIPTION
+    if not location.has_active_subscription():
+        return HttpResponseForbidden(
+            "SpotPay services unavailable for this location"
+        )
+
+    # ----------------------
+    # GET → SHOW PACKAGES
+    # ----------------------
+    if request.method == "GET":
+        packages = Package.objects.filter(
+            location=location,
+            is_active=True,
+            vouchers__status='UNUSED'
+        ).distinct()
+
+        return render(
+            request,
+            "portal_api/buy.html",
+            {
+                "location": location,
+                "packages": packages,
+            }
+        )
+
+    # ----------------------
+    # POST → INITIATE PAYMENT
+    # ----------------------
+    if request.method == "POST":
+        package_id = request.POST.get("package")
+        phone = request.POST.get("phone")
+
+        packages = Package.objects.filter(
+            location=location,
+            is_active=True,
+            vouchers__status='UNUSED'
+        ).distinct()
+
+        if not package_id or not phone:
+            return render(
+                request,
+                "portal_api/buy.html",
+                {
+                    "location": location,
+                    "packages": packages,
+                    "error": "Please select a package and enter a phone number",
+                }
+            )
+
+        # 🔐 Step 1: Get package by ID ONLY (no joins)
+        package = get_object_or_404(
+            Package,
+            id=package_id,
+            location=location,
+            is_active=True
+        )
+
+        # 🔐 Step 2: Ensure vouchers still exist
+        if not package.vouchers.filter(status='UNUSED').exists():
+            return render(
+                request,
+                "portal_api/buy.html",
+                {
+                    "location": location,
+                    "packages": packages,
+                    "error": "This package is currently out of stock",
+                }
+            )
+
+        # ✅ Safe to initiate payment
+        initiate_payment(
+            location=location,
+            package=package,
+            phone=phone,
+            source="FALLBACK_PORTAL",
+        )
+
+        return render(
+            request,
+            "portal_api/buy_processing.html",
+            {
+                "location": location,
+                "package": package,
+                "phone": phone,
+            }
+        )
