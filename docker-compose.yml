@@ -2,7 +2,7 @@ services:
   web:
     build: .
     env_file:
-      - .env
+      - prod.env
     ports:
       - "8001:8000"
     command: >
