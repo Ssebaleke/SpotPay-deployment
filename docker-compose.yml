@@ -16,5 +16,4 @@ services:
       - ./media:/app/media
     restart: unless-stopped
 
-    #new
-    
+    #newone
