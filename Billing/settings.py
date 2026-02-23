@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-
 import dj_database_url
 
 # ==================================================
@@ -11,19 +10,38 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ==================================================
 # CORE SETTINGS
 # ==================================================
-SECRET_KEY = os.getenv("SECRET_KEY", "unsafe-secret-key-change-me")
 
-DEBUG = os.getenv("DEBUG", "False").lower() in ("1", "true", "yes", "y")
+# SECRET KEY
+SECRET_KEY = (
+    os.getenv("DJANGO_SECRET_KEY")
+    or os.getenv("SECRET_KEY")
+    or "unsafe-secret-key-change-me"
+)
+
+# DEBUG
+DEBUG = (
+    os.getenv("DJANGO_DEBUG")
+    or os.getenv("DEBUG", "False")
+).lower() in ("1", "true", "yes", "y")
+
+# ALLOWED HOSTS
+_raw_hosts = (
+    os.getenv("DJANGO_ALLOWED_HOSTS")
+    or os.getenv("ALLOWED_HOSTS")
+    or "127.0.0.1,localhost"
+)
 
 ALLOWED_HOSTS = [
     h.strip()
-    for h in os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+    for h in _raw_hosts.split(",")
     if h.strip()
 ]
 
+# CSRF
+_raw_csrf = os.getenv("CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [
     o.strip()
-    for o in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    for o in _raw_csrf.split(",")
     if o.strip()
 ]
 
@@ -92,18 +110,24 @@ TEMPLATES = [
 # ==================================================
 # DATABASE
 # ==================================================
-DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+
+DATABASE_URL = (os.getenv("DATABASE_URL") or "").strip()
 
 if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.parse(
             DATABASE_URL,
-            conn_max_age=0,     # good for poolers
+            conn_max_age=0,      # best for Supabase pooler
             ssl_require=True,
         )
     }
 else:
-    # Local fallback
+    if not DEBUG:
+        raise RuntimeError(
+            "DATABASE_URL missing in production. Refusing SQLite fallback."
+        )
+
+    # Local development fallback
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -159,4 +183,3 @@ PORTAL_API_BASE = os.getenv(
     "PORTAL_API_BASE",
     "http://127.0.0.1:8000/api/portal/"
 ).strip()
-
