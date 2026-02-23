@@ -11,44 +11,40 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # CORE SETTINGS
 # ==================================================
 
-# SECRET KEY
 SECRET_KEY = (
     os.getenv("DJANGO_SECRET_KEY")
     or os.getenv("SECRET_KEY")
     or "unsafe-secret-key-change-me"
 )
 
-# DEBUG
 DEBUG = (
     os.getenv("DJANGO_DEBUG")
     or os.getenv("DEBUG", "False")
 ).lower() in ("1", "true", "yes", "y")
 
+# --------------------------------------------------
 # ALLOWED HOSTS
+# --------------------------------------------------
 _raw_hosts = (
     os.getenv("DJANGO_ALLOWED_HOSTS")
     or os.getenv("ALLOWED_HOSTS")
     or "127.0.0.1,localhost"
 )
 
-ALLOWED_HOSTS = [
-    h.strip()
-    for h in _raw_hosts.split(",")
-    if h.strip()
-]
+ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(",") if h.strip()]
 
+# --------------------------------------------------
 # CSRF
+# --------------------------------------------------
 _raw_csrf = os.getenv("CSRF_TRUSTED_ORIGINS", "")
-CSRF_TRUSTED_ORIGINS = [
-    o.strip()
-    for o in _raw_csrf.split(",")
-    if o.strip()
-]
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _raw_csrf.split(",") if o.strip()]
 
 # ==================================================
 # APPLICATIONS
 # ==================================================
 INSTALLED_APPS = [
+    "corsheaders",  # ✅ CORS
+
     "widget_tweaks",
     "django.contrib.humanize",
 
@@ -76,12 +72,27 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+
+    # ✅ CORS MUST BE BEFORE CommonMiddleware
+    "corsheaders.middleware.CorsMiddleware",
+
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
 ]
+
+# ==================================================
+# CORS SETTINGS
+# ==================================================
+_raw_cors = os.getenv("CORS_ALLOWED_ORIGINS", "")
+CORS_ALLOWED_ORIGINS = [o.strip() for o in _raw_cors.split(",") if o.strip()]
+
+CORS_ALLOW_ALL_ORIGINS = (
+    os.getenv("CORS_ALLOW_ALL_ORIGINS", "False")
+    .lower() in ("1", "true", "yes", "y")
+)
 
 # ==================================================
 # URL / WSGI
@@ -110,14 +121,13 @@ TEMPLATES = [
 # ==================================================
 # DATABASE
 # ==================================================
-
 DATABASE_URL = (os.getenv("DATABASE_URL") or "").strip()
 
 if DATABASE_URL:
     DATABASES = {
         "default": dj_database_url.parse(
             DATABASE_URL,
-            conn_max_age=0,      # best for Supabase pooler
+            conn_max_age=0,
             ssl_require=True,
         )
     }
@@ -127,7 +137,6 @@ else:
             "DATABASE_URL missing in production. Refusing SQLite fallback."
         )
 
-    # Local development fallback
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -181,5 +190,5 @@ SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000").strip()
 
 PORTAL_API_BASE = os.getenv(
     "PORTAL_API_BASE",
-    "http://127.0.0.1:8000/api/portal/"
+    f"{SITE_URL}/api/portal/"
 ).strip()
