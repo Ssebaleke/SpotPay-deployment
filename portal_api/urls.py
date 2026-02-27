@@ -3,7 +3,9 @@ from .views import (
     portal_data,
     portal_download_page,
     download_portal_zip,
-    portal_buy,          # 👈 add this
+    portal_buy,                 # fallback HTML
+    portal_buy_api,             # NEW: JS buy endpoint
+    portal_payment_status,      # NEW: polling endpoint
 )
 
 urlpatterns = [
@@ -14,6 +16,24 @@ urlpatterns = [
         "portal/<uuid:uuid>/",
         portal_data,
         name="portal_api",
+    ),
+
+    # =========================
+    # JS BUY (NEW - JSON)
+    # =========================
+    path(
+        "portal/<uuid:uuid>/buy-api/",
+        portal_buy_api,
+        name="portal_buy_api",
+    ),
+
+    # =========================
+    # PAYMENT STATUS POLLING
+    # =========================
+    path(
+        "portal/payments/status/<str:reference>/",
+        portal_payment_status,
+        name="portal_payment_status",
     ),
 
     # =========================
