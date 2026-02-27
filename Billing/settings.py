@@ -10,7 +10,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # ==================================================
 # CORE SETTINGS
 # ==================================================
-
 SECRET_KEY = (
     os.getenv("DJANGO_SECRET_KEY")
     or os.getenv("SECRET_KEY")
@@ -22,9 +21,9 @@ DEBUG = (
     or os.getenv("DEBUG", "False")
 ).lower() in ("1", "true", "yes", "y")
 
-# --------------------------------------------------
+# ==================================================
 # ALLOWED HOSTS
-# --------------------------------------------------
+# ==================================================
 _raw_hosts = (
     os.getenv("DJANGO_ALLOWED_HOSTS")
     or os.getenv("ALLOWED_HOSTS")
@@ -33,9 +32,9 @@ _raw_hosts = (
 
 ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(",") if h.strip()]
 
-# --------------------------------------------------
-# CSRF
-# --------------------------------------------------
+# ==================================================
+# CSRF TRUSTED ORIGINS
+# ==================================================
 _raw_csrf = os.getenv("CSRF_TRUSTED_ORIGINS", "")
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _raw_csrf.split(",") if o.strip()]
 
@@ -43,7 +42,7 @@ CSRF_TRUSTED_ORIGINS = [o.strip() for o in _raw_csrf.split(",") if o.strip()]
 # APPLICATIONS
 # ==================================================
 INSTALLED_APPS = [
-    "corsheaders",  # ✅ CORS
+    "corsheaders",
 
     "widget_tweaks",
     "django.contrib.humanize",
@@ -73,7 +72,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
 
-    # ✅ CORS MUST BE BEFORE CommonMiddleware
+    # CORS must be high
     "corsheaders.middleware.CorsMiddleware",
 
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -133,10 +132,7 @@ if DATABASE_URL:
     }
 else:
     if not DEBUG:
-        raise RuntimeError(
-            "DATABASE_URL missing in production. Refusing SQLite fallback."
-        )
-
+        raise RuntimeError("DATABASE_URL missing in production. Refusing SQLite fallback.")
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -164,14 +160,28 @@ USE_I18N = True
 USE_TZ = True
 
 # ==================================================
-# STATIC & MEDIA
+# STATIC
 # ==================================================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
+# ==================================================
+# MEDIA (Uploads)
+# ==================================================
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# ==================================================
+# UPLOAD LIMITS (IMPORTANT FOR VIDEO)
+# Default Django can choke on big files if your proxy/container limits are small.
+# ==================================================
+# 200MB (adjust if you need bigger)
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("FILE_UPLOAD_MAX_MEMORY_SIZE", str(200 * 1024 * 1024)))
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.getenv("DATA_UPLOAD_MAX_MEMORY_SIZE", str(200 * 1024 * 1024)))
+
+# If you upload large videos, better to stream to disk
+FILE_UPLOAD_TEMP_DIR = os.getenv("FILE_UPLOAD_TEMP_DIR", None)
 
 # ==================================================
 # EMAIL (DEV)
@@ -186,9 +196,14 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ==================================================
 # PROJECT CONSTANTS
 # ==================================================
-SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000").strip()
+SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000").strip().rstrip("/")
 
-PORTAL_API_BASE = os.getenv(
-    "PORTAL_API_BASE",
-    f"{SITE_URL}/api/portal/"
-).strip()
+# IMPORTANT: keep it WITHOUT trailing slash to avoid double paths
+PORTAL_API_BASE = os.getenv("PORTAL_API_BASE", f"{SITE_URL}/api/portal").strip().rstrip("/")
+
+# ==================================================
+# PROXY / HTTPS (safe defaults; won't break HTTP)
+# If you're behind nginx later, these help correct scheme/secure cookies
+# ==================================================
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
