@@ -1,22 +1,29 @@
 from django.urls import path
-from . import views
+from .views import (
+    portal_data,
+    portal_download_page,
+    download_portal_zip,
+    portal_buy,                 # fallback HTML
+    portal_buy_api,             # NEW: JS buy endpoint
+    portal_payment_status,      # NEW: polling endpoint
+)
 
 urlpatterns = [
     # =========================
     # MAIN CAPTIVE PORTAL API
     # =========================
     path(
-        "<uuid:uuid>/",
-        views.portal_data,
+        "portal/<uuid:uuid>/",
+        portal_data,
         name="portal_api",
     ),
 
     # =========================
-    # JS BUY (JSON)
+    # JS BUY (NEW - JSON)
     # =========================
     path(
-        "<uuid:uuid>/buy/",
-        views.portal_buy_api,
+        "portal/<uuid:uuid>/buy-api/",
+        portal_buy_api,
         name="portal_buy_api",
     ),
 
@@ -24,18 +31,18 @@ urlpatterns = [
     # PAYMENT STATUS POLLING
     # =========================
     path(
-        "payments/status/<str:reference>/",
-        views.portal_payment_status,
+        "portal/payments/status/<str:reference>/",
+        portal_payment_status,
         name="portal_payment_status",
     ),
 
     # =========================
-    # FALLBACK BUY PAGE (HTML)
+    # FALLBACK BUY PAGE (NO JS)
     # =========================
     path(
-        "<uuid:uuid>/buy-page/",
-        views.portal_buy,
-        name="portal_buy_page",
+        "portal/<uuid:uuid>/buy/",
+        portal_buy,
+        name="portal_buy",
     ),
 
     # =========================
@@ -43,13 +50,13 @@ urlpatterns = [
     # =========================
     path(
         "portal-download/<uuid:location_uuid>/",
-        views.portal_download_page,
+        portal_download_page,
         name="portal_download_page",
     ),
 
     path(
-        "<uuid:location_uuid>/download/",
-        views.download_portal_zip,
+        "portal/<uuid:location_uuid>/download/",
+        download_portal_zip,
         name="portal_zip_download",
     ),
 ]
