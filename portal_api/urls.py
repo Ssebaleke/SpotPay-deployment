@@ -4,8 +4,8 @@ from .views import (
     portal_download_page,
     download_portal_zip,
     portal_buy,                 # fallback HTML
-    portal_buy_api,             # NEW: JS buy endpoint
-    portal_payment_status,      # NEW: polling endpoint
+    portal_buy_api,             # JSON buy endpoint
+    portal_payment_status,      # polling endpoint
 )
 
 urlpatterns = [
@@ -13,16 +13,16 @@ urlpatterns = [
     # MAIN CAPTIVE PORTAL API
     # =========================
     path(
-        "portal/<uuid:uuid>/",
+        "<uuid:uuid>/",
         portal_data,
         name="portal_api",
     ),
 
     # =========================
-    # JS BUY (NEW - JSON)
+    # JS BUY (JSON)
     # =========================
     path(
-        "portal/<uuid:uuid>/buy-api/",
+        "<uuid:uuid>/buy/",
         portal_buy_api,
         name="portal_buy_api",
     ),
@@ -31,16 +31,16 @@ urlpatterns = [
     # PAYMENT STATUS POLLING
     # =========================
     path(
-        "portal/payments/status/<str:reference>/",
+        "payments/status/<str:reference>/",
         portal_payment_status,
         name="portal_payment_status",
     ),
 
     # =========================
-    # FALLBACK BUY PAGE (NO JS)
+    # FALLBACK BUY PAGE (HTML)
     # =========================
     path(
-        "portal/<uuid:uuid>/buy/",
+        "<uuid:uuid>/buy-page/",
         portal_buy,
         name="portal_buy",
     ),
@@ -55,7 +55,7 @@ urlpatterns = [
     ),
 
     path(
-        "portal/<uuid:location_uuid>/download/",
+        "<uuid:location_uuid>/download/",
         download_portal_zip,
         name="portal_zip_download",
     ),

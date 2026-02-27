@@ -340,3 +340,5 @@ def portal_buy(request, uuid):
                 "payment": result,  # ✅ use status_url / reference in template
             }
         )
+        
+        
