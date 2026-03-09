@@ -27,6 +27,11 @@ jobs:
             git fetch --all
             git reset --hard origin/main
 
+            echo "Creating .env file from secrets..."
+            cat > .env << 'EOF'
+            ${{ secrets.ENV_FILE }}
+            EOF
+
             echo "Rebuilding containers..."
             docker compose up -d --build
 
