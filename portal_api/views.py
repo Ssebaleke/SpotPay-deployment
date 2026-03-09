@@ -117,14 +117,20 @@ def portal_buy_api(request, uuid):
         )
 
     # ✅ initiate payment (your existing engine)
-    result = initiate_payment(
-        location=location,
-        package=package,
-        phone=phone,
-        source="JS_PORTAL",
-        mac_address=mac_address,
-        ip_address=ip_address,
-    )
+    try:
+        result = initiate_payment(
+            location=location,
+            package=package,
+            phone=phone,
+            source="JS_PORTAL",
+            mac_address=mac_address,
+            ip_address=ip_address,
+        )
+    except Exception as e:
+        return JsonResponse(
+            {"success": False, "message": str(e)},
+            status=400
+        )
 
     # Ensure status_url is absolute for captive portal
     if result.get("status_url"):
