@@ -48,14 +48,23 @@ class MomoAdapter:
         amount_int = int(Decimal(str(amt)))
         currency = (data.get("currency") or getattr(payment, "currency", None) or "UGX")
 
+        # Format phone number for MakyPay (must be 256XXXXXXXXX, 12 digits, no +)
+        if phone.startswith("+"):
+            phone = phone[1:]
+        if phone.startswith("0"):
+            phone = "256" + phone[1:]
+        if not phone.startswith("256"):
+            phone = "256" + phone   # Fallback, though ideally already mapped
+
         payload = {
-            "phone_number": phone,              # required
+            "phone_number": phone,              # required (256XXXXXXXXX)
             "amount": str(amount_int),          # required (send as string in forms)
+            "country": "UG",                    # required by new API docs
             "reference": str(payment.uuid),     # required
             "currency": str(currency),          # optional
         }
 
-        url = f"{self.base_url}/api/v1/collections/collect-money"
+        url = f"{self.base_url}/collections/collect-money"
 
         print("MAKYPAY URL:", url)
         print("MAKYPAY FORM PAYLOAD:", payload)
