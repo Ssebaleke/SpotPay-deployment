@@ -33,5 +33,4 @@ whitenoise==6.6.0
 python-dotenv
 dj-database-url
 psycopg2-binary
-requests
 requests==2.31.0
