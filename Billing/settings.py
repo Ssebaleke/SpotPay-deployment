@@ -85,13 +85,10 @@ MIDDLEWARE = [
 # ==================================================
 # CORS SETTINGS
 # ==================================================
-_raw_cors = os.getenv("CORS_ALLOWED_ORIGINS", "")
-CORS_ALLOWED_ORIGINS = [o.strip() for o in _raw_cors.split(",") if o.strip()]
-
-CORS_ALLOW_ALL_ORIGINS = (
-    os.getenv("CORS_ALLOW_ALL_ORIGINS", "False")
-    .lower() in ("1", "true", "yes", "y")
-)
+# For captive portals, we need to allow all origins
+# since users access via MikroTik DNS (e.g., hot.spot)
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
 
 # ==================================================
 # URL / WSGI
