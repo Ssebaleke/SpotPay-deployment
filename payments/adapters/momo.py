@@ -64,7 +64,7 @@ class MomoAdapter:
             "currency": str(currency),          # optional
         }
 
-        url = f"{self.base_url}/collections/collect-money"
+        url = f"{self.base_url}/api/v1/collections/collect-money"
 
         print("MAKYPAY URL:", url)
         print("MAKYPAY FORM PAYLOAD:", payload)
