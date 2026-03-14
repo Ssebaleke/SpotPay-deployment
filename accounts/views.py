@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
@@ -12,6 +13,7 @@ from datetime import timedelta
 
 from payments.models import Payment, PaymentProvider
 from sms.models import VendorSMSWallet
+from wallets.models import VendorWallet, WithdrawalRequest
 
 from .forms import VendorRegistrationForm, VendorProfileForm
 from .models import Vendor
@@ -60,6 +62,9 @@ def vendor_login(request):
             user = authenticate(username=username, password=password)
 
             if user is not None and user.is_active:
+                if user.is_staff:
+                    login(request, user)
+                    return redirect('admin_dashboard')
                 try:
                     vendor = user.vendor
                     if vendor.status == 'ACTIVE':
@@ -80,6 +85,55 @@ def vendor_login(request):
         form = AuthenticationForm()
 
     return render(request, 'accounts/login.html', {'form': form})
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_dashboard(request):
+    total_platform_sales = (
+        Payment.objects.filter(
+            purpose="TRANSACTION",
+            status="SUCCESS"
+        ).aggregate(total=Sum("amount"))["total"]
+        or Decimal("0.00")
+    )
+
+    total_vendors = Vendor.objects.count()
+    active_vendors = Vendor.objects.filter(status="ACTIVE").count()
+
+    total_transactions = Payment.objects.filter(purpose="TRANSACTION").count()
+    successful_transactions = Payment.objects.filter(
+        purpose="TRANSACTION",
+        status="SUCCESS"
+    ).count()
+
+    total_wallet_balance = (
+        VendorWallet.objects.aggregate(total=Sum("balance"))["total"]
+        or Decimal("0.00")
+    )
+    pending_withdrawals_qs = WithdrawalRequest.objects.filter(status=WithdrawalRequest.STATUS_PENDING)
+    pending_withdrawals_count = pending_withdrawals_qs.count()
+    pending_withdrawals_total = (
+        pending_withdrawals_qs.aggregate(total=Sum("amount"))["total"]
+        or Decimal("0.00")
+    )
+
+    recent_vendor_activity = Payment.objects.filter(
+        purpose="TRANSACTION"
+    ).select_related("vendor", "package", "location").order_by("-initiated_at")[:10]
+
+    return render(request, 'accounts/admin_dashboard.html', {
+        'total_platform_sales': total_platform_sales,
+        'total_vendors': total_vendors,
+        'active_vendors': active_vendors,
+        'total_transactions': total_transactions,
+        'successful_transactions': successful_transactions,
+        'total_wallet_balance': total_wallet_balance,
+        'pending_withdrawals_count': pending_withdrawals_count,
+        'pending_withdrawals_total': pending_withdrawals_total,
+        'pending_withdrawals': pending_withdrawals_qs.select_related('wallet', 'wallet__vendor').order_by('-created_at')[:10],
+        'recent_vendor_activity': recent_vendor_activity,
+    })
 
 
 # =====================================================
