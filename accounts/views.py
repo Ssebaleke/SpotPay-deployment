@@ -7,7 +7,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Sum, Count, Q
 from decimal import Decimal
 from datetime import timedelta
 
@@ -90,22 +90,34 @@ def vendor_login(request):
 @login_required
 @user_passes_test(lambda user: user.is_staff)
 def admin_dashboard(request):
+    period = request.GET.get('period', '30d')
+    now = timezone.now()
+
+    period_start_map = {
+        '7d': now - timedelta(days=7),
+        '30d': now - timedelta(days=30),
+        '90d': now - timedelta(days=90),
+        '365d': now - timedelta(days=365),
+    }
+    start_dt = period_start_map.get(period)
+
+    transactions_scope = Payment.objects.filter(
+        purpose="TRANSACTION",
+        vendor__isnull=False
+    )
+    if start_dt:
+        transactions_scope = transactions_scope.filter(initiated_at__gte=start_dt)
+
     total_platform_sales = (
-        Payment.objects.filter(
-            purpose="TRANSACTION",
-            status="SUCCESS"
-        ).aggregate(total=Sum("amount"))["total"]
+        transactions_scope.filter(status="SUCCESS").aggregate(total=Sum("amount"))["total"]
         or Decimal("0.00")
     )
 
     total_vendors = Vendor.objects.count()
     active_vendors = Vendor.objects.filter(status="ACTIVE").count()
 
-    total_transactions = Payment.objects.filter(purpose="TRANSACTION").count()
-    successful_transactions = Payment.objects.filter(
-        purpose="TRANSACTION",
-        status="SUCCESS"
-    ).count()
+    total_transactions = transactions_scope.count()
+    successful_transactions = transactions_scope.filter(status="SUCCESS").count()
 
     total_wallet_balance = (
         VendorWallet.objects.aggregate(total=Sum("balance"))["total"]
@@ -118,11 +130,32 @@ def admin_dashboard(request):
         or Decimal("0.00")
     )
 
-    recent_vendor_activity = Payment.objects.filter(
-        purpose="TRANSACTION"
-    ).select_related("vendor", "package", "location").order_by("-initiated_at")[:10]
+    recent_vendor_activity = transactions_scope.select_related(
+        "vendor", "package", "location"
+    ).order_by("-initiated_at")[:10]
+
+    vendor_performance = list(
+        transactions_scope.values(
+            'vendor_id',
+            'vendor__company_name'
+        ).annotate(
+            transaction_count=Count('id'),
+            successful_count=Count('id', filter=Q(status='SUCCESS')),
+            total_sales=Sum('amount', filter=Q(status='SUCCESS')),
+        ).order_by('-total_sales', '-successful_count')[:15]
+    )
+
+    for item in vendor_performance:
+        success_count = item.get('successful_count') or 0
+        transaction_count = item.get('transaction_count') or 0
+        item['total_sales'] = item.get('total_sales') or Decimal('0.00')
+        item['success_rate'] = (
+            round((success_count / transaction_count) * 100, 2)
+            if transaction_count > 0 else 0
+        )
 
     return render(request, 'accounts/admin_dashboard.html', {
+        'period': period,
         'total_platform_sales': total_platform_sales,
         'total_vendors': total_vendors,
         'active_vendors': active_vendors,
@@ -133,6 +166,7 @@ def admin_dashboard(request):
         'pending_withdrawals_total': pending_withdrawals_total,
         'pending_withdrawals': pending_withdrawals_qs.select_related('wallet', 'wallet__vendor').order_by('-created_at')[:10],
         'recent_vendor_activity': recent_vendor_activity,
+        'vendor_performance': vendor_performance,
     })
 
 
