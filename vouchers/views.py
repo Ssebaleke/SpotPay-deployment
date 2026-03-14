@@ -3,8 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
+from django.db.models import Count, Q
 
-from .models import Voucher
+from .models import Voucher, VoucherBatch
 from packages.models import Package
 
 
@@ -28,8 +29,20 @@ def voucher_list(request):
         package__location__vendor=vendor
     ).select_related(
         'package',
-        'package__location'
+        'package__location',
+        'batch'
     ).order_by('-created_at')
+
+    batches = VoucherBatch.objects.filter(
+        package__location__vendor=vendor
+    ).select_related(
+        'package',
+        'package__location'
+    ).annotate(
+        vouchers_count=Count('vouchers'),
+        used_count=Count('vouchers', filter=Q(vouchers__status='USED')),
+        unused_count=Count('vouchers', filter=Q(vouchers__status='UNUSED')),
+    )
 
     # Handle CSV upload
     if request.method == 'POST':
@@ -44,6 +57,12 @@ def voucher_list(request):
             Package,
             id=package_id,
             location__vendor=vendor
+        )
+
+        batch = VoucherBatch.objects.create(
+            package=package,
+            uploaded_by=request.user,
+            source_filename=getattr(csv_file, 'name', ''),
         )
 
         decoded_file = csv_file.read().decode('utf-8').splitlines()
@@ -67,7 +86,10 @@ def voucher_list(request):
 
             voucher, created = Voucher.objects.get_or_create(
                 code=code.strip(),
-                defaults={'package': package}
+                defaults={
+                    'package': package,
+                    'batch': batch,
+                }
             )
 
             # Repair old vouchers without package
@@ -77,6 +99,12 @@ def voucher_list(request):
 
             if created:
                 created_count += 1
+
+        batch.total_uploaded = created_count
+        if created_count == 0:
+            batch.delete()
+        else:
+            batch.save(update_fields=['total_uploaded'])
 
         messages.success(
             request,
@@ -88,8 +116,32 @@ def voucher_list(request):
 
     return render(request, 'vouchers/voucher_list.html', {
         'packages': packages,
-        'vouchers': vouchers
+        'vouchers': vouchers,
+        'batches': batches,
     })
+
+
+@login_required
+def delete_voucher_batch(request, id):
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method.')
+        return redirect('voucher_list')
+
+    batch = get_object_or_404(
+        VoucherBatch,
+        id=id,
+        package__location__vendor=request.user.vendor
+    )
+
+    if batch.vouchers.filter(status='USED').exists():
+        messages.error(request, 'This batch contains used vouchers and cannot be deleted.')
+        return redirect('voucher_list')
+
+    deleted_count, _ = batch.vouchers.all().delete()
+    batch.delete()
+
+    messages.success(request, f'Batch deleted successfully. {deleted_count} voucher(s) removed.')
+    return redirect('voucher_list')
 
 
 @login_required

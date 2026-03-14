@@ -151,6 +151,10 @@ def vendor_dashboard(request):
 
     successful_payments_qs = vendor_payments.filter(status="SUCCESS")
     today = timezone.now().date()
+    now = timezone.now()
+    week_start = now - timezone.timedelta(days=6)
+    month_start = now.replace(day=1)
+    year_start = now.replace(month=1, day=1)
 
     total_payments_received = (
         successful_payments_qs.aggregate(total=Sum("amount"))["total"]
@@ -161,6 +165,19 @@ def vendor_dashboard(request):
     )
     todays_payments_total = (
         todays_payments.aggregate(total=Sum("amount"))["total"]
+        or Decimal("0.00")
+    )
+
+    weekly_payments_total = (
+        successful_payments_qs.filter(completed_at__gte=week_start).aggregate(total=Sum("amount"))["total"]
+        or Decimal("0.00")
+    )
+    monthly_payments_total = (
+        successful_payments_qs.filter(completed_at__gte=month_start).aggregate(total=Sum("amount"))["total"]
+        or Decimal("0.00")
+    )
+    annual_payments_total = (
+        successful_payments_qs.filter(completed_at__gte=year_start).aggregate(total=Sum("amount"))["total"]
         or Decimal("0.00")
     )
 
@@ -189,6 +206,9 @@ def vendor_dashboard(request):
         'sms_balance': sms_balance,   # 🔥 REAL SMS UNITS
         'total_payments_received': total_payments_received,
         'todays_payments_total': todays_payments_total,
+        'weekly_payments_total': weekly_payments_total,
+        'monthly_payments_total': monthly_payments_total,
+        'annual_payments_total': annual_payments_total,
         'successful_payments_count': successful_payments_count,
         'pending_payments_count': pending_payments_count,
         'failed_payments_count': failed_payments_count,

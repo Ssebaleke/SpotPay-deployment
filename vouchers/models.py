@@ -3,6 +3,30 @@ from django.utils import timezone
 from packages.models import Package
 
 
+class VoucherBatch(models.Model):
+    package = models.ForeignKey(
+        Package,
+        on_delete=models.CASCADE,
+        related_name='voucher_batches'
+    )
+    uploaded_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='voucher_batches'
+    )
+    source_filename = models.CharField(max_length=255, blank=True)
+    total_uploaded = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Batch #{self.id} - {self.package.name}"
+
+
 class Voucher(models.Model):
     STATUS_CHOICES = (
         ('UNUSED', 'Unused'),
@@ -14,6 +38,13 @@ class Voucher(models.Model):
     package = models.ForeignKey(
         Package,
         on_delete=models.CASCADE,
+        related_name='vouchers'
+    )
+    batch = models.ForeignKey(
+        VoucherBatch,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='vouchers'
     )
 
