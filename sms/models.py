@@ -11,6 +11,7 @@ from accounts.models import Vendor
 
 class SMSProvider(models.Model):
     PROVIDER_TYPES = (
+        ("UGSMS", "UGSMS"),
         ("AFRICASTALKING", "Africa's Talking"),
         ("YOUGANDA", "Yo! Uganda"),
         ("TWILIO", "Twilio"),
@@ -41,6 +42,29 @@ class SMSProvider(models.Model):
         # Ensure ONLY one provider is active
         if self.is_active:
             SMSProvider.objects.exclude(pk=self.pk).update(is_active=False)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        status = "ACTIVE" if self.is_active else "INACTIVE"
+        return f"{self.name} ({status})"
+
+
+class EmailProvider(models.Model):
+    PROVIDER_TYPES = (
+        ("RESEND", "Resend"),
+        ("OTHER", "Other"),
+    )
+
+    name = models.CharField(max_length=50)
+    provider_type = models.CharField(max_length=20, choices=PROVIDER_TYPES, default="RESEND")
+    api_key = models.CharField(max_length=255)
+    from_email = models.EmailField(help_text="Verified sender email/domain in provider")
+    is_active = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if self.is_active:
+            EmailProvider.objects.exclude(pk=self.pk).update(is_active=False)
         super().save(*args, **kwargs)
 
     def __str__(self):

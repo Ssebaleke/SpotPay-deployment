@@ -15,6 +15,7 @@ from datetime import timedelta
 from payments.models import Payment, PaymentProvider
 from sms.models import VendorSMSWallet
 from wallets.models import VendorWallet, WithdrawalRequest, WalletTransaction
+from sms.services.notifications import notify_withdrawal_status
 
 from .forms import VendorRegistrationForm, VendorProfileForm
 from .models import Vendor
@@ -211,6 +212,7 @@ def admin_approve_withdrawal(request, withdrawal_id):
         withdrawal.status = WithdrawalRequest.STATUS_APPROVED
         withdrawal.save(update_fields=['status', 'updated_at'])
 
+    notify_withdrawal_status(withdrawal, "approved")
     messages.success(request, 'Withdrawal approved and wallet debited successfully.')
     return redirect('admin_dashboard')
 
@@ -222,6 +224,15 @@ def admin_reject_withdrawal(request, withdrawal_id):
         messages.error(request, 'Invalid request method.')
         return redirect('admin_dashboard')
 
+    withdrawal = WithdrawalRequest.objects.select_related('wallet', 'wallet__vendor').filter(
+        id=withdrawal_id,
+        status=WithdrawalRequest.STATUS_PENDING
+    ).first()
+
+    if not withdrawal:
+        messages.error(request, 'Withdrawal request not found or already processed.')
+        return redirect('admin_dashboard')
+
     updated = WithdrawalRequest.objects.filter(
         id=withdrawal_id,
         status=WithdrawalRequest.STATUS_PENDING
@@ -231,6 +242,7 @@ def admin_reject_withdrawal(request, withdrawal_id):
         messages.error(request, 'Withdrawal request not found or already processed.')
         return redirect('admin_dashboard')
 
+    notify_withdrawal_status(withdrawal, "rejected")
     messages.success(request, 'Withdrawal request rejected successfully.')
     return redirect('admin_dashboard')
 

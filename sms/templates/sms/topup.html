@@ -7,6 +7,17 @@
     <div class="card p-4" style="max-width: 400px; width: 100%;">
         <h4 class="mb-3 text-center">Buy SMS</h4>
 
+        {% if pricing %}
+            <div class="alert alert-info">
+                Price per SMS: <strong>{{ pricing.price_per_sms }} {{ pricing.currency }}</strong><br>
+                Current SMS units: <strong>{{ wallet.balance_units }}</strong>
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                SMS pricing is not configured yet. Contact admin.
+            </div>
+        {% endif %}
+
         {% if error %}
             <div class="alert alert-danger">{{ error }}</div>
         {% endif %}
@@ -24,7 +35,7 @@
                 <input type="text" name="phone" class="form-control" required>
             </div>
 
-            <button class="btn btn-primary w-100">
+            <button class="btn btn-primary w-100" {% if not pricing %}disabled{% endif %}>
                 Pay & Buy SMS
             </button>
         </form>

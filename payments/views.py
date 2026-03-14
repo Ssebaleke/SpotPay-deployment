@@ -13,6 +13,8 @@ from .utils import get_active_provider, load_provider_adapter
 from .services.payment_success import handle_payment_success
 
 from wallets.models import VendorWallet
+from sms.services.sms_topup import credit_sms_wallet
+from sms.services.notifications import notify_vendor_payment_received
 
 
 def _parse_body(request):
@@ -178,6 +180,19 @@ def payment_callback(request):
                     amount=vendor_amount,
                     reference=payment.uuid
                 )
+
+            if payment.purpose == "SMS_PURCHASE" and payment.vendor_id:
+                try:
+                    credit_sms_wallet(
+                        vendor=payment.vendor,
+                        amount_paid=int(payment.amount)
+                    )
+                except Exception as exc:
+                    payment.processor_message = f"SMS credit warning: {exc}"
+                    payment.save(update_fields=["processor_message"])
+
+            if payment.vendor_id:
+                notify_vendor_payment_received(payment)
 
             payment_id = payment.id
             run_success_handler = True

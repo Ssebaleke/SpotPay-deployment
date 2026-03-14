@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdraw | SpotPay</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont; background:#f4f6f8; margin:0; padding:20px; }
+        .card { max-width:620px; margin:0 auto; background:#fff; border-radius:12px; padding:22px; box-shadow:0 6px 16px rgba(0,0,0,.08); }
+        .muted { color:#6c757d; }
+        .row { margin-bottom:14px; }
+        input[type="number"] { width:100%; padding:10px; border:1px solid #ced4da; border-radius:8px; }
+        .mode { border:1px solid #dee2e6; border-radius:10px; padding:12px; margin-bottom:10px; }
+        .actions { display:flex; gap:10px; margin-top:18px; }
+        .btn { border:none; border-radius:8px; padding:10px 14px; text-decoration:none; cursor:pointer; font-weight:600; }
+        .btn-primary { background:#198754; color:#fff; }
+        .btn-secondary { background:#e9ecef; color:#212529; }
+        .alert { padding:10px 12px; border-radius:8px; margin-bottom:12px; }
+        .alert-danger { background:#f8d7da; color:#842029; }
+        .alert-success { background:#d1e7dd; color:#0f5132; }
+        .alert-info { background:#cff4fc; color:#055160; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Withdraw Funds</h2>
+        <p class="muted">Available balance: <strong>UGX {{ wallet.balance }}</strong></p>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% else %}alert-info{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="row">
+                <label for="amount">Amount (UGX)</label>
+                <input id="amount" name="amount" type="number" min="1" step="0.01" required>
+            </div>
+
+            <div class="row">
+                <label class="muted">Withdrawal Option</label>
+
+                <label class="mode">
+                    <input type="radio" name="withdrawal_mode" value="instant" checked>
+                    <strong>Instant Withdrawal</strong>
+                    <div class="muted">Debits your wallet immediately (no admin approval).</div>
+                </label>
+
+                <label class="mode">
+                    <input type="radio" name="withdrawal_mode" value="pending">
+                    <strong>Request Admin Approval</strong>
+                    <div class="muted">Creates a pending withdrawal for admin review.</div>
+                </label>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">Continue</button>
+                <a href="{% url 'wallet_dashboard' %}" class="btn btn-secondary">Back</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

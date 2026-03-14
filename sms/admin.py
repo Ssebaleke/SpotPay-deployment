@@ -3,6 +3,7 @@ from django.utils.html import format_html
 
 from .models import (
     SMSProvider,
+    EmailProvider,
     SMSPricing,
     VendorSMSWallet,
     SMSPurchase,
@@ -39,6 +40,32 @@ class SMSProviderAdmin(admin.ModelAdmin):
         """
         if obj.is_active:
             SMSProvider.objects.exclude(pk=obj.pk).update(is_active=False)
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(EmailProvider)
+class EmailProviderAdmin(admin.ModelAdmin):
+    list_display = (
+        "name",
+        "provider_type",
+        "from_email",
+        "active_status",
+        "created_at",
+    )
+    list_filter = ("provider_type", "is_active")
+    search_fields = ("name", "from_email")
+    readonly_fields = ("created_at",)
+
+    def active_status(self, obj):
+        if obj.is_active:
+            return format_html('<b style="color: green;">ACTIVE</b>')
+        return format_html('<b style="color: red;">INACTIVE</b>')
+
+    active_status.short_description = "Status"
+
+    def save_model(self, request, obj, form, change):
+        if obj.is_active:
+            EmailProvider.objects.exclude(pk=obj.pk).update(is_active=False)
         super().save_model(request, obj, form, change)
 
 

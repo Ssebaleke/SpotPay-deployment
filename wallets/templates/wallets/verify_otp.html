@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify OTP | SpotPay</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont; background:#f4f6f8; margin:0; padding:20px; }
+        .card { max-width:480px; margin:0 auto; background:#fff; border-radius:12px; padding:22px; box-shadow:0 6px 16px rgba(0,0,0,.08); }
+        .muted { color:#6c757d; }
+        input { width:100%; padding:10px; border:1px solid #ced4da; border-radius:8px; }
+        .actions { display:flex; gap:10px; margin-top:18px; }
+        .btn { border:none; border-radius:8px; padding:10px 14px; text-decoration:none; cursor:pointer; font-weight:600; }
+        .btn-primary { background:#0d6efd; color:#fff; }
+        .btn-secondary { background:#e9ecef; color:#212529; }
+        .alert { padding:10px 12px; border-radius:8px; margin-bottom:12px; }
+        .alert-danger { background:#f8d7da; color:#842029; }
+        .alert-success { background:#d1e7dd; color:#0f5132; }
+        .alert-info { background:#cff4fc; color:#055160; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Verify OTP</h2>
+        <p class="muted">Enter the OTP sent to your email to continue withdrawal.</p>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% else %}alert-info{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            <label for="otp">OTP Code</label>
+            <input id="otp" name="otp" type="text" maxlength="6" required>
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">Verify</button>
+                <a href="{% url 'wallet_send_otp' %}" class="btn btn-secondary">Resend OTP</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

@@ -4,6 +4,7 @@ from django.utils.html import format_html
 from django.contrib import messages
 from django.utils import timezone
 from .models import Vendor
+from sms.services.notifications import notify_vendor_approval
 
 @admin.register(Vendor)
 class VendorAdmin(admin.ModelAdmin):
@@ -34,11 +35,16 @@ class VendorAdmin(admin.ModelAdmin):
     actions = ['approve_vendors', 'reject_vendors', 'suspend_vendors']
     
     def approve_vendors(self, request, queryset):
-        updated = queryset.update(status='ACTIVE', approved_by=request.user, approved_at=timezone.now())
-        # Also activate the user account
-        for vendor in queryset:
+        updated = 0
+        for vendor in queryset.select_related('user'):
+            vendor.status = 'ACTIVE'
+            vendor.approved_by = request.user
+            vendor.approved_at = timezone.now()
+            vendor.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
             vendor.user.is_active = True
             vendor.user.save()
+            notify_vendor_approval(vendor)
+            updated += 1
         self.message_user(request, f'{updated} vendor(s) approved and activated.')
     approve_vendors.short_description = "Approve selected vendors"
     
