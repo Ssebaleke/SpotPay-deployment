@@ -145,6 +145,7 @@
                                         <th>Vendor</th>
                                         <th>Amount</th>
                                         <th>Requested</th>
+                                        <th class="text-end">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -153,10 +154,22 @@
                                             <td>{{ withdrawal.wallet.vendor.company_name|default:"N/A" }}</td>
                                             <td>UGX {{ withdrawal.amount }}</td>
                                             <td>{{ withdrawal.created_at|date:"M d, H:i" }}</td>
+                                            <td class="text-end">
+                                                <div class="d-inline-flex gap-1">
+                                                    <form method="post" action="{% url 'admin_approve_withdrawal' withdrawal.id %}">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Approve this withdrawal?');">Approve</button>
+                                                    </form>
+                                                    <form method="post" action="{% url 'admin_reject_withdrawal' withdrawal.id %}">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Reject this withdrawal?');">Reject</button>
+                                                    </form>
+                                                </div>
+                                            </td>
                                         </tr>
                                     {% empty %}
                                         <tr>
-                                            <td colspan="3" class="text-center text-muted py-3">No pending withdrawals</td>
+                                            <td colspan="4" class="text-center text-muted py-3">No pending withdrawals</td>
                                         </tr>
                                     {% endfor %}
                                 </tbody>

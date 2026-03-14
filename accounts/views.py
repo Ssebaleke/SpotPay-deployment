@@ -8,12 +8,13 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
+from django.db import transaction
 from decimal import Decimal
 from datetime import timedelta
 
 from payments.models import Payment, PaymentProvider
 from sms.models import VendorSMSWallet
-from wallets.models import VendorWallet, WithdrawalRequest
+from wallets.models import VendorWallet, WithdrawalRequest, WalletTransaction
 
 from .forms import VendorRegistrationForm, VendorProfileForm
 from .models import Vendor
@@ -168,6 +169,70 @@ def admin_dashboard(request):
         'recent_vendor_activity': recent_vendor_activity,
         'vendor_performance': vendor_performance,
     })
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_approve_withdrawal(request, withdrawal_id):
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method.')
+        return redirect('admin_dashboard')
+
+    with transaction.atomic():
+        withdrawal = WithdrawalRequest.objects.select_for_update().select_related('wallet', 'wallet__vendor').filter(
+            id=withdrawal_id,
+            status=WithdrawalRequest.STATUS_PENDING
+        ).first()
+
+        if not withdrawal:
+            messages.error(request, 'Withdrawal request not found or already processed.')
+            return redirect('admin_dashboard')
+
+        wallet = withdrawal.wallet
+        if not wallet:
+            messages.error(request, 'Wallet record missing for this withdrawal.')
+            return redirect('admin_dashboard')
+
+        if wallet.balance < withdrawal.amount:
+            messages.error(request, 'Insufficient wallet balance for approval.')
+            return redirect('admin_dashboard')
+
+        wallet.balance = wallet.balance - withdrawal.amount
+        wallet.save(update_fields=['balance', 'updated_at'])
+
+        WalletTransaction.objects.create(
+            wallet=wallet,
+            amount=withdrawal.amount,
+            transaction_type=WalletTransaction.DEBIT,
+            reason='WITHDRAWAL',
+            reference=f"WD-{withdrawal.reference}",
+        )
+
+        withdrawal.status = WithdrawalRequest.STATUS_APPROVED
+        withdrawal.save(update_fields=['status', 'updated_at'])
+
+    messages.success(request, 'Withdrawal approved and wallet debited successfully.')
+    return redirect('admin_dashboard')
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_reject_withdrawal(request, withdrawal_id):
+    if request.method != 'POST':
+        messages.error(request, 'Invalid request method.')
+        return redirect('admin_dashboard')
+
+    updated = WithdrawalRequest.objects.filter(
+        id=withdrawal_id,
+        status=WithdrawalRequest.STATUS_PENDING
+    ).update(status=WithdrawalRequest.STATUS_REJECTED)
+
+    if not updated:
+        messages.error(request, 'Withdrawal request not found or already processed.')
+        return redirect('admin_dashboard')
+
+    messages.success(request, 'Withdrawal request rejected successfully.')
+    return redirect('admin_dashboard')
 
 
 # =====================================================
