@@ -76,3 +76,46 @@ class VendorRegistrationForm(forms.Form):
         except IntegrityError:
             # Absolute last line of defense (DB-level uniqueness)
             raise ValidationError("A user with this username already exists.")
+
+
+class VendorProfileForm(forms.ModelForm):
+    email = forms.EmailField()
+
+    class Meta:
+        model = Vendor
+        fields = [
+            'company_name',
+            'contact_person',
+            'business_address',
+            'business_phone',
+            'business_email',
+        ]
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        if self.user:
+            self.fields['email'].initial = self.user.email
+
+        for field in self.fields.values():
+            existing_class = field.widget.attrs.get('class', '')
+            field.widget.attrs['class'] = f"{existing_class} form-control".strip()
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        qs = User.objects.filter(email=email)
+        if self.user:
+            qs = qs.exclude(pk=self.user.pk)
+        if qs.exists():
+            raise ValidationError("Email already registered.")
+        return email
+
+    def save(self, commit=True):
+        vendor = super().save(commit=commit)
+
+        if self.user and commit:
+            self.user.email = self.cleaned_data['email']
+            self.user.save(update_fields=['email'])
+
+        return vendor

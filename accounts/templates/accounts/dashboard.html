@@ -75,9 +75,9 @@
             <div class="stat-icon icon-sales">
                 <i class="bi bi-graph-up-arrow"></i>
             </div>
-            <h3 class="mb-1">UGX {{ today_sales|default:"0" }}</h3>
-            <p class="text-muted mb-2">Today's Sales</p>
-            <a href="#" class="btn btn-sm btn-outline-primary">Details</a>
+            <h3 class="mb-1">UGX {{ todays_payments_total|default:"0" }}</h3>
+            <p class="text-muted mb-2">Today's Payments</p>
+            <a href="{% url 'vendor_dashboard' %}" class="btn btn-sm btn-outline-primary">Details</a>
         </div>
     </div>
 </div>
@@ -108,12 +108,12 @@
     <!-- Quick Stats -->
     <div class="col-lg-4 mb-4">
         <div class="chart-container">
-            <h5 class="mb-3">Quick Stats</h5>
+            <h5 class="mb-3">Payment Summary</h5>
             
             <div class="mb-4">
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Bought Vouchers</span>
-                    <strong>{{ vouchers_count|default:"0" }}</strong>
+                    <span class="text-muted">Total Payments Received</span>
+                    <strong>UGX {{ total_payments_received|default:"0" }}</strong>
                 </div>
                 <div class="progress" style="height: 10px;">
                     <div class="progress-bar bg-primary" style="width: 75%"></div>
@@ -122,8 +122,8 @@
             
             <div class="mb-4">
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Active Packages</span>
-                    <strong>{{ packages_count|default:"0" }}</strong>
+                    <span class="text-muted">Successful Payments</span>
+                    <strong>{{ successful_payments_count|default:"0" }}</strong>
                 </div>
                 <div class="progress" style="height: 10px;">
                     <div class="progress-bar bg-success" style="width: 60%"></div>
@@ -132,8 +132,8 @@
             
             <div class="mb-4">
                 <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Online Devices</span>
-                    <strong>{{ online_devices|default:"0" }}/{{ total_devices|default:"0" }}</strong>
+                    <span class="text-muted">Pending / Failed</span>
+                    <strong>{{ pending_payments_count|default:"0" }} / {{ failed_payments_count|default:"0" }}</strong>
                 </div>
                 <div class="progress" style="height: 10px;">
                     <div class="progress-bar bg-info" style="width: 85%"></div>
@@ -168,11 +168,19 @@
                         {% for transaction in recent_transactions %}
                         <tr>
                             <td>#{{ transaction.id }}</td>
-                            <td>{{ transaction.customer|default:"Anonymous" }}</td>
-                            <td>{{ transaction.package }}</td>
-                            <td class="text-success fw-bold">KES {{ transaction.amount }}</td>
-                            <td>{{ transaction.time }}</td>
-                            <td><span class="badge bg-success">Completed</span></td>
+                            <td>{{ transaction.phone|default:"N/A" }}</td>
+                            <td>{{ transaction.package.name|default:"N/A" }}</td>
+                            <td class="fw-bold">{{ transaction.currency }} {{ transaction.amount }}</td>
+                            <td>{{ transaction.initiated_at|date:"Y-m-d H:i" }}</td>
+                            <td>
+                                {% if transaction.status == 'SUCCESS' %}
+                                    <span class="badge bg-success">Success</span>
+                                {% elif transaction.status == 'PENDING' %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Failed</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>

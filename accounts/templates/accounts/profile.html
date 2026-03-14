@@ -1,0 +1,61 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Profile - SpotPay{% endblock %}
+{% block page_title %}Profile Settings{% endblock %}
+{% block page_subtitle %}Update your vendor account information{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="chart-container">
+            <h5 class="mb-3">Vendor Profile</h5>
+
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="id_company_name">Business Name</label>
+                        {{ form.company_name }}
+                        {% if form.company_name.errors %}<div class="text-danger small">{{ form.company_name.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="id_contact_person">Contact Person</label>
+                        {{ form.contact_person }}
+                        {% if form.contact_person.errors %}<div class="text-danger small">{{ form.contact_person.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="id_business_phone">Phone Number</label>
+                        {{ form.business_phone }}
+                        {% if form.business_phone.errors %}<div class="text-danger small">{{ form.business_phone.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="id_email">Login Email</label>
+                        {{ form.email }}
+                        {% if form.email.errors %}<div class="text-danger small">{{ form.email.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="id_business_email">Business Email</label>
+                        {{ form.business_email }}
+                        {% if form.business_email.errors %}<div class="text-danger small">{{ form.business_email.errors|striptags }}</div>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="id_business_address">Business Address</label>
+                        {{ form.business_address }}
+                        {% if form.business_address.errors %}<div class="text-danger small">{{ form.business_address.errors|striptags }}</div>{% endif %}
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a href="{% url 'vendor_dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
