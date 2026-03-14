@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdrawal History | SpotPay</title>
+    <style>
+        body { font-family: system-ui, -apple-system, BlinkMacSystemFont; background:#f4f6f8; margin:0; padding:20px; }
+        .container { max-width:980px; margin:0 auto; }
+        .card { background:#fff; border-radius:12px; padding:18px; box-shadow:0 6px 16px rgba(0,0,0,.08); }
+        .top { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+        .btn { border:none; border-radius:8px; padding:8px 12px; text-decoration:none; font-weight:600; }
+        .btn-secondary { background:#e9ecef; color:#212529; }
+        table { width:100%; border-collapse:collapse; }
+        th, td { text-align:left; padding:10px; border-bottom:1px solid #eee; }
+        .badge { padding:4px 8px; border-radius:999px; font-size:.8rem; font-weight:600; }
+        .pending { background:#fff3cd; color:#664d03; }
+        .approved { background:#d1e7dd; color:#0f5132; }
+        .paid { background:#cfe2ff; color:#084298; }
+        .rejected { background:#f8d7da; color:#842029; }
+        .muted { color:#6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="top">
+                <div>
+                    <h2 style="margin:0;">Withdrawal History</h2>
+                    <small class="muted">Wallet balance: UGX {{ wallet.balance }}</small>
+                </div>
+                <a href="{% url 'wallet_dashboard' %}" class="btn btn-secondary">Back to Wallet</a>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Reference</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Requested On</th>
+                        <th>Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in withdrawals %}
+                        <tr>
+                            <td>{{ item.reference }}</td>
+                            <td>UGX {{ item.amount }}</td>
+                            <td>
+                                <span class="badge {{ item.status }}">{{ item.status|upper }}</span>
+                            </td>
+                            <td>{{ item.created_at|date:"Y-m-d H:i" }}</td>
+                            <td>{{ item.updated_at|date:"Y-m-d H:i" }}</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="5" class="muted">No withdrawal records yet.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

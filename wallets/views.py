@@ -63,6 +63,19 @@ def wallet_dashboard(request):
     })
 
 
+@login_required
+@wallet_required
+def wallet_withdrawal_history(request):
+    vendor = request.user.vendor
+    wallet, _ = VendorWallet.objects.get_or_create(vendor=vendor)
+    withdrawals = wallet.withdrawals.order_by('-created_at')
+
+    return render(request, 'wallets/withdrawal_history.html', {
+        'wallet': wallet,
+        'withdrawals': withdrawals,
+    })
+
+
 # =====================================================
 # WALLET AUTH (PASSWORD UNLOCK)
 # =====================================================

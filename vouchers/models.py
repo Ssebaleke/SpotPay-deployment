@@ -27,6 +27,40 @@ class VoucherBatch(models.Model):
         return f"Batch #{self.id} - {self.package.name}"
 
 
+class VoucherBatchDeletionLog(models.Model):
+    batch_reference = models.PositiveBigIntegerField()
+    package = models.ForeignKey(
+        Package,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='batch_deletion_logs'
+    )
+    vendor = models.ForeignKey(
+        'accounts.Vendor',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='batch_deletion_logs'
+    )
+    deleted_by = models.ForeignKey(
+        'auth.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='deleted_voucher_batches'
+    )
+    source_filename = models.CharField(max_length=255, blank=True)
+    vouchers_deleted_count = models.PositiveIntegerField(default=0)
+    deleted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-deleted_at']
+
+    def __str__(self):
+        return f"Deleted batch #{self.batch_reference} by {self.deleted_by_id or 'system'}"
+
+
 class Voucher(models.Model):
     STATUS_CHOICES = (
         ('UNUSED', 'Unused'),

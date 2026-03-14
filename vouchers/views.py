@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Q
 
-from .models import Voucher, VoucherBatch
+from .models import Voucher, VoucherBatch, VoucherBatchDeletionLog
 from packages.models import Package
 
 
@@ -137,8 +137,19 @@ def delete_voucher_batch(request, id):
         messages.error(request, 'This batch contains used vouchers and cannot be deleted.')
         return redirect('voucher_list')
 
-    deleted_count, _ = batch.vouchers.all().delete()
-    batch.delete()
+    with transaction.atomic():
+        deleted_count, _ = batch.vouchers.all().delete()
+
+        VoucherBatchDeletionLog.objects.create(
+            batch_reference=batch.id,
+            package=batch.package,
+            vendor=request.user.vendor,
+            deleted_by=request.user,
+            source_filename=batch.source_filename,
+            vouchers_deleted_count=deleted_count,
+        )
+
+        batch.delete()
 
     messages.success(request, f'Batch deleted successfully. {deleted_count} voucher(s) removed.')
     return redirect('voucher_list')
