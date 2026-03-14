@@ -88,10 +88,14 @@
     <div class="col-lg-8 mb-4">
         <div class="chart-container">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 class="mb-0">Transaction Analytics</h5>
+                <h5 class="mb-0">7-Day Payment Trend</h5>
             </div>
 
-            <div class="row g-3">
+            <div style="height: 280px;">
+                <canvas id="paymentsTrendChart"></canvas>
+            </div>
+
+            <div class="row g-3 mt-2">
                 <div class="col-md-3 col-6">
                     <div class="p-3 rounded bg-light">
                         <small class="text-muted d-block">Daily</small>
@@ -211,4 +215,54 @@
         </div>
     </div>
 </div>
+
+{{ trend_labels|json_script:"trend-labels-data" }}
+{{ trend_values|json_script:"trend-values-data" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const trendLabels = JSON.parse(document.getElementById('trend-labels-data').textContent);
+    const trendValues = JSON.parse(document.getElementById('trend-values-data').textContent);
+    const trendCtx = document.getElementById('paymentsTrendChart');
+
+    if (trendCtx) {
+        new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: trendLabels,
+                datasets: [{
+                    label: 'Payments (UGX)',
+                    data: trendValues,
+                    borderColor: '#4361ee',
+                    backgroundColor: 'rgba(67, 97, 238, 0.15)',
+                    fill: true,
+                    tension: 0.35,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'UGX ' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
 {% endblock %}

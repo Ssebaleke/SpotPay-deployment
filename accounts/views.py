@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum
 from decimal import Decimal
+from datetime import timedelta
 
 from payments.models import Payment, PaymentProvider
 from sms.models import VendorSMSWallet
@@ -181,6 +182,17 @@ def vendor_dashboard(request):
         or Decimal("0.00")
     )
 
+    trend_labels = []
+    trend_values = []
+    for day_offset in range(6, -1, -1):
+        day = today - timedelta(days=day_offset)
+        day_total = (
+            successful_payments_qs.filter(completed_at__date=day).aggregate(total=Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
+        trend_labels.append(day.strftime("%a"))
+        trend_values.append(float(day_total))
+
     successful_payments_count = successful_payments_qs.count()
     pending_payments_count = vendor_payments.filter(status="PENDING").count()
     failed_payments_count = vendor_payments.filter(status="FAILED").count()
@@ -213,6 +225,8 @@ def vendor_dashboard(request):
         'pending_payments_count': pending_payments_count,
         'failed_payments_count': failed_payments_count,
         'recent_transactions': recent_transactions,
+        'trend_labels': trend_labels,
+        'trend_values': trend_values,
     })
 
 
