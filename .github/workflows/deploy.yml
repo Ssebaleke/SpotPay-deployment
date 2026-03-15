@@ -43,8 +43,8 @@ jobs:
             fi
 
             echo "Checking SSL certificate status..."
-            if [ ! -f /etc/letsencrypt/live/spotpay.it.com/fullchain.pem ]; then
-              echo "⚠️  SSL certificate not found. Installing Let's Encrypt certificate..."
+            if [ ! -f ssl/fullchain.pem ] || [ ! -f ssl/privkey.pem ]; then
+              echo "⚠️  SSL certificate not found in ssl/ directory. Installing Let's Encrypt certificate..."
               
               # Stop all containers to free port 80
               echo "Stopping all containers to free port 80..."
@@ -62,7 +62,7 @@ jobs:
               if ! command -v certbot &> /dev/null; then
                 echo "Installing certbot..."
                 apt-get update -qq
-                apt-get install -y certbot python3-certbot-nginx
+                apt-get install -y certbot
               fi
               
               # Obtain SSL certificate (for both main domain and www subdomain)
@@ -70,6 +70,7 @@ jobs:
               certbot certonly --standalone \
                 -d spotpay.it.com \
                 -d www.spotpay.it.com \
+                --expand \
                 --non-interactive \
                 --agree-tos \
                 --email support@spotpay.it.com \
@@ -81,21 +82,25 @@ jobs:
               if [ -f /etc/letsencrypt/live/spotpay.it.com/fullchain.pem ]; then
                 echo "✅ SSL certificate obtained successfully"
                 
-                # Enable HTTPS in nginx.conf
-                echo "Enabling HTTPS configuration..."
-                sed -i 's/# return 301 https/return 301 https/g' nginx.conf
-                sed -i 's/^# server {/server {/g' nginx.conf
-                sed -i 's/^#     /    /g' nginx.conf
-                sed -i 's/^# }/}/g' nginx.conf
+                # Create ssl directory and copy certificates
+                echo "Copying certificates to ssl/ directory..."
+                mkdir -p ssl
+                chmod 755 /etc/letsencrypt/live/
+                chmod 755 /etc/letsencrypt/archive/
+                chmod 755 /etc/letsencrypt/live/spotpay.it.com/
+                chmod 755 /etc/letsencrypt/archive/spotpay.it.com/
+                chmod 644 /etc/letsencrypt/archive/spotpay.it.com/privkey*.pem
+                cp /etc/letsencrypt/live/spotpay.it.com/fullchain.pem ssl/
+                cp /etc/letsencrypt/live/spotpay.it.com/privkey.pem ssl/
                 
-                # Setup auto-renewal cron job
+                # Setup auto-renewal cron job with certificate copy
                 echo "Setting up SSL auto-renewal..."
-                (crontab -l 2>/dev/null | grep -v certbot; echo "0 0,12 * * * certbot renew --quiet --post-hook 'cd /root/SpotPay-deployment && docker compose restart nginx'") | crontab -
+                (crontab -l 2>/dev/null | grep -v certbot; echo "0 0,12 * * * certbot renew --quiet --post-hook 'cp /etc/letsencrypt/live/spotpay.it.com/*.pem /root/SpotPay-deployment/ssl/ && cd /root/SpotPay-deployment && docker compose restart nginx'") | crontab -
                 
                 echo "✅ HTTPS enabled and auto-renewal configured"
               fi
             else
-              echo "✅ SSL certificate already exists"
+              echo "✅ SSL certificates already exist in ssl/ directory"
             fi
 
             echo "Stopping existing containers before rebuild..."
