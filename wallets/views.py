@@ -11,6 +11,7 @@ from django.utils import timezone
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
+from django.db.models import Sum
 
 from .models import (
     VendorWallet,
@@ -56,10 +57,31 @@ def wallet_dashboard(request):
     transactions = wallet.transactions.order_by('-created_at')[:10]
     withdrawals = wallet.withdrawals.order_by('-created_at')[:5]
 
+    total_credited = (
+        wallet.transactions.filter(transaction_type=WalletTransaction.CREDIT)
+        .aggregate(total=Sum('amount'))['total']
+        or Decimal('0.00')
+    )
+    total_withdrawn = (
+        wallet.transactions.filter(
+            transaction_type=WalletTransaction.DEBIT,
+            reason='WITHDRAWAL'
+        ).aggregate(total=Sum('amount'))['total']
+        or Decimal('0.00')
+    )
+    pending_withdrawals_total = (
+        wallet.withdrawals.filter(status=WithdrawalRequest.STATUS_PENDING)
+        .aggregate(total=Sum('amount'))['total']
+        or Decimal('0.00')
+    )
+
     return render(request, 'wallets/dashboard.html', {
         'wallet': wallet,
         'transactions': transactions,
         'withdrawals': withdrawals,
+        'total_credited': total_credited,
+        'total_withdrawn': total_withdrawn,
+        'pending_withdrawals_total': pending_withdrawals_total,
     })
 
 

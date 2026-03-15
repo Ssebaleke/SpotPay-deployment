@@ -3,11 +3,16 @@ from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import redirect, render
 from django.contrib import messages
 from django.http import JsonResponse
+from django.db import transaction
+
+import json
+from math import ceil
 
 import requests
 
 from payments.views import initiate_payment
 from .models import SMSPricing, VendorSMSWallet, SMSProvider
+from .services.sms_gateway import send_bulk_sms
 
 
 @login_required
@@ -96,3 +101,107 @@ def ugsms_balance(request):
         return JsonResponse({"success": False, "message": data.get("message", "UGSMS error")}, status=response.status_code)
 
     return JsonResponse(data)
+
+
+@login_required
+def sms_send_bulk(request):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "POST required"}, status=405)
+
+    if not hasattr(request.user, "vendor"):
+        return JsonResponse({"success": False, "message": "Vendor account required"}, status=403)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except Exception:
+        return JsonResponse({"success": False, "message": "Invalid JSON payload"}, status=400)
+
+    messages_payload = payload.get("messages") or []
+    sender_id = payload.get("sender_id")
+    reference = payload.get("reference")
+
+    if not isinstance(messages_payload, list) or not messages_payload:
+        return JsonResponse({"success": False, "message": "messages array is required"}, status=400)
+
+    normalized_messages = []
+    estimated_units = 0
+
+    for item in messages_payload:
+        number = (item.get("number") or "").strip()
+        message_body = (item.get("message_body") or "").strip()
+
+        if not number or not message_body:
+            return JsonResponse({"success": False, "message": "Each message needs number and message_body"}, status=400)
+
+        normalized_messages.append({
+            "number": number,
+            "message_body": message_body,
+        })
+        estimated_units += max(1, ceil(len(message_body) / 160))
+
+    vendor = request.user.vendor
+
+    with transaction.atomic():
+        wallet, _ = VendorSMSWallet.objects.select_for_update().get_or_create(
+            vendor=vendor,
+            defaults={"balance_units": 0, "balance_amount": 0},
+        )
+
+        if wallet.balance_units < estimated_units:
+            return JsonResponse({
+                "success": False,
+                "message": f"Insufficient SMS units. Required {estimated_units}, available {wallet.balance_units}",
+            }, status=400)
+
+        wallet.balance_units -= estimated_units
+        wallet.save(update_fields=["balance_units", "updated_at"])
+
+    success, gateway_response = send_bulk_sms(
+        vendor=vendor,
+        messages=normalized_messages,
+        sender_id=sender_id,
+        reference=reference,
+    )
+
+    if not success:
+        with transaction.atomic():
+            wallet = VendorSMSWallet.objects.select_for_update().get(vendor=vendor)
+            wallet.balance_units += estimated_units
+            wallet.save(update_fields=["balance_units", "updated_at"])
+
+        return JsonResponse({
+            "success": False,
+            "message": gateway_response.get("message", "Bulk SMS failed"),
+            "provider_response": gateway_response,
+        }, status=502)
+
+    data = gateway_response.get("data") or {}
+    summary = data.get("summary") or {}
+    successful_messages = data.get("successful_messages") or []
+
+    actual_units = 0
+    for item in successful_messages:
+        actual_units += int(item.get("number_of_messages") or 1)
+
+    actual_units = max(actual_units, 0)
+
+    with transaction.atomic():
+        wallet = VendorSMSWallet.objects.select_for_update().get(vendor=vendor)
+
+        if estimated_units > actual_units:
+            wallet.balance_units += (estimated_units - actual_units)
+            wallet.save(update_fields=["balance_units", "updated_at"])
+        elif actual_units > estimated_units:
+            extra = actual_units - estimated_units
+            if wallet.balance_units >= extra:
+                wallet.balance_units -= extra
+                wallet.save(update_fields=["balance_units", "updated_at"])
+
+    return JsonResponse({
+        "success": True,
+        "message": gateway_response.get("message", "Bulk SMS sent"),
+        "estimated_units": estimated_units,
+        "actual_units": actual_units,
+        "summary": summary,
+        "provider_response": gateway_response,
+    })

@@ -136,6 +136,21 @@
         <h1>UGX {{ wallet.balance }}</h1>
     </div>
 
+    <div class="actions" style="margin-top: -10px; margin-bottom: 22px;">
+        <div class="action-btn">
+            <small style="display:block;color:#6c757d;">Total Credited</small>
+            UGX {{ total_credited }}
+        </div>
+        <div class="action-btn">
+            <small style="display:block;color:#6c757d;">Total Withdrawn</small>
+            UGX {{ total_withdrawn }}
+        </div>
+        <div class="action-btn">
+            <small style="display:block;color:#6c757d;">Pending Withdrawals</small>
+            UGX {{ pending_withdrawals_total }}
+        </div>
+    </div>
+
 <div class="actions">
     <a href="{% url 'wallet_withdraw' %}" class="action-btn withdraw">
             Withdraw Funds
