@@ -23,7 +23,10 @@ def analytics_dashboard(request):
         messages.error(request, 'You are not registered as a vendor.')
         return redirect('vendor_login')
 
-    return render(request, 'analytics/dashboard.html', {'vendor': vendor})
+    return render(request, 'analytics/dashboard.html', {
+        'vendor': vendor,
+        'active_page': 'analytics',
+    })
 
 
 @login_required

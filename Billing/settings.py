@@ -56,6 +56,7 @@ INSTALLED_APPS = [
 
     "accounts",
     "ads",
+    "analytics",
     "hotspot",
     "packages",
     "portal_api",
