@@ -13,9 +13,9 @@
     }
 
     .portal-card {
-        background: #ffffff;
+        background: var(--bg-secondary);
         border-radius: 14px;
-        box-shadow: 0 15px 40px rgba(0,0,0,0.12);
+        box-shadow: 0 15px 40px var(--shadow);
         padding: 32px;
     }
 
@@ -28,17 +28,17 @@
         margin: 0;
         font-size: 26px;
         font-weight: 700;
-        color: #111827;
+        color: var(--text-primary);
     }
 
     .portal-header p {
         margin-top: 6px;
-        color: #6b7280;
+        color: var(--text-secondary);
         font-size: 14px;
     }
 
     .portal-meta {
-        background: #f9fafb;
+        background: var(--bg-primary);
         border-radius: 10px;
         padding: 16px;
         margin-bottom: 26px;
@@ -47,12 +47,12 @@
 
     .portal-meta div {
         margin-bottom: 8px;
-        color: #374151;
+        color: var(--text-secondary);
     }
 
     .portal-meta span {
         font-weight: 600;
-        color: #111827;
+        color: var(--text-primary);
     }
 
     .download-btn {
@@ -83,16 +83,26 @@
         font-weight: 600;
     }
 
+    [data-theme="dark"] .disabled-box {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+    }
+
     .instructions {
         margin-top: 26px;
         font-size: 13px;
-        color: #6b7280;
+        color: var(--text-secondary);
         line-height: 1.6;
+    }
+
+    .instructions strong {
+        color: var(--text-primary);
     }
 
     .uuid-box {
         font-family: monospace;
-        background: #eef2ff;
+        background: rgba(67, 97, 238, 0.1);
+        color: var(--text-primary);
         padding: 8px;
         border-radius: 6px;
         word-break: break-all;

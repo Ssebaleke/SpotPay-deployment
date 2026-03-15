@@ -6,11 +6,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <style>
+        :root {
+            --bg-primary: #f4f6f8;
+            --bg-secondary: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #6c757d;
+            --border-color: #eee;
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f2e;
+            --text-primary: #e8eaed;
+            --text-secondary: #9ca3af;
+            --border-color: #2d3748;
+        }
+        
         body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont;
-            background: #f4f6f8;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             margin: 0;
             padding: 0;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .container {
@@ -52,13 +70,17 @@
 
         .action-btn {
             padding: 14px;
-            background: #fff;
+            background: var(--bg-secondary);
             border-radius: 12px;
             text-align: center;
             text-decoration: none;
-            color: #000;
+            color: var(--text-primary);
             font-weight: 600;
             box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+        }
+        
+        .action-btn small {
+            color: var(--text-secondary) !important;
         }
 
         .action-btn.withdraw {
@@ -67,16 +89,21 @@
         }
 
         .transactions {
-            background: #fff;
+            background: var(--bg-secondary);
             border-radius: 12px;
             padding: 20px;
+        }
+        
+        .transactions h3 {
+            color: var(--text-primary);
         }
 
         .transaction {
             display: flex;
             justify-content: space-between;
             padding: 12px 0;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
         }
 
         .transaction:last-child {
@@ -117,6 +144,12 @@
 </head>
 
 <body>
+
+<script>
+// Theme sync with main app
+const savedTheme = localStorage.getItem('theme') || 'light';
+document.documentElement.setAttribute('data-theme', savedTheme);
+</script>
 
 <div class="container">
 
