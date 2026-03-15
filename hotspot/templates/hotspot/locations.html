@@ -75,17 +75,26 @@
 
                         <!-- ACTIONS COLUMN -->
                         <td>
-                            {% if location.status == "ACTIVE" and location.has_active_subscription %}
-                                <a href="{% url 'portal_download_page' location.uuid %}"
-                                   class="btn btn-sm btn-outline-primary">
-                                    View
+                            <div class="btn-group btn-group-sm" role="group">
+                                {% if location.status == "ACTIVE" and location.has_active_subscription %}
+                                    <a href="{% url 'portal_download_page' location.uuid %}"
+                                       class="btn btn-outline-primary"
+                                       title="View Portal">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                {% endif %}
+                                
+                                <a href="{% url 'edit_location' location.id %}"
+                                   class="btn btn-outline-secondary"
+                                   title="Edit Location">
+                                    <i class="bi bi-pencil"></i>
                                 </a>
-                            {% elif location.status == "PENDING" %}
-                                <span class="text-muted">Pending approval</span>
+                            </div>
+                            
+                            {% if location.status == "PENDING" %}
+                                <small class="d-block text-muted mt-1">Pending approval</small>
                             {% elif location.status == "SUSPENDED" %}
-                                <span class="text-muted">Suspended</span>
-                            {% else %}
-                                <span class="text-muted">Unavailable</span>
+                                <small class="d-block text-muted mt-1">Suspended</small>
                             {% endif %}
                         </td>
                     </tr>

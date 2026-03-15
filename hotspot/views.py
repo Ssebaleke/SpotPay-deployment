@@ -70,24 +70,21 @@ def add_location(request):
 
 
 # =====================================================
-# EDIT LOCATION (DNS ONLY)
+# EDIT LOCATION
 # =====================================================
 
 @login_required
 def edit_location(request, location_id):
-    # Allow staff to view first vendor's locations for testing
+    # Staff users cannot edit locations
     if request.user.is_staff:
-        from accounts.models import Vendor
-        vendor = Vendor.objects.filter(status='ACTIVE').first()
-        if not vendor:
-            messages.error(request, 'No active vendors in the system.')
-            return redirect('admin_dashboard')
-    else:
-        try:
-            vendor = request.user.vendor
-        except:
-            messages.error(request, 'You are not registered as a vendor.')
-            return redirect('vendor_login')
+        messages.warning(request, 'Staff users cannot edit locations.')
+        return redirect('locations_list')
+    
+    try:
+        vendor = request.user.vendor
+    except:
+        messages.error(request, 'You are not registered as a vendor.')
+        return redirect('vendor_login')
 
     location = get_object_or_404(
         HotspotLocation,
@@ -96,22 +93,25 @@ def edit_location(request, location_id):
     )
 
     if request.method == "POST":
-        # Staff users cannot edit locations
-        if request.user.is_staff:
-            messages.warning(request, 'Staff users cannot edit locations.')
-            return redirect('locations_list')
+        form = HotspotLocationForm(request.POST, instance=location)
         
-        hotspot_dns = request.POST.get("hotspot_dns", "hot.spot").strip()
-        location.hotspot_dns = hotspot_dns
-        location.save(update_fields=["hotspot_dns"])
-
-        messages.success(request, "Hotspot DNS updated successfully.")
-        return redirect("locations_list")
+        if form.is_valid():
+            location = form.save(commit=False)
+            
+            if not location.hotspot_dns:
+                location.hotspot_dns = "hot.spot"
+            
+            location.save()
+            
+            messages.success(request, f'Location "{location.site_name}" updated successfully.')
+            return redirect("locations_list")
+    else:
+        form = HotspotLocationForm(instance=location)
 
     return render(
         request,
         "hotspot/location_form.html",
-        {"location": location}
+        {"location": location, "form": form}
     )
 
 

@@ -1,14 +1,71 @@
-<div class="mb-3">
-    <label class="form-label">Hotspot DNS</label>
-    <input
-        type="text"
-        name="hotspot_dns"
-        class="form-control"
-        placeholder="hot.spot"
-        value="{{ location.hotspot_dns|default:'hot.spot' }}"
-        required
-    >
-    <small class="text-muted">
-        DNS name configured on your MikroTik hotspot (default: hot.spot)
-    </small>
+{% extends 'accounts/base.html' %}
+
+{% block title %}Edit Location - SpotPay{% endblock %}
+{% block page_title %}Edit Hotspot Location{% endblock %}
+{% block page_subtitle %}Update your location details{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="chart-container">
+            <h5 class="mb-4">Edit Location: {{ location.site_name }}</h5>
+
+            <form method="POST">
+                {% csrf_token %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Site Name *</label>
+                        {{ form.site_name }}
+                        {% if form.site_name.errors %}
+                            <div class="text-danger small">{{ form.site_name.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Location Type *</label>
+                        {{ form.location_type }}
+                        {% if form.location_type.errors %}
+                            <div class="text-danger small">{{ form.location_type.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Town / City *</label>
+                        {{ form.town_city }}
+                        {% if form.town_city.errors %}
+                            <div class="text-danger small">{{ form.town_city.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Hotspot DNS</label>
+                        {{ form.hotspot_dns }}
+                        {% if form.hotspot_dns.errors %}
+                            <div class="text-danger small">{{ form.hotspot_dns.errors|striptags }}</div>
+                        {% endif %}
+                        <small class="text-muted d-block">DNS name on your MikroTik (default: hot.spot)</small>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Full Address *</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <div class="text-danger small">{{ form.address.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>Save Changes
+                    </button>
+                    <a href="{% url 'locations_list' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
+{% endblock %}
