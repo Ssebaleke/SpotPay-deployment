@@ -404,16 +404,28 @@ def vendor_dashboard(request):
 
 @login_required
 def vendor_profile(request):
-    try:
-        vendor = request.user.vendor
-        if vendor.status != 'ACTIVE' or not request.user.is_active:
-            messages.error(request, 'Your account is not approved or has been suspended.')
+    # Allow staff to view first vendor's profile for testing
+    if request.user.is_staff:
+        vendor = Vendor.objects.filter(status='ACTIVE').first()
+        if not vendor:
+            messages.error(request, 'No active vendors in the system.')
+            return redirect('admin_dashboard')
+    else:
+        try:
+            vendor = request.user.vendor
+            if vendor.status != 'ACTIVE' or not request.user.is_active:
+                messages.error(request, 'Your account is not approved or has been suspended.')
+                return redirect('vendor_login')
+        except Vendor.DoesNotExist:
+            messages.error(request, 'You are not registered as a vendor.')
             return redirect('vendor_login')
-    except Vendor.DoesNotExist:
-        messages.error(request, 'You are not registered as a vendor.')
-        return redirect('vendor_login')
 
     if request.method == 'POST':
+        # Staff users cannot edit vendor profiles
+        if request.user.is_staff:
+            messages.warning(request, 'Staff users cannot edit vendor profiles.')
+            return redirect('vendor_profile')
+        
         form = VendorProfileForm(request.POST, instance=vendor, user=request.user)
         if form.is_valid():
             form.save()
@@ -430,14 +442,21 @@ def vendor_profile(request):
 
 @login_required
 def vendor_change_password(request):
-    try:
-        vendor = request.user.vendor
-        if vendor.status != 'ACTIVE' or not request.user.is_active:
-            messages.error(request, 'Your account is not approved or has been suspended.')
+    # Allow staff to view first vendor's password change page for testing
+    if request.user.is_staff:
+        vendor = Vendor.objects.filter(status='ACTIVE').first()
+        if not vendor:
+            messages.error(request, 'No active vendors in the system.')
+            return redirect('admin_dashboard')
+    else:
+        try:
+            vendor = request.user.vendor
+            if vendor.status != 'ACTIVE' or not request.user.is_active:
+                messages.error(request, 'Your account is not approved or has been suspended.')
+                return redirect('vendor_login')
+        except Vendor.DoesNotExist:
+            messages.error(request, 'You are not registered as a vendor.')
             return redirect('vendor_login')
-    except Vendor.DoesNotExist:
-        messages.error(request, 'You are not registered as a vendor.')
-        return redirect('vendor_login')
 
     if request.method == 'POST':
         form = PasswordChangeForm(request.user, request.POST)
