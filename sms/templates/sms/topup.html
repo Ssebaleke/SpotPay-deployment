@@ -1,44 +1,83 @@
 {% extends "accounts/base.html" %}
 
 {% block title %}Buy SMS{% endblock %}
+{% block page_title %}Buy SMS Credits{% endblock %}
+{% block page_subtitle %}Purchase SMS units via Mobile Money{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
-    <div class="card p-4" style="max-width: 400px; width: 100%;">
-        <h4 class="mb-3 text-center">Buy SMS</h4>
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="chart-container">
+            <h5 class="mb-4">SMS Top-Up</h5>
 
-        {% if pricing %}
-            <div class="alert alert-info">
-                Price per SMS: <strong>{{ pricing.price_per_sms }} {{ pricing.currency }}</strong><br>
-                Current SMS units: <strong>{{ wallet.balance_units }}</strong>
-            </div>
-        {% else %}
-            <div class="alert alert-warning">
-                SMS pricing is not configured yet. Contact admin.
-            </div>
-        {% endif %}
+            {% if pricing %}
+                <div class="alert alert-info mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span><i class="bi bi-tag-fill me-2"></i>Price per SMS:</span>
+                        <strong>{{ pricing.price_per_sms }} {{ pricing.currency }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-wallet2 me-2"></i>Current Balance:</span>
+                        <strong>{{ wallet.balance_units }} SMS units</strong>
+                    </div>
+                </div>
 
-        {% if error %}
-            <div class="alert alert-danger">{{ error }}</div>
-        {% endif %}
+                <div class="card bg-light mb-4" id="calculator">
+                    <div class="card-body">
+                        <h6 class="card-title">SMS Calculator</h6>
+                        <p class="text-muted small mb-3">See how many SMS you'll get</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Amount: <strong id="calc-amount">0</strong> {{ pricing.currency }}</span>
+                            <i class="bi bi-arrow-right"></i>
+                            <span><strong id="calc-sms">0</strong> SMS units</span>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    SMS pricing is not configured yet. Contact admin.
+                </div>
+            {% endif %}
 
-        <form method="post">
-            {% csrf_token %}
+            <form method="post">
+                {% csrf_token %}
 
-            <div class="mb-3">
-                <label class="form-label">Amount (UGX)</label>
-                <input type="number" name="amount" class="form-control" required>
-            </div>
+                <div class="mb-3">
+                    <label class="form-label">Amount ({{ pricing.currency|default:"UGX" }})</label>
+                    <input type="number" name="amount" id="amount-input" class="form-control" min="{{ pricing.price_per_sms }}" step="100" required placeholder="Enter amount">
+                    <small class="form-text text-muted">Minimum: {{ pricing.price_per_sms }} {{ pricing.currency }}</small>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label">Phone Number</label>
-                <input type="text" name="phone" class="form-control" required>
-            </div>
+                <div class="mb-3">
+                    <label class="form-label">Mobile Money Number</label>
+                    <input type="text" name="phone" class="form-control" required placeholder="256XXXXXXXXX">
+                    <small class="form-text text-muted">Format: 256XXXXXXXXX (MTN/Airtel)</small>
+                </div>
 
-            <button class="btn btn-primary w-100" {% if not pricing %}disabled{% endif %}>
-                Pay & Buy SMS
-            </button>
-        </form>
+                <button type="submit" class="btn btn-primary w-100" {% if not pricing %}disabled{% endif %}>
+                    <i class="bi bi-credit-card me-2"></i>Pay via Mobile Money
+                </button>
+            </form>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+{% if pricing %}
+<script>
+const pricePerSms = {{ pricing.price_per_sms }};
+const amountInput = document.getElementById('amount-input');
+const calcAmount = document.getElementById('calc-amount');
+const calcSms = document.getElementById('calc-sms');
+
+amountInput.addEventListener('input', function() {
+    const amount = parseInt(this.value) || 0;
+    const smsUnits = Math.floor(amount / pricePerSms);
+    calcAmount.textContent = amount.toLocaleString();
+    calcSms.textContent = smsUnits.toLocaleString();
+});
+</script>
+{% endif %}
 {% endblock %}
