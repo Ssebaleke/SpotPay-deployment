@@ -254,19 +254,26 @@ def admin_reject_withdrawal(request, withdrawal_id):
 @login_required
 def vendor_dashboard(request):
     # -------------------------------------------------
-    # VALIDATE VENDOR
+    # VALIDATE VENDOR (ALLOW STAFF FOR TESTING)
     # -------------------------------------------------
-    try:
-        vendor = request.user.vendor
-        if vendor.status != 'ACTIVE' or not request.user.is_active:
-            messages.error(
-                request,
-                'Your account is not approved or has been suspended.'
-            )
+    if request.user.is_staff:
+        # Staff can view any vendor's dashboard for testing
+        vendor = Vendor.objects.filter(status='ACTIVE').first()
+        if not vendor:
+            messages.error(request, 'No active vendors in the system.')
+            return redirect('admin_dashboard')
+    else:
+        try:
+            vendor = request.user.vendor
+            if vendor.status != 'ACTIVE' or not request.user.is_active:
+                messages.error(
+                    request,
+                    'Your account is not approved or has been suspended.'
+                )
+                return redirect('vendor_login')
+        except Vendor.DoesNotExist:
+            messages.error(request, 'You are not registered as a vendor.')
             return redirect('vendor_login')
-    except Vendor.DoesNotExist:
-        messages.error(request, 'You are not registered as a vendor.')
-        return redirect('vendor_login')
 
     # -------------------------------------------------
     # SUBSCRIPTION WARNINGS
