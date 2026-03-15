@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
     dependencies = [
         ('accounts', '0001_initial'),
         ('packages', '0001_initial'),
-        ('vouchers', '0002_voucher_batch'),
+        ('vouchers', '0003_merge_0002'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
