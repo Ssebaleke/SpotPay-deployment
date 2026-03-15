@@ -1,0 +1,93 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Analytics - SpotPay{% endblock %}
+{% block page_title %}Analytics{% endblock %}
+{% block page_subtitle %}Transaction trends and performance reports{% endblock %}
+
+{% block content %}
+<div class="row mb-4" id="summary-cards">
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon icon-sales"><i class="bi bi-calendar-day"></i></div>
+            <h3 class="mb-1" id="total-today">—</h3>
+            <p class="text-muted mb-0">Today</p>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon icon-wallet"><i class="bi bi-calendar-month"></i></div>
+            <h3 class="mb-1" id="total-month">—</h3>
+            <p class="text-muted mb-0">This Month</p>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <div class="stat-icon icon-sms"><i class="bi bi-graph-up-arrow"></i></div>
+            <h3 class="mb-1" id="total-all">—</h3>
+            <p class="text-muted mb-0">All Time</p>
+        </div>
+    </div>
+</div>
+
+<div class="chart-container">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h5 class="mb-0">Transaction Chart</h5>
+        <div class="btn-group" role="group">
+            <button class="btn btn-sm btn-outline-primary period-btn active" data-period="daily">Daily</button>
+            <button class="btn btn-sm btn-outline-primary period-btn" data-period="weekly">Weekly</button>
+            <button class="btn btn-sm btn-outline-primary period-btn" data-period="monthly">Monthly</button>
+            <button class="btn btn-sm btn-outline-primary period-btn" data-period="annual">Annual</button>
+        </div>
+    </div>
+    <div style="height: 350px;">
+        <canvas id="analyticsChart"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('analyticsChart').getContext('2d');
+    let chart = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: [], datasets: [{ label: 'UGX', data: [], backgroundColor: 'rgba(67,97,238,0.7)', borderRadius: 6 }] },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: v => 'UGX ' + v.toLocaleString() }
+                }
+            }
+        }
+    });
+
+    function fmt(n) { return 'UGX ' + parseFloat(n).toLocaleString(undefined, {minimumFractionDigits: 0}); }
+
+    function loadPeriod(period) {
+        fetch(`/analytics/data/?period=${period}`)
+            .then(r => r.json())
+            .then(data => {
+                chart.data.labels = data.labels;
+                chart.data.datasets[0].data = data.values;
+                chart.update();
+                document.getElementById('total-today').textContent = fmt(data.summary.total_today);
+                document.getElementById('total-month').textContent = fmt(data.summary.total_month);
+                document.getElementById('total-all').textContent = fmt(data.summary.total_all);
+            });
+    }
+
+    document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            loadPeriod(this.dataset.period);
+        });
+    });
+
+    loadPeriod('daily');
+</script>
+{% endblock %}

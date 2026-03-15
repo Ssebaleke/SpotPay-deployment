@@ -5,28 +5,30 @@ from django.conf import settings
 from django.core.mail import send_mail
 from .models import VendorWallet, WalletPasswordToken
 
+
 @receiver(post_save, sender=Vendor)
-def handle_vendor_approval(sender, instance, **kwargs):
-    if instance.is_approved:
-        wallet, created = VendorWallet.objects.get_or_create(vendor=instance)
+def handle_vendor_wallet_creation(sender, instance, **kwargs):
+    """Auto-create wallet when vendor becomes ACTIVE. Send wallet setup email only once."""
+    if not instance.is_approved():
+        return
 
-        if created or not wallet.wallet_password:
-            token, _ = WalletPasswordToken.objects.get_or_create(wallet=wallet)
+    wallet, created = VendorWallet.objects.get_or_create(vendor=instance)
 
-            link = f"{settings.SITE_URL}/wallet/setup-password/{token.token}/"
+    if created or not wallet.wallet_password:
+        WalletPasswordToken.objects.filter(wallet=wallet).delete()
+        token = WalletPasswordToken.objects.create(wallet=wallet)
 
-            send_mail(
-                subject="Set your SpotPay Wallet Password",
-                message=f"""
-Hello {instance.company_name},
+        link = f"{settings.SITE_URL}/wallets/setup-password/{token.token}/"
 
-Your SpotPay wallet is ready.
-
-Set your wallet password using the link below:
-{link}
-
-This link expires in 1 hour.
-""",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[instance.user.email],
-            )
+        send_mail(
+            subject="Set your SpotPay Wallet Password",
+            message=(
+                f"Hello {instance.company_name},\n\n"
+                "Your SpotPay wallet is ready.\n\n"
+                f"Set your wallet password here:\n{link}\n\n"
+                "This link expires in 1 hour.\n\nSpotPay"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[instance.user.email],
+            fail_silently=True,
+        )
