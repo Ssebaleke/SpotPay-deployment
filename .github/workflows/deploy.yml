@@ -51,8 +51,16 @@ jobs:
 
             echo "Health checking new image..."
             docker compose up -d --no-deps --build web
-            sleep 10
-            if ! docker compose exec -T web python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/')" && ! docker compose logs web | grep -q 'Booting worker'; then
+            echo "Waiting for gunicorn to be ready..."
+            for i in $(seq 1 15); do
+              if docker compose logs web | grep -q 'Booting worker'; then
+                echo "✅ Gunicorn is up."
+                break
+              fi
+              echo "Attempt $i/15 - waiting 3s..."
+              sleep 3
+            done
+            if ! docker compose logs web | grep -q 'Booting worker'; then
               echo "❌ Health check failed. Not restarting nginx. Aborting!"
               docker compose logs web
               exit 1
