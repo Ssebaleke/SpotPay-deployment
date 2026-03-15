@@ -42,6 +42,52 @@ jobs:
               exit 1
             fi
 
+            echo "Checking SSL certificate status..."
+            if [ ! -f /etc/letsencrypt/live/spotpay.it.com/fullchain.pem ]; then
+              echo "⚠️  SSL certificate not found. Installing Let's Encrypt certificate..."
+              
+              # Stop nginx to free port 80
+              docker compose stop nginx || true
+              
+              # Install certbot if not present
+              if ! command -v certbot &> /dev/null; then
+                echo "Installing certbot..."
+                apt-get update -qq
+                apt-get install -y certbot python3-certbot-nginx
+              fi
+              
+              # Obtain SSL certificate
+              echo "Obtaining SSL certificate for spotpay.it.com..."
+              certbot certonly --standalone \
+                -d spotpay.it.com \
+                -d www.spotpay.it.com \
+                --non-interactive \
+                --agree-tos \
+                --email support@spotpay.it.com \
+                --preferred-challenges http
+              
+              if [ $? -eq 0 ]; then
+                echo "✅ SSL certificate obtained successfully"
+                
+                # Enable HTTPS in nginx.conf
+                echo "Enabling HTTPS configuration..."
+                sed -i 's/# return 301 https/return 301 https/g' nginx.conf
+                sed -i 's/^# server {/server {/g' nginx.conf
+                sed -i 's/^#     /    /g' nginx.conf
+                sed -i 's/^# }/}/g' nginx.conf
+                
+                # Setup auto-renewal cron job
+                echo "Setting up SSL auto-renewal..."
+                (crontab -l 2>/dev/null | grep -v certbot; echo "0 0,12 * * * certbot renew --quiet --post-hook 'cd /root/SpotPay-deployment && docker compose restart nginx'") | crontab -
+                
+                echo "✅ HTTPS enabled and auto-renewal configured"
+              else
+                echo "⚠️  SSL certificate installation failed. Continuing with HTTP only."
+              fi
+            else
+              echo "✅ SSL certificate already exists"
+            fi
+
             echo "Building new containers (no downtime)..."
             docker compose build
 

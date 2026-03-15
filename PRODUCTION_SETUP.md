@@ -201,6 +201,36 @@ docker compose exec -T db psql -U postgres dbname < backup_20250101.sql
 ## Support
 
 For issues or questions:
-- Email: support@spotpay.vicotech.com
+- Email: support@spotpay.it.com
 - Check logs: `docker compose logs -f`
 - Review GitHub Actions deployment logs
+
+## Captive Portal ZIP Generation
+
+The system generates customized captive portal files for each location:
+
+### How it works:
+1. Admin uploads a base portal template ZIP via Django admin (`PortalTemplate` model)
+2. Template contains HTML/CSS/JS files with placeholders:
+   - `{{API_BASE}}` - Replaced with your API endpoint
+   - `{{LOCATION_UUID}}` - Replaced with location's unique ID
+   - `{{SUPPORT_PHONE}}` - Replaced with vendor's support phone
+3. Vendor downloads customized ZIP from: `/api/portal-download/<location-uuid>/`
+4. System dynamically replaces placeholders and generates location-specific portal
+
+### Portal Template Structure:
+```
+portal-template.zip
+├── index.html          (with {{API_BASE}}, {{LOCATION_UUID}} placeholders)
+├── portal.js           (API calls to {{API_BASE}}/portal/{{LOCATION_UUID}}/)
+├── styles.css
+└── assets/
+    ├── logo.png
+    └── background.jpg
+```
+
+### Upload Portal Template:
+1. Go to Django Admin: `/admin/portal_api/portaltemplate/`
+2. Upload ZIP file with portal template
+3. Mark as active
+4. Vendors can now download customized portals for their locations

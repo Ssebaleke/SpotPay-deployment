@@ -21,17 +21,41 @@
             --sidebar-width: 250px;
         }
         
+        /* Light Mode (Default) */
+        :root {
+            --bg-primary: #f5f7fb;
+            --bg-secondary: #ffffff;
+            --text-primary: #212529;
+            --text-secondary: #64748b;
+            --border-color: #eee;
+            --shadow: rgba(0,0,0,0.05);
+            --shadow-hover: rgba(0,0,0,0.1);
+        }
+        
+        /* Dark Mode */
+        [data-theme="dark"] {
+            --bg-primary: #1a1d29;
+            --bg-secondary: #242837;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --shadow: rgba(0,0,0,0.3);
+            --shadow-hover: rgba(0,0,0,0.5);
+        }
+        
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: #f5f7fb;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
             overflow-x: hidden;
+            transition: background-color 0.3s, color 0.3s;
         }
         
         /* Sidebar */
         #sidebar {
             width: var(--sidebar-width);
-            background: white;
-            box-shadow: 0 0 15px rgba(0,0,0,0.05);
+            background: var(--bg-secondary);
+            box-shadow: 0 0 15px var(--shadow);
             position: fixed;
             top: 0;
             left: 0;
@@ -48,7 +72,7 @@
         
         .sidebar-header {
             padding: 1.5rem;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border-color);
         }
         
         .logo-icon {
@@ -62,7 +86,7 @@
         }
         
         .nav-link {
-            color: #64748b;
+            color: var(--text-secondary);
             padding: 0.75rem 1.5rem;
             margin: 0.25rem 0.75rem;
             border-radius: 8px;
@@ -70,7 +94,7 @@
         }
         
         .nav-link:hover, .nav-link.active {
-            background-color: #eef2ff;
+            background-color: rgba(67, 97, 238, 0.1);
             color: var(--primary);
         }
         
@@ -89,25 +113,26 @@
         
         /* Topbar */
         .topbar {
-            background: white;
+            background: var(--bg-secondary);
             padding: 1rem 1.5rem;
             border-radius: 10px;
             margin-bottom: 1.5rem;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 10px var(--shadow);
         }
         
         /* Stats Cards */
         .stat-card {
-            background: white;
+            background: var(--bg-secondary);
             border-radius: 12px;
             padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 20px var(--shadow);
             border: none;
-            transition: transform 0.3s;
+            transition: transform 0.3s, box-shadow 0.3s;
         }
         
         .stat-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 6px 25px var(--shadow-hover);
         }
         
         .stat-icon {
@@ -128,11 +153,27 @@
         
         /* Chart Container */
         .chart-container {
-            background: white;
+            background: var(--bg-secondary);
             border-radius: 12px;
             padding: 1.5rem;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 20px var(--shadow);
             height: 100%;
+        }
+        
+        /* Theme Toggle Button */
+        .theme-toggle {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--text-primary);
+        }
+        
+        .theme-toggle:hover {
+            background: rgba(67, 97, 238, 0.1);
+            border-color: var(--primary);
         }
         
         /* Responsive */
@@ -232,7 +273,7 @@
         </div>
         
         <!-- User Info at Bottom -->
-        <div class="position-absolute bottom-0 w-100 p-3 border-top" style="background: white;">
+        <div class="position-absolute bottom-0 w-100 p-3 border-top" style="background: var(--bg-secondary); border-color: var(--border-color) !important;">
             <div class="d-flex align-items-center gap-2">
                 <div class="flex-shrink-0">
                     <div style="width: 35px; height: 35px; background: #eef2ff; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
@@ -269,6 +310,11 @@
                     <small class="text-muted">{% block page_subtitle %}Overview of your business{% endblock %}</small>
                 </div>
                 <div class="d-flex align-items-center gap-3">
+                    <!-- Theme Toggle -->
+                    <button class="theme-toggle border-0" id="themeToggle" title="Toggle Dark/Light Mode">
+                        <i class="bi bi-moon-stars fs-5" id="themeIcon"></i>
+                    </button>
+                    
                     <div class="position-relative">
                         <a href="#" class="text-decoration-none text-dark" data-bs-toggle="dropdown">
                             <i class="bi bi-bell fs-5"></i>
@@ -337,7 +383,7 @@
         <footer class="mt-5 pt-4 border-top text-center text-muted">
             <small>
                 &copy; {% now "Y" %} SpotPay by Vicotech. 
-                Need help? Contact support@spotpay.vicotech.com
+                Need help? Contact support@spotpay.it.com
             </small>
         </footer>
     </div>
@@ -346,6 +392,33 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // Theme Toggle Functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const htmlElement = document.documentElement;
+        
+        // Load saved theme or default to light
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        htmlElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+        
+        themeToggle.addEventListener('click', function() {
+            const currentTheme = htmlElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            htmlElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+        
+        function updateThemeIcon(theme) {
+            if (theme === 'dark') {
+                themeIcon.className = 'bi bi-sun fs-5';
+            } else {
+                themeIcon.className = 'bi bi-moon-stars fs-5';
+            }
+        }
+        
         // Set active menu item based on current URL
         document.addEventListener('DOMContentLoaded', function() {
             const currentPath = window.location.pathname;
