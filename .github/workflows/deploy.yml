@@ -98,6 +98,9 @@ jobs:
               echo "✅ SSL certificate already exists"
             fi
 
+            echo "Stopping existing containers before rebuild..."
+            docker compose down || true
+            
             echo "Building new containers (no downtime)..."
             docker compose build
 
