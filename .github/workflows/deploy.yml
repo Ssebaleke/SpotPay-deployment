@@ -52,7 +52,7 @@ jobs:
             echo "Health checking new image..."
             docker compose up -d --no-deps --build web
             sleep 10
-            if ! docker compose exec -T web curl -f http://localhost:8000/ || ! docker compose logs web | grep -q 'Booting worker'; then
+            if ! docker compose exec -T web python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/')" && ! docker compose logs web | grep -q 'Booting worker'; then
               echo "❌ Health check failed. Not restarting nginx. Aborting!"
               docker compose logs web
               exit 1
