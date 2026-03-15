@@ -65,16 +65,17 @@ jobs:
                 apt-get install -y certbot python3-certbot-nginx
               fi
               
-              # Obtain SSL certificate (only for main domain, skip www if DNS not configured)
-              echo "Obtaining SSL certificate for spotpay.it.com..."
+              # Obtain SSL certificate (for both main domain and www subdomain)
+              echo "Obtaining SSL certificate for spotpay.it.com and www.spotpay.it.com..."
               certbot certonly --standalone \
                 -d spotpay.it.com \
+                -d www.spotpay.it.com \
                 --non-interactive \
                 --agree-tos \
                 --email support@spotpay.it.com \
                 --preferred-challenges http || {
                   echo "⚠️  SSL certificate installation failed. Continuing with HTTP only."
-                  echo "Note: Ensure DNS A record for spotpay.it.com points to this server's IP."
+                  echo "Note: Ensure DNS A records for both spotpay.it.com and www.spotpay.it.com point to this server's IP."
                 }
               
               if [ -f /etc/letsencrypt/live/spotpay.it.com/fullchain.pem ]; then
