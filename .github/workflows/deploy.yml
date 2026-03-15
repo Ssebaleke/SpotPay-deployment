@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy via SSH
+      - name: Deploy via SSH (Zero Downtime)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -32,11 +32,37 @@ jobs:
             ${{ secrets.ENV_FILE }}
             EOF
 
-            echo "Stopping existing containers..."
-            docker compose down
+            echo "Validating environment variables..."
+            if ! grep -q 'DATABASE_URL=' .env; then
+              echo "❌ DATABASE_URL missing in .env. Aborting deploy!"
+              exit 1
+            fi
+            if ! grep -q 'SECRET_KEY=' .env; then
+              echo "❌ SECRET_KEY missing in .env. Aborting deploy!"
+              exit 1
+            fi
 
-            echo "Rebuilding and starting containers..."
-            docker compose up -d --build
+            echo "Building new containers (no downtime)..."
+            docker compose build
+
+            echo "Running migrations and static collection in a temp container..."
+            docker compose run --rm web python manage.py migrate --noinput
+            docker compose run --rm web python manage.py collectstatic --noinput
+
+            echo "Health checking new image..."
+            docker compose up -d --no-deps --build web
+            sleep 10
+            if ! docker compose exec -T web curl -f http://localhost:8000/ || ! docker compose logs web | grep -q 'Booting worker'; then
+              echo "❌ Health check failed. Not restarting nginx. Aborting!"
+              docker compose logs web
+              exit 1
+            fi
+
+            echo "Reloading nginx (zero downtime)..."
+            docker compose up -d --no-deps nginx
+
+            echo "Pruning old containers..."
+            docker system prune -af --volumes
 
             echo "Checking container status..."
             docker compose ps
