@@ -176,6 +176,273 @@
             border-color: var(--primary);
         }
         
+        /* Global Dark Mode Overrides */
+        [data-theme="dark"] .card {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .table {
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .table-hover tbody tr:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+        }
+        
+        [data-theme="dark"] .modal-content {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .modal-footer {
+            border-top-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .form-control,
+        [data-theme="dark"] .form-select {
+            background-color: var(--bg-primary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .form-control:focus,
+        [data-theme="dark"] .form-select:focus {
+            background-color: var(--bg-primary);
+            border-color: var(--primary);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .form-control::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        [data-theme="dark"] .btn-outline-primary {
+            color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        [data-theme="dark"] .btn-outline-primary:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+        
+        [data-theme="dark"] .btn-outline-secondary {
+            color: var(--text-secondary);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .btn-outline-secondary:hover {
+            background-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .alert-info {
+            background-color: rgba(67, 97, 238, 0.1);
+            border-color: rgba(67, 97, 238, 0.3);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .alert-warning {
+            background-color: rgba(255, 193, 7, 0.1);
+            border-color: rgba(255, 193, 7, 0.3);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .alert-danger {
+            background-color: rgba(220, 53, 69, 0.1);
+            border-color: rgba(220, 53, 69, 0.3);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .alert-success {
+            background-color: rgba(25, 135, 84, 0.1);
+            border-color: rgba(25, 135, 84, 0.3);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .text-muted {
+            color: var(--text-secondary) !important;
+        }
+        
+        [data-theme="dark"] .border-top {
+            border-top-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .dropdown-menu {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .dropdown-item {
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .dropdown-item:hover {
+            background-color: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+        }
+        
+        [data-theme="dark"] .dropdown-header {
+            color: var(--text-secondary);
+        }
+        
+        [data-theme="dark"] .dropdown-divider {
+            border-top-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .bg-light {
+            background-color: var(--bg-primary) !important;
+        }
+        
+        [data-theme="dark"] thead {
+            border-bottom-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .btn-close {
+            filter: invert(1);
+        }
+        
+        [data-theme="dark"] .progress {
+            background-color: var(--bg-primary);
+        }
+        
+        [data-theme="dark"] .table-light {
+            background-color: var(--bg-primary) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        [data-theme="dark"] .table-light th {
+            color: var(--text-primary) !important;
+            border-bottom-color: var(--border-color) !important;
+        }
+        
+        [data-theme="dark"] .btn-light {
+            background-color: var(--bg-primary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .btn-light:hover {
+            background-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .shadow-sm {
+            box-shadow: 0 0.125rem 0.25rem var(--shadow) !important;
+        }
+        
+        [data-theme="dark"] .form-check-input {
+            background-color: var(--bg-primary);
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .form-check-input:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        [data-theme="dark"] .badge {
+            border: 1px solid transparent;
+        }
+        
+        [data-theme="dark"] .badge.bg-secondary {
+            background-color: var(--border-color) !important;
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] hr {
+            border-color: var(--border-color);
+            opacity: 1;
+        }
+        
+        [data-theme="dark"] .fw-bold,
+        [data-theme="dark"] .fw-semibold,
+        [data-theme="dark"] strong {
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] small {
+            color: var(--text-secondary);
+        }
+        
+        [data-theme="dark"] .btn-group .btn {
+            border-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .btn-outline-danger {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        
+        [data-theme="dark"] .btn-outline-danger:hover {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        [data-theme="dark"] .badge.bg-primary {
+            background-color: var(--primary) !important;
+        }
+        
+        [data-theme="dark"] input[type="file"]::file-selector-button {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] input[type="file"]::file-selector-button:hover {
+            background-color: var(--border-color);
+        }
+        
+        [data-theme="dark"] .card-header {
+            background-color: var(--bg-primary);
+            border-bottom-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .list-group-item {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .list-group-item:hover {
+            background-color: var(--bg-primary);
+        }
+        
+        [data-theme="dark"] textarea {
+            background-color: var(--bg-primary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] textarea:focus {
+            background-color: var(--bg-primary);
+            border-color: var(--primary);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .page-item .page-link {
+            background-color: var(--bg-secondary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .page-item.active .page-link {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        [data-theme="dark"] .page-item.disabled .page-link {
+            background-color: var(--bg-primary);
+            color: var(--text-secondary);
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
             #sidebar {
