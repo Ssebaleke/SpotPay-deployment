@@ -5,23 +5,130 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Withdraw | SpotPay</title>
     <style>
-        body { font-family: system-ui, -apple-system, BlinkMacSystemFont; background:#f4f6f8; margin:0; padding:20px; }
-        .card { max-width:620px; margin:0 auto; background:#fff; border-radius:12px; padding:22px; box-shadow:0 6px 16px rgba(0,0,0,.08); }
-        .muted { color:#6c757d; }
-        .row { margin-bottom:14px; }
-        input[type="number"] { width:100%; padding:10px; border:1px solid #ced4da; border-radius:8px; }
-        .mode { border:1px solid #dee2e6; border-radius:10px; padding:12px; margin-bottom:10px; }
-        .actions { display:flex; gap:10px; margin-top:18px; }
-        .btn { border:none; border-radius:8px; padding:10px 14px; text-decoration:none; cursor:pointer; font-weight:600; }
-        .btn-primary { background:#198754; color:#fff; }
-        .btn-secondary { background:#e9ecef; color:#212529; }
-        .alert { padding:10px 12px; border-radius:8px; margin-bottom:12px; }
-        .alert-danger { background:#f8d7da; color:#842029; }
-        .alert-success { background:#d1e7dd; color:#0f5132; }
-        .alert-info { background:#cff4fc; color:#055160; }
+        :root {
+            --bg-primary: #f4f6f8;
+            --bg-secondary: #ffffff;
+            --text-primary: #000000;
+            --text-secondary: #6c757d;
+            --border-color: #ced4da;
+            --border-light: #dee2e6;
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #0f1419;
+            --bg-secondary: #1a1f2e;
+            --text-primary: #e8eaed;
+            --text-secondary: #9ca3af;
+            --border-color: #2d3748;
+            --border-light: #374151;
+        }
+        
+        body { 
+            font-family: system-ui, -apple-system, BlinkMacSystemFont; 
+            background: var(--bg-primary); 
+            color: var(--text-primary);
+            margin: 0; 
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        
+        .card { 
+            max-width: 620px; 
+            margin: 0 auto; 
+            background: var(--bg-secondary); 
+            border-radius: 12px; 
+            padding: 22px; 
+            box-shadow: 0 6px 16px rgba(0,0,0,.08); 
+        }
+        
+        .muted { color: var(--text-secondary); }
+        .row { margin-bottom: 14px; }
+        
+        label {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        input[type="number"] { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #198754;
+        }
+        
+        .mode { 
+            border: 1px solid var(--border-light); 
+            border-radius: 10px; 
+            padding: 12px; 
+            margin-bottom: 10px;
+            background: var(--bg-primary);
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        
+        .mode:hover {
+            border-color: #198754;
+        }
+        
+        .mode input[type="radio"] {
+            margin-right: 8px;
+        }
+        
+        .mode strong {
+            color: var(--text-primary);
+        }
+        
+        .actions { display: flex; gap: 10px; margin-top: 18px; }
+        
+        .btn { 
+            border: none; 
+            border-radius: 8px; 
+            padding: 10px 14px; 
+            text-decoration: none; 
+            cursor: pointer; 
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .btn-primary { background: #198754; color: #fff; }
+        .btn-secondary { 
+            background: var(--border-light); 
+            color: var(--text-primary); 
+        }
+        
+        .alert { 
+            padding: 10px 12px; 
+            border-radius: 8px; 
+            margin-bottom: 12px; 
+        }
+        
+        .alert-danger { background: #f8d7da; color: #842029; }
+        .alert-success { background: #d1e7dd; color: #0f5132; }
+        .alert-info { background: #cff4fc; color: #055160; }
+        
+        [data-theme="dark"] .alert-danger { background: rgba(220, 53, 69, 0.15); color: #f87171; }
+        [data-theme="dark"] .alert-success { background: rgba(25, 135, 84, 0.15); color: #4ade80; }
+        [data-theme="dark"] .alert-info { background: rgba(13, 202, 240, 0.15); color: #38bdf8; }
     </style>
 </head>
 <body>
+
+<script>
+// Theme sync with main app
+const savedTheme = localStorage.getItem('theme') || 'light';
+document.documentElement.setAttribute('data-theme', savedTheme);
+</script>
     <div class="card">
         <h2>Withdraw Funds</h2>
         <p class="muted">Available balance: <strong>UGX {{ wallet.balance }}</strong></p>
