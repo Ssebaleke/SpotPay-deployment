@@ -14,7 +14,20 @@ from .forms import HotspotLocationForm
 
 @login_required
 def locations_list(request):
-    vendor = request.user.vendor
+    # Allow staff to view first vendor's locations for testing
+    if request.user.is_staff:
+        from accounts.models import Vendor
+        vendor = Vendor.objects.filter(status='ACTIVE').first()
+        if not vendor:
+            messages.error(request, 'No active vendors in the system.')
+            return redirect('admin_dashboard')
+    else:
+        try:
+            vendor = request.user.vendor
+        except:
+            messages.error(request, 'You are not registered as a vendor.')
+            return redirect('vendor_login')
+    
     locations = vendor.locations.all().order_by('-created_at')
 
     return render(request, 'hotspot/locations.html', {
@@ -29,6 +42,11 @@ def locations_list(request):
 
 @login_required
 def add_location(request):
+    # Staff users cannot add locations
+    if request.user.is_staff:
+        messages.warning(request, 'Staff users cannot add locations.')
+        return redirect('locations_list')
+    
     if request.method == 'POST':
         form = HotspotLocationForm(request.POST)
 
@@ -57,7 +75,19 @@ def add_location(request):
 
 @login_required
 def edit_location(request, location_id):
-    vendor = request.user.vendor
+    # Allow staff to view first vendor's locations for testing
+    if request.user.is_staff:
+        from accounts.models import Vendor
+        vendor = Vendor.objects.filter(status='ACTIVE').first()
+        if not vendor:
+            messages.error(request, 'No active vendors in the system.')
+            return redirect('admin_dashboard')
+    else:
+        try:
+            vendor = request.user.vendor
+        except:
+            messages.error(request, 'You are not registered as a vendor.')
+            return redirect('vendor_login')
 
     location = get_object_or_404(
         HotspotLocation,
@@ -66,6 +96,11 @@ def edit_location(request, location_id):
     )
 
     if request.method == "POST":
+        # Staff users cannot edit locations
+        if request.user.is_staff:
+            messages.warning(request, 'Staff users cannot edit locations.')
+            return redirect('locations_list')
+        
         hotspot_dns = request.POST.get("hotspot_dns", "hot.spot").strip()
         location.hotspot_dns = hotspot_dns
         location.save(update_fields=["hotspot_dns"])
@@ -86,7 +121,17 @@ def edit_location(request, location_id):
 
 @login_required
 def location_status(request, location_id):
-    vendor = request.user.vendor
+    # Allow staff to view first vendor's locations for testing
+    if request.user.is_staff:
+        from accounts.models import Vendor
+        vendor = Vendor.objects.filter(status='ACTIVE').first()
+        if not vendor:
+            return JsonResponse({'error': 'No active vendors'}, status=404)
+    else:
+        try:
+            vendor = request.user.vendor
+        except:
+            return JsonResponse({'error': 'Not a vendor'}, status=403)
 
     location = get_object_or_404(
         HotspotLocation,
