@@ -46,7 +46,7 @@ def sms_topup(request):
         post_data = request.POST.copy()
         post_data["payer_type"] = "VENDOR"
         post_data["purpose"] = "SMS_PURCHASE"
-        post_data["vendor_id"] = str(request.user.vendor.id)
+        post_data["vendor_id"] = str(vendor.id)
         post_data["amount"] = amount
         post_data["phone"] = phone
 
