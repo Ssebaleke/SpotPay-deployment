@@ -65,17 +65,19 @@ jobs:
                 apt-get install -y certbot python3-certbot-nginx
               fi
               
-              # Obtain SSL certificate
+              # Obtain SSL certificate (only for main domain, skip www if DNS not configured)
               echo "Obtaining SSL certificate for spotpay.it.com..."
               certbot certonly --standalone \
                 -d spotpay.it.com \
-                -d www.spotpay.it.com \
                 --non-interactive \
                 --agree-tos \
                 --email support@spotpay.it.com \
-                --preferred-challenges http
+                --preferred-challenges http || {
+                  echo "⚠️  SSL certificate installation failed. Continuing with HTTP only."
+                  echo "Note: Ensure DNS A record for spotpay.it.com points to this server's IP."
+                }
               
-              if [ $? -eq 0 ]; then
+              if [ -f /etc/letsencrypt/live/spotpay.it.com/fullchain.pem ]; then
                 echo "✅ SSL certificate obtained successfully"
                 
                 # Enable HTTPS in nginx.conf
@@ -90,8 +92,6 @@ jobs:
                 (crontab -l 2>/dev/null | grep -v certbot; echo "0 0,12 * * * certbot renew --quiet --post-hook 'cd /root/SpotPay-deployment && docker compose restart nginx'") | crontab -
                 
                 echo "✅ HTTPS enabled and auto-renewal configured"
-              else
-                echo "⚠️  SSL certificate installation failed. Continuing with HTTP only."
               fi
             else
               echo "✅ SSL certificate already exists"
