@@ -534,6 +534,26 @@
             color: #fff !important;
         }
         
+        /* Input group button styling for dark mode */
+        [data-theme="dark"] .input-group .btn-outline-secondary {
+            background-color: var(--bg-primary);
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+        }
+        
+        [data-theme="dark"] .input-group .btn-outline-secondary:hover {
+            background-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        
+        [data-theme="dark"] .input-group .form-control {
+            border-right: none;
+        }
+        
+        [data-theme="dark"] .input-group .btn {
+            border-left: 1px solid var(--border-color);
+        }
+        
         /* Fix unreadable links and small text */
         [data-theme="dark"] a {
             color: #60a5fa;
