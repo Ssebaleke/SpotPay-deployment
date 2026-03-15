@@ -46,8 +46,17 @@ jobs:
             if [ ! -f /etc/letsencrypt/live/spotpay.it.com/fullchain.pem ]; then
               echo "⚠️  SSL certificate not found. Installing Let's Encrypt certificate..."
               
-              # Stop nginx to free port 80
-              docker compose stop nginx || true
+              # Stop all containers to free port 80
+              echo "Stopping all containers to free port 80..."
+              docker compose down || true
+              
+              # Kill any process using port 80
+              echo "Checking for processes on port 80..."
+              lsof -ti:80 | xargs kill -9 2>/dev/null || true
+              fuser -k 80/tcp 2>/dev/null || true
+              
+              # Wait for port to be free
+              sleep 3
               
               # Install certbot if not present
               if ! command -v certbot &> /dev/null; then
