@@ -135,7 +135,7 @@
                     <strong>UGX {{ total_payments_received|default:"0" }}</strong>
                 </div>
                 <div class="progress" style="height: 10px;">
-                    <div class="progress-bar bg-primary" style="width: 75%"></div>
+                    <div class="progress-bar bg-primary" style="width: {{ total_received_percentage }}%"></div>
                 </div>
             </div>
             
@@ -145,7 +145,7 @@
                     <strong>{{ successful_payments_count|default:"0" }}</strong>
                 </div>
                 <div class="progress" style="height: 10px;">
-                    <div class="progress-bar bg-success" style="width: 60%"></div>
+                    <div class="progress-bar bg-success" style="width: {{ successful_percentage }}%"></div>
                 </div>
             </div>
             
@@ -155,7 +155,7 @@
                     <strong>{{ pending_payments_count|default:"0" }} / {{ failed_payments_count|default:"0" }}</strong>
                 </div>
                 <div class="progress" style="height: 10px;">
-                    <div class="progress-bar bg-info" style="width: 85%"></div>
+                    <div class="progress-bar bg-warning" style="width: {{ pending_failed_percentage }}%"></div>
                 </div>
             </div>
         </div>

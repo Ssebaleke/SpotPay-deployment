@@ -369,6 +369,19 @@ def vendor_dashboard(request):
     pending_payments_count = vendor_payments.filter(status="PENDING").count()
     failed_payments_count = vendor_payments.filter(status="FAILED").count()
 
+    # Calculate progress bar percentages
+    total_payments_count = vendor_payments.count()
+    if total_payments_count > 0:
+        successful_percentage = round((successful_payments_count / total_payments_count) * 100)
+        pending_failed_count = pending_payments_count + failed_payments_count
+        pending_failed_percentage = round((pending_failed_count / total_payments_count) * 100)
+    else:
+        successful_percentage = 0
+        pending_failed_percentage = 0
+    
+    # Total payments received percentage (always 100% if there are payments, 0% otherwise)
+    total_received_percentage = 100 if total_payments_received > 0 else 0
+
     recent_transactions = vendor_payments.select_related("package").order_by("-initiated_at")[:10]
 
     # -------------------------------------------------
@@ -396,6 +409,9 @@ def vendor_dashboard(request):
         'successful_payments_count': successful_payments_count,
         'pending_payments_count': pending_payments_count,
         'failed_payments_count': failed_payments_count,
+        'total_received_percentage': total_received_percentage,
+        'successful_percentage': successful_percentage,
+        'pending_failed_percentage': pending_failed_percentage,
         'recent_transactions': recent_transactions,
         'trend_labels': trend_labels,
         'trend_values': trend_values,
