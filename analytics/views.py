@@ -2,13 +2,14 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum
+from django.db.models import Sum, Count, Q
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.contrib import messages
 
 from accounts.models import Vendor
+from hotspot.models import HotspotLocation
 from payments.models import Payment
 
 
@@ -23,9 +24,30 @@ def analytics_dashboard(request):
         messages.error(request, 'You are not registered as a vendor.')
         return redirect('vendor_login')
 
+    locations = HotspotLocation.objects.filter(vendor=vendor, status='ACTIVE')
+
+    # Per-location performance summary
+    now = timezone.now()
+    location_stats = []
+    for loc in locations:
+        qs = Payment.objects.filter(vendor=vendor, location=loc, purpose='TRANSACTION', status='SUCCESS')
+        total = qs.aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        count = qs.count()
+        today_total = qs.filter(completed_at__date=now.date()).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        month_total = qs.filter(completed_at__year=now.year, completed_at__month=now.month).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+        location_stats.append({
+            'location': loc,
+            'total': total,
+            'count': count,
+            'today': today_total,
+            'month': month_total,
+        })
+
     return render(request, 'analytics/dashboard.html', {
         'vendor': vendor,
         'active_page': 'analytics',
+        'locations': locations,
+        'location_stats': location_stats,
     })
 
 
@@ -39,6 +61,7 @@ def analytics_data(request):
         return JsonResponse({'error': 'Unauthorized'}, status=403)
 
     period = request.GET.get('period', 'weekly')
+    location_id = request.GET.get('location', '')
     now = timezone.now()
     today = now.date()
 
@@ -47,6 +70,9 @@ def analytics_data(request):
         purpose='TRANSACTION',
         status='SUCCESS',
     )
+
+    if location_id:
+        base_qs = base_qs.filter(location_id=location_id)
 
     if period == 'daily':
         # Last 24 hours by hour

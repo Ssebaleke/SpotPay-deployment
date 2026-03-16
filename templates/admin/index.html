@@ -560,7 +560,7 @@ html, body {
 
             <div class="sp-chart-box">
                 <h3>Transaction Breakdown</h3>
-                <div style="height:220px;">
+                <div style="height:200px;">
                     <canvas id="spDonut"></canvas>
                 </div>
                 <div style="display:flex;gap:10px;justify-content:center;margin-top:8px;flex-wrap:wrap;">
@@ -571,11 +571,40 @@ html, body {
             </div>
         </div>
 
+        <!-- Monthly Revenue Bar -->
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-top:16px;">
+            <div class="sp-chart-box">
+                <h3>Monthly Revenue (Last 12 Months)</h3>
+                <div style="height:260px;"><canvas id="spMonthlyRevenue"></canvas></div>
+            </div>
+            <div class="sp-chart-box">
+                <h3>Vendor Status</h3>
+                <div style="height:200px;"><canvas id="spVendorDonut"></canvas></div>
+                <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap;">
+                    <span style="font-size:.72rem;color:#6b7280;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#10b981;margin-right:3px;"></span>Active</span>
+                    <span style="font-size:.72rem;color:#6b7280;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#f59e0b;margin-right:3px;"></span>Pending</span>
+                    <span style="font-size:.72rem;color:#6b7280;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;margin-right:3px;"></span>Suspended</span>
+                    <span style="font-size:.72rem;color:#6b7280;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#94a3b8;margin-right:3px;"></span>Rejected</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Payers Bar -->
+        <div style="margin-top:16px;">
+            <div class="sp-chart-box">
+                <h3>Unique Payers Per Month (Last 12 Months)</h3>
+                <div style="height:260px;"><canvas id="spMonthlyPayers"></canvas></div>
+            </div>
+        </div>
+
     </main>
 </div>
 
 {{ sp_trend_labels|json_script:"sp-tl" }}
 {{ sp_trend_values|json_script:"sp-tv" }}
+{{ sp_monthly_labels|json_script:"sp-ml" }}
+{{ sp_monthly_revenue|json_script:"sp-mr" }}
+{{ sp_monthly_payers|json_script:"sp-mp" }}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
@@ -650,6 +679,70 @@ function toggleSidebar() {
                     }
                 }
             }
+        }
+    });
+    // Monthly Revenue Bar
+    const ml = JSON.parse(document.getElementById('sp-ml').textContent);
+    const mr = JSON.parse(document.getElementById('sp-mr').textContent);
+    new Chart(document.getElementById('spMonthlyRevenue'), {
+        type: 'bar',
+        data: {
+            labels: ml,
+            datasets: [{
+                label: 'Revenue (UGX)',
+                data: mr,
+                backgroundColor: 'rgba(67,97,238,0.75)',
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + v.toLocaleString() } } }
+        }
+    });
+
+    // Monthly Payers Bar
+    const mp = JSON.parse(document.getElementById('sp-mp').textContent);
+    new Chart(document.getElementById('spMonthlyPayers'), {
+        type: 'bar',
+        data: {
+            labels: ml,
+            datasets: [{
+                label: 'Unique Payers',
+                data: mp,
+                backgroundColor: 'rgba(46,196,182,0.75)',
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Vendor Status Donut
+    const va = {{ sp_vendor_active }};
+    const vp = {{ sp_vendor_pending }};
+    const vs = {{ sp_vendor_suspended }};
+    const vr = {{ sp_vendor_rejected }};
+    const vAllZero = va === 0 && vp === 0 && vs === 0 && vr === 0;
+    new Chart(document.getElementById('spVendorDonut'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Active','Pending','Suspended','Rejected'],
+            datasets: [{
+                data: vAllZero ? [1,1,1,1] : [va, vp, vs, vr],
+                backgroundColor: vAllZero ? ['#e2e8f0','#e2e8f0','#e2e8f0','#e2e8f0'] : ['#10b981','#f59e0b','#ef4444','#94a3b8'],
+                borderWidth: 2, borderColor: 'transparent', hoverOffset: 5
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, cutout: '65%',
+            plugins: { legend: { display: false } }
         }
     });
 })();

@@ -43,6 +43,29 @@ class SpotPayAdminSite(AdminSite):
             trend_labels.append(day.strftime("%a %d"))
             trend_values.append(float(total))
 
+        # Monthly revenue + payers (last 12 months)
+        monthly_labels, monthly_revenue, monthly_payers = [], [], []
+        for offset in range(11, -1, -1):
+            month_date = (now - timedelta(days=offset * 30)).replace(day=1)
+            month_end = (month_date.replace(day=28) + timedelta(days=4)).replace(day=1)
+            rev = Payment.objects.filter(
+                purpose="TRANSACTION", status="SUCCESS",
+                completed_at__gte=month_date, completed_at__lt=month_end
+            ).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+            payers = Payment.objects.filter(
+                purpose="TRANSACTION", status="SUCCESS",
+                completed_at__gte=month_date, completed_at__lt=month_end
+            ).values("phone").distinct().count()
+            monthly_labels.append(month_date.strftime("%b %Y"))
+            monthly_revenue.append(float(rev))
+            monthly_payers.append(payers)
+
+        # Vendor status donut
+        vendor_active = Vendor.objects.filter(status="ACTIVE").count()
+        vendor_pending = Vendor.objects.filter(status="PENDING").count()
+        vendor_suspended = Vendor.objects.filter(status="SUSPENDED").count()
+        vendor_rejected = Vendor.objects.filter(status="REJECTED").count()
+
         pending_wd_qs = WithdrawalRequest.objects.filter(status=WithdrawalRequest.STATUS_PENDING)
 
         extra_context = extra_context or {}
@@ -63,6 +86,13 @@ class SpotPayAdminSite(AdminSite):
             "sp_withdrawals_total": pending_wd_qs.aggregate(t=Sum("amount"))["t"] or Decimal("0"),
             "sp_trend_labels": trend_labels,
             "sp_trend_values": trend_values,
+            "sp_monthly_labels": monthly_labels,
+            "sp_monthly_revenue": monthly_revenue,
+            "sp_monthly_payers": monthly_payers,
+            "sp_vendor_active": vendor_active,
+            "sp_vendor_pending": vendor_pending,
+            "sp_vendor_suspended": vendor_suspended,
+            "sp_vendor_rejected": vendor_rejected,
         })
         return super().index(request, extra_context)
 
