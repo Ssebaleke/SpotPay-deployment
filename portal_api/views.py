@@ -137,43 +137,6 @@ def portal_buy_api(request, uuid):
 
 
 # =====================================================
-# STATUS API (polling)
-# If you ALREADY have /payments/status/<reference>/ in payments app,
-# you can skip this and just poll that existing endpoint.
-# But this is a safe fallback.
-# GET /api/portal/payments/status/<reference>/
-# =====================================================
-
-def portal_payment_status(request, reference):
-    # try provider_reference first, then uuid
-    payment = (
-        Payment.objects.filter(provider_reference=reference).first()
-        or Payment.objects.filter(uuid=reference).first()
-    )
-    if not payment:
-        return JsonResponse({"success": False, "status": "NOT_FOUND"}, status=404)
-
-    voucher = None
-    try:
-        voucher = payment.issued_voucher.voucher.code
-    except Exception:
-        voucher = None
-
-    return JsonResponse({
-        "success": True,
-        "status": payment.status,
-        "message": (
-            "Please approve the payment on your phone."
-            if payment.status == "PENDING"
-            else "Payment successful."
-            if payment.status == "SUCCESS"
-            else "Payment failed."
-        ),
-        "voucher": voucher,
-    })
-
-
-# =====================================================
 # DOWNLOAD PORTAL ZIP (Vendor)
 # =====================================================
 
@@ -207,6 +170,7 @@ def download_portal_zip(request, location_uuid):
                     text = content.decode("utf-8", errors="ignore")
                     text = text.replace("{{API_BASE}}", settings.PORTAL_API_BASE)
                     text = text.replace("{{LOCATION_UUID}}", str(location.uuid))
+                    text = text.replace("{{BUY_URL}}", f"{settings.SITE_URL}/api/portal/{location.uuid}/buy/")
                     text = text.replace(
                         "{{SUPPORT_PHONE}}",
                         getattr(location.vendor, "business_phone", "") or ""

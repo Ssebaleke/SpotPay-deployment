@@ -4,6 +4,7 @@ from django.shortcuts import redirect, render
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db import transaction
+from django.core.paginator import Paginator
 
 import json
 from math import ceil
@@ -11,7 +12,7 @@ from math import ceil
 import requests
 
 from payments.views import initiate_payment
-from .models import SMSPricing, VendorSMSWallet, SMSProvider
+from .models import SMSPricing, VendorSMSWallet, SMSProvider, SMSLog
 from .services.sms_gateway import send_bulk_sms
 
 
@@ -239,4 +240,26 @@ def sms_send_bulk(request):
         "actual_units": actual_units,
         "summary": summary,
         "provider_response": gateway_response,
+    })
+
+
+@login_required
+def sms_logs(request):
+    try:
+        vendor = request.user.vendor
+    except Exception:
+        return redirect('vendor_login')
+
+    logs = SMSLog.objects.filter(vendor=vendor).order_by('-created_at')
+
+    status_filter = request.GET.get('status', '')
+    if status_filter:
+        logs = logs.filter(status=status_filter)
+
+    paginator = Paginator(logs, 20)
+    page = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'sms/sms_logs.html', {
+        'page_obj': page,
+        'status_filter': status_filter,
     })

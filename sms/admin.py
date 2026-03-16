@@ -176,21 +176,25 @@ class SMSPurchaseAdmin(admin.ModelAdmin):
 @admin.register(SMSLog)
 class SMSLogAdmin(admin.ModelAdmin):
     list_display = (
+        "created_at",
         "vendor",
         "phone",
-        "short_message",
-        "provider",
+        "voucher_code",
         "status",
-        "created_at",
+        "failure_reason",
+        "provider",
     )
     list_filter = ("status", "provider", "created_at")
-    search_fields = ("phone", "vendor__company_name")
+    search_fields = ("phone", "voucher_code", "vendor__company_name")
     readonly_fields = (
         "vendor",
         "phone",
+        "voucher_code",
+        "payment",
         "message",
         "provider",
         "status",
+        "failure_reason",
         "created_at",
     )
 

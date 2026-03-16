@@ -10,7 +10,7 @@ def _is_ugsms_provider(provider):
     return (provider.provider_type or "").upper() in ("UGSMS", "YOUGANDA")
 
 
-def send_sms(*, vendor, phone, message, purpose=None):
+def send_sms(*, vendor, phone, message, purpose=None, voucher_code=None, payment=None):
     provider = _active_provider()
 
     if not provider:
@@ -18,7 +18,10 @@ def send_sms(*, vendor, phone, message, purpose=None):
             vendor=vendor,
             phone=phone,
             message=message,
+            voucher_code=voucher_code,
+            payment=payment,
             status="FAILED",
+            failure_reason="No active SMS provider",
         )
         return False, "No active SMS provider"
 
@@ -61,6 +64,8 @@ def send_sms(*, vendor, phone, message, purpose=None):
             vendor=vendor,
             phone=phone,
             message=message,
+            voucher_code=voucher_code,
+            payment=payment,
             provider=provider,
             status="SENT",
         )
@@ -72,8 +77,11 @@ def send_sms(*, vendor, phone, message, purpose=None):
             vendor=vendor,
             phone=phone,
             message=message,
+            voucher_code=voucher_code,
+            payment=payment,
             provider=provider,
             status="FAILED",
+            failure_reason=str(e),
         )
         return False, str(e)
 

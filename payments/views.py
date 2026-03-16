@@ -99,6 +99,13 @@ def payment_status(request, reference):
         "reference": payment.provider_reference,
         "payment_uuid": str(payment.uuid),
         "status": payment.status,
+        "message": (
+            "Please approve the payment on your phone."
+            if payment.status == "PENDING"
+            else "Payment successful."
+            if payment.status == "SUCCESS"
+            else "Payment failed."
+        ),
     }
 
     if payment.status == "SUCCESS":

@@ -39,6 +39,30 @@ class VendorWallet(models.Model):
     def check_wallet_password(self, raw_password):
         return check_password(raw_password, self.wallet_password)
 
+    @classmethod
+    def credit(cls, vendor, amount, reference):
+        """
+        Credit vendor wallet. Creates wallet if it doesn't exist.
+        Records a WalletTransaction for audit.
+        """
+        from django.db import transaction as db_transaction
+        from wallets.models import WalletTransaction
+
+        with db_transaction.atomic():
+            wallet, _ = cls.objects.select_for_update().get_or_create(vendor=vendor)
+            wallet.balance += Decimal(str(amount))
+            wallet.save(update_fields=['balance', 'updated_at'])
+
+            WalletTransaction.objects.get_or_create(
+                reference=f"TXN-{reference}",
+                defaults=dict(
+                    wallet=wallet,
+                    amount=Decimal(str(amount)),
+                    transaction_type=WalletTransaction.CREDIT,
+                    reason='VOUCHER_SALE',
+                )
+            )
+
     def __str__(self):
         return f"{self.vendor.company_name} Wallet"
 

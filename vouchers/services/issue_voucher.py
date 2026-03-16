@@ -34,3 +34,11 @@ def issue_voucher(vendor, package):
     voucher.save(update_fields=["status"])
 
     return voucher
+
+
+def mark_voucher_used(voucher):
+    """
+    Move voucher from RESERVED → USED.
+    Call this after confirmed MikroTik login.
+    """
+    voucher.mark_used()

@@ -1,0 +1,78 @@
+{% extends "accounts/base.html" %}
+{% block title %}SMS Logs{% endblock %}
+{% block page_title %}SMS Logs{% endblock %}
+{% block page_subtitle %}Track every voucher SMS sent or failed{% endblock %}
+
+{% block content %}
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-transparent d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <strong>SMS Delivery Logs</strong>
+    <form method="get" class="d-flex gap-2">
+      <select name="status" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+        <option value="">All Status</option>
+        <option value="SENT" {% if status_filter == 'SENT' %}selected{% endif %}>Sent</option>
+        <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed</option>
+      </select>
+    </form>
+  </div>
+
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Phone</th>
+            <th>Voucher Code</th>
+            <th>Status</th>
+            <th>Failure Reason</th>
+            <th>Message</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in page_obj %}
+          <tr>
+            <td><small>{{ log.created_at|date:"d M Y H:i" }}</small></td>
+            <td>{{ log.phone }}</td>
+            <td>
+              {% if log.voucher_code %}
+                <code>{{ log.voucher_code }}</code>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if log.status == 'SENT' %}
+                <span class="badge bg-success">Sent</span>
+              {% else %}
+                <span class="badge bg-danger">Failed</span>
+              {% endif %}
+            </td>
+            <td><small class="text-danger">{{ log.failure_reason|default:"—" }}</small></td>
+            <td><small class="text-muted">{{ log.message|truncatechars:60 }}</small></td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="text-center text-muted py-4">No SMS logs found.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-transparent">
+    <nav>
+      <ul class="pagination pagination-sm mb-0 justify-content-center">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ status_filter }}">«</a></li>
+        {% endif %}
+        <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ status_filter }}">»</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

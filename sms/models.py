@@ -194,18 +194,25 @@ class SMSLog(models.Model):
     phone = models.CharField(max_length=20)
     message = models.TextField()
 
+    voucher_code = models.CharField(max_length=100, blank=True, null=True)
+    payment = models.ForeignKey(
+        "payments.Payment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sms_logs"
+    )
+
     provider = models.ForeignKey(
         SMSProvider,
         on_delete=models.SET_NULL,
         null=True
     )
 
-    status = models.CharField(
-        max_length=20,
-        default="SENT"
-    )
+    status = models.CharField(max_length=20, default="SENT")
+    failure_reason = models.TextField(blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"SMS to {self.phone} ({self.status})"
+        return f"SMS to {self.phone} | {self.voucher_code or 'no voucher'} ({self.status})"

@@ -339,27 +339,16 @@ def admin_reject_withdrawal(request, withdrawal_id):
 
 @login_required
 def vendor_dashboard(request):
-    # -------------------------------------------------
-    # VALIDATE VENDOR (ALLOW STAFF FOR TESTING)
-    # -------------------------------------------------
     if request.user.is_staff:
-        # Staff can view any vendor's dashboard for testing
-        vendor = Vendor.objects.filter(status='ACTIVE').first()
-        if not vendor:
-            messages.error(request, 'No active vendors in the system.')
-            return redirect('admin_dashboard')
-    else:
-        try:
-            vendor = request.user.vendor
-            if vendor.status != 'ACTIVE' or not request.user.is_active:
-                messages.error(
-                    request,
-                    'Your account is not approved or has been suspended.'
-                )
-                return redirect('vendor_login')
-        except Vendor.DoesNotExist:
-            messages.error(request, 'You are not registered as a vendor.')
+        return redirect('admin_dashboard')
+    try:
+        vendor = request.user.vendor
+        if vendor.status != 'ACTIVE' or not request.user.is_active:
+            messages.error(request, 'Your account is not approved or has been suspended.')
             return redirect('vendor_login')
+    except Vendor.DoesNotExist:
+        messages.error(request, 'You are not registered as a vendor.')
+        return redirect('vendor_login')
 
     # -------------------------------------------------
     # SUBSCRIPTION WARNINGS
@@ -521,28 +510,18 @@ def vendor_dashboard(request):
 
 @login_required
 def vendor_profile(request):
-    # Allow staff to view first vendor's profile for testing
     if request.user.is_staff:
-        vendor = Vendor.objects.filter(status='ACTIVE').first()
-        if not vendor:
-            messages.error(request, 'No active vendors in the system.')
-            return redirect('admin_dashboard')
-    else:
-        try:
-            vendor = request.user.vendor
-            if vendor.status != 'ACTIVE' or not request.user.is_active:
-                messages.error(request, 'Your account is not approved or has been suspended.')
-                return redirect('vendor_login')
-        except Vendor.DoesNotExist:
-            messages.error(request, 'You are not registered as a vendor.')
+        return redirect('admin_dashboard')
+    try:
+        vendor = request.user.vendor
+        if vendor.status != 'ACTIVE' or not request.user.is_active:
+            messages.error(request, 'Your account is not approved or has been suspended.')
             return redirect('vendor_login')
+    except Vendor.DoesNotExist:
+        messages.error(request, 'You are not registered as a vendor.')
+        return redirect('vendor_login')
 
     if request.method == 'POST':
-        # Staff users cannot edit vendor profiles
-        if request.user.is_staff:
-            messages.warning(request, 'Staff users cannot edit vendor profiles.')
-            return redirect('vendor_profile')
-        
         form = VendorProfileForm(request.POST, instance=vendor, user=request.user)
         if form.is_valid():
             form.save()
@@ -559,21 +538,16 @@ def vendor_profile(request):
 
 @login_required
 def vendor_change_password(request):
-    # Allow staff to view first vendor's password change page for testing
     if request.user.is_staff:
-        vendor = Vendor.objects.filter(status='ACTIVE').first()
-        if not vendor:
-            messages.error(request, 'No active vendors in the system.')
-            return redirect('admin_dashboard')
-    else:
-        try:
-            vendor = request.user.vendor
-            if vendor.status != 'ACTIVE' or not request.user.is_active:
-                messages.error(request, 'Your account is not approved or has been suspended.')
-                return redirect('vendor_login')
-        except Vendor.DoesNotExist:
-            messages.error(request, 'You are not registered as a vendor.')
+        return redirect('admin_dashboard')
+    try:
+        vendor = request.user.vendor
+        if vendor.status != 'ACTIVE' or not request.user.is_active:
+            messages.error(request, 'Your account is not approved or has been suspended.')
             return redirect('vendor_login')
+    except Vendor.DoesNotExist:
+        messages.error(request, 'You are not registered as a vendor.')
+        return redirect('vendor_login')
 
     if request.method == 'POST':
         form = PasswordChangeForm(request.user, request.POST)
@@ -615,25 +589,46 @@ def pay_subscription(request):
     vendor = request.user.vendor
 
     if request.method == "POST":
-        phone = request.POST.get("phone")
+        phone = request.POST.get("phone", "").strip()
+        location_id = request.POST.get("location_id")
+
+        if not phone:
+            messages.error(request, "Phone number is required.")
+            return redirect("vendor_dashboard")
 
         provider = PaymentProvider.objects.filter(is_active=True).first()
         if not provider:
             messages.error(request, "Payment service not available.")
             return redirect("vendor_dashboard")
 
-        Payment.objects.create(
+        from hotspot.models import HotspotLocation
+        from payments.utils import load_provider_adapter
+        from decimal import Decimal
+
+        location = None
+        if location_id:
+            location = HotspotLocation.objects.filter(id=location_id, vendor=vendor).first()
+
+        payment = Payment.objects.create(
             payer_type="VENDOR",
             purpose="SUBSCRIPTION",
             vendor=vendor,
+            location=location,
+            phone=phone,
             amount=Decimal("50000"),
             provider=provider,
+            currency="UGX",
         )
 
-        messages.success(
-            request,
-            "Payment request sent. Complete the payment on your phone."
-        )
+        try:
+            adapter = load_provider_adapter(provider)
+            reference = adapter.charge(payment, {"phone": phone, "amount": str(payment.amount), "currency": "UGX"})
+            payment.provider_reference = reference
+            payment.save(update_fields=["provider_reference"])
+            messages.success(request, "Payment prompt sent. Approve on your phone.")
+        except Exception as e:
+            payment.delete()
+            messages.error(request, f"Payment failed: {e}")
 
         return redirect("vendor_dashboard")
 

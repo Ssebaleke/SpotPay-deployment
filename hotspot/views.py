@@ -14,19 +14,13 @@ from .forms import HotspotLocationForm
 
 @login_required
 def locations_list(request):
-    # Allow staff to view first vendor's locations for testing
     if request.user.is_staff:
-        from accounts.models import Vendor
-        vendor = Vendor.objects.filter(status='ACTIVE').first()
-        if not vendor:
-            messages.error(request, 'No active vendors in the system.')
-            return redirect('admin_dashboard')
-    else:
-        try:
-            vendor = request.user.vendor
-        except:
-            messages.error(request, 'You are not registered as a vendor.')
-            return redirect('vendor_login')
+        return redirect('admin_dashboard')
+    try:
+        vendor = request.user.vendor
+    except:
+        messages.error(request, 'You are not registered as a vendor.')
+        return redirect('vendor_login')
     
     locations = vendor.locations.all().order_by('-created_at')
 
@@ -115,17 +109,12 @@ def edit_location(request, location_id):
 
 @login_required
 def location_status(request, location_id):
-    # Allow staff to view first vendor's locations for testing
     if request.user.is_staff:
-        from accounts.models import Vendor
-        vendor = Vendor.objects.filter(status='ACTIVE').first()
-        if not vendor:
-            return JsonResponse({'error': 'No active vendors'}, status=404)
-    else:
-        try:
-            vendor = request.user.vendor
-        except:
-            return JsonResponse({'error': 'Not a vendor'}, status=403)
+        return redirect('admin_dashboard')
+    try:
+        vendor = request.user.vendor
+    except:
+        return JsonResponse({'error': 'Not a vendor'}, status=403)
 
     location = get_object_or_404(
         HotspotLocation,
@@ -149,17 +138,12 @@ def location_status(request, location_id):
 @login_required
 def dns_setup(request):
     if request.user.is_staff:
-        from accounts.models import Vendor
-        vendor = Vendor.objects.filter(status='ACTIVE').first()
-        if not vendor:
-            messages.error(request, 'No active vendors in the system.')
-            return redirect('admin_dashboard')
-    else:
-        try:
-            vendor = request.user.vendor
-        except:
-            messages.error(request, 'You are not registered as a vendor.')
-            return redirect('vendor_login')
+        return redirect('admin_dashboard')
+    try:
+        vendor = request.user.vendor
+    except:
+        messages.error(request, 'You are not registered as a vendor.')
+        return redirect('vendor_login')
 
     locations = vendor.locations.filter(status='ACTIVE').order_by('-created_at')
 
