@@ -130,14 +130,9 @@ jobs:
               exit 1
             fi
 
-            echo "Freeing ports 80 and 443..."
-            lsof -ti:80 | xargs kill -9 2>/dev/null || true
-            lsof -ti:443 | xargs kill -9 2>/dev/null || true
-            fuser -k 80/tcp 2>/dev/null || true
-            fuser -k 443/tcp 2>/dev/null || true
-            sleep 2
-
             echo "Reloading nginx (zero downtime)..."
+            docker compose stop nginx || true
+            docker compose rm -f nginx || true
             docker compose up -d --no-deps nginx
 
             echo "Pruning old images only (no volumes)..."
