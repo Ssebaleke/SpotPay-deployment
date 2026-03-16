@@ -1,216 +1,256 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Wallet | SpotPay</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+/* ===== GLOBAL ===== */
+* {
+    box-sizing: border-box;
+}
 
-    <style>
-        :root {
-            --bg-primary: #f4f6f8;
-            --bg-secondary: #ffffff;
-            --text-primary: #000000;
-            --text-secondary: #6c757d;
-            --border-color: #eee;
-        }
-        
-        [data-theme="dark"] {
-            --bg-primary: #0f1419;
-            --bg-secondary: #1a1f2e;
-            --text-primary: #e8eaed;
-            --text-secondary: #9ca3af;
-            --border-color: #2d3748;
-        }
-        
-        body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            margin: 0;
-            padding: 0;
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        .container {
-            max-width: 1100px;
-            margin: auto;
-            padding: 20px;
-        }
-
-        .wallet-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .wallet-header h2 {
-            margin: 0;
-        }
-
-        .balance-card {
-            background: linear-gradient(135deg, #0d6efd, #084298);
-            color: #fff;
-            padding: 25px;
-            border-radius: 14px;
-            margin-bottom: 25px;
-        }
-
-        .balance-card h1 {
-            margin: 10px 0 0;
-            font-size: 2.2rem;
-        }
-
-        .actions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }
-
-        .action-btn {
-            padding: 14px;
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            text-align: center;
-            text-decoration: none;
-            color: var(--text-primary);
-            font-weight: 600;
-            box-shadow: 0 6px 15px rgba(0,0,0,0.08);
-        }
-        
-        .action-btn small {
-            color: var(--text-secondary) !important;
-        }
-
-        .action-btn.withdraw {
-            background: #198754;
-            color: #fff;
-        }
-
-        .transactions {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            padding: 20px;
-        }
-        
-        .transactions h3 {
-            color: var(--text-primary);
-        }
-
-        .transaction {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-primary);
-        }
-
-        .transaction:last-child {
-            border-bottom: none;
-        }
-
-        .credit {
-            color: #198754;
-        }
-
-        .debit {
-            color: #dc3545;
-        }
-
-        .logout-btn {
-    background: #dc3545;
+body {
+    margin: 0;
+    padding: 0;
+    background: #05070b;
     color: #fff;
-    padding: 8px 14px;
-    border-radius: 8px;
-    text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
 }
 
-.logout-btn:hover {
-    opacity: 0.9;
+/* ===== MAIN PAGE WRAPPER ===== */
+#content,
+.main,
+.content,
+#content-main {
+    width: 100%;
 }
 
+/* remove narrow centered feel */
+#content {
+    padding: 20px 24px !important;
+    max-width: 100% !important;
+}
 
-        @media (max-width: 600px) {
-            .wallet-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-        }
-    </style>
-</head>
+/* ===== TOP SUMMARY CARDS ===== */
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
+    width: 100%;
+}
 
-<body>
+.dashboard-card {
+    border-radius: 16px;
+    padding: 20px;
+    color: #fff;
+    min-height: 150px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.22);
+}
 
-<script>
-// Theme sync with main app
-const savedTheme = localStorage.getItem('theme') || 'light';
-document.documentElement.setAttribute('data-theme', savedTheme);
-</script>
+.dashboard-card h2,
+.dashboard-card h3,
+.dashboard-card p {
+    margin: 0 0 8px 0;
+}
 
-<div class="container">
+/* ===== CHART SECTION ===== */
+.dashboard-charts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 28px;
+    width: 100%;
+}
 
-    <div class="wallet-header">
-        <div>
-            <h2>💼 SpotPay Wallet</h2>
-            <small>Secure financial access</small>
-        </div>
-    
-        <a href="{% url 'vendor_logout' %}" class="logout-btn">
-            Logout
-        </a>
-    </div>
-    
-    <div class="balance-card">
-        <p>Available Balance</p>
-        <h1>UGX {{ wallet.balance }}</h1>
-    </div>
+.chart-box {
+    background: #f7f7f7;
+    border-radius: 18px;
+    padding: 20px;
+    min-height: 300px;
+    overflow: hidden;
+}
 
-    <div class="actions" style="margin-top: -10px; margin-bottom: 22px;">
-        <div class="action-btn">
-            <small style="display:block;color:#6c757d;">Total Credited</small>
-            UGX {{ total_credited }}
-        </div>
-        <div class="action-btn">
-            <small style="display:block;color:#6c757d;">Total Withdrawn</small>
-            UGX {{ total_withdrawn }}
-        </div>
-        <div class="action-btn">
-            <small style="display:block;color:#6c757d;">Pending Withdrawals</small>
-            UGX {{ pending_withdrawals_total }}
-        </div>
-    </div>
+/* ===== LOWER SECTION: LEFT CONTENT + RIGHT SIDEBAR ===== */
+.dashboard-lower {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) 340px;
+    gap: 24px;
+    align-items: start;
+    width: 100%;
+}
 
-<div class="actions">
-    <a href="{% url 'wallet_withdraw' %}" class="action-btn withdraw">
-            Withdraw Funds
-        </a>
+/* left side apps/modules */
+.dashboard-main {
+    min-width: 0;
+}
 
-        <a href="{% url 'wallet_withdrawal_history' %}" class="action-btn">
-            View Transactions
-        </a>
-    </div>
+/* right recent actions */
+.dashboard-sidebar {
+    background: #121417;
+    border-radius: 16px;
+    padding: 20px;
+    position: sticky;
+    top: 20px;
+}
 
-    <div class="transactions">
-        <h3>Recent Transactions</h3>
+/* ===== DJANGO ADMIN APP LIST ===== */
+#content-related {
+    float: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+}
 
-        {% for tx in transactions %}
-            <div class="transaction">
-                <span>{{ tx.reference }}</span>
-                <span class="{{ tx.transaction_type }}">
-                    {% if tx.transaction_type == 'credit' %}+{% else %}-{% endif %}
-                    UGX {{ tx.amount }}
-                </span>
-            </div>
-        {% empty %}
-            <p>No transactions yet.</p>
-        {% endfor %}
-    </div>
+#content-main {
+    float: none !important;
+    width: 100% !important;
+}
 
+.app-list,
+.module {
+    width: 100%;
+}
+
+.module {
+    background: transparent !important;
+    border: none !important;
+    margin-bottom: 22px !important;
+}
+
+.module caption,
+.module h2 {
+    background: #2e5f73 !important;
+    color: #fff !important;
+    border-radius: 0 !important;
+    padding: 12px 14px !important;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+}
+
+.module table {
+    width: 100%;
+    background: transparent;
+}
+
+.module tbody tr {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.module tbody tr:hover {
+    background: rgba(255,255,255,.03) !important;
+}
+
+.module td,
+.module th {
+    padding: 14px 12px !important;
+    color: #fff !important;
+}
+
+/* ===== RECENT ACTIONS PANEL ===== */
+#recent-actions-module {
+    background: #17191d !important;
+    border-radius: 16px;
+    padding: 18px !important;
+    border: none !important;
+}
+
+#recent-actions-module h2 {
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 0 16px 0 !important;
+    font-size: 18px;
+    text-transform: none;
+}
+
+#recent-actions-module ul,
+.actionlist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.actionlist li {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+/* ===== FORCE DJANGO INDEX AREA INTO 2 COLUMNS ===== */
+.dashboard #content {
+    width: 100%;
+}
+
+.dashboard #content-main-wrapper,
+.dashboard .content-wrapper {
+    width: 100%;
+}
+
+/* if you wrap manually */
+.admin-bottom-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) 340px;
+    gap: 24px;
+    align-items: start;
+    width: 100%;
+}
+
+.admin-bottom-layout .left-column {
+    min-width: 0;
+}
+
+.admin-bottom-layout .right-column {
+    min-width: 0;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1100px) {
+    .dashboard-charts {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-lower,
+    .admin-bottom-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-sidebar,
+    .admin-bottom-layout .right-column {
+        position: static;
+    }
+}
+
+@media (max-width: 700px) {
+    #content {
+        padding: 16px !important;
+    }
+
+    .dashboard-cards {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 520px) {
+    .dashboard-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+<div class="dashboard-cards">
+    <div class="dashboard-card">...</div>
+    <div class="dashboard-card">...</div>
+    <div class="dashboard-card">...</div>
+    <div class="dashboard-card">...</div>
+    <div class="dashboard-card">...</div>
+    <div class="dashboard-card">...</div>
+    <div class="dashboard-card">...</div>
+    <div class="dashboard-card">...</div>
 </div>
 
-</body>
-</html>
+<div class="dashboard-charts">
+    <div class="chart-box">Revenue chart</div>
+    <div class="chart-box">Breakdown chart</div>
+</div>
+
+<div class="admin-bottom-layout">
+    <div class="left-column">
+        <!-- all your app tables/modules here -->
+    </div>
+
+    <div class="right-column">
+        <!-- recent actions here -->
+    </div>
+</div>

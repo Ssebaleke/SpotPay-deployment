@@ -9,11 +9,31 @@
     .dns-card {
         background: var(--bg-secondary);
         border-radius: 14px;
-        padding: 1.5rem;
         box-shadow: 0 4px 20px var(--shadow);
         border: 1px solid var(--border-color);
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
+        overflow: hidden;
     }
+    .dns-card-header {
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        user-select: none;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: background 0.2s;
+    }
+    .dns-card-header:hover { background: rgba(67,97,238,0.06); }
+    .dns-card-body {
+        padding: 0 1.5rem 1.5rem;
+        border-top: 1px solid var(--border-color);
+    }
+    .dns-chevron {
+        margin-left: auto;
+        transition: transform 0.25s;
+        color: var(--text-secondary);
+    }
+    .dns-card.open .dns-chevron { transform: rotate(180deg); }
     .script-box {
         background: #0d1117;
         color: #c9d1d9;
@@ -62,21 +82,24 @@
 {% else %}
 
 {% for location in locations %}
-<div class="dns-card">
+<div class="dns-card" id="dns-card-{{ location.id }}">
 
-    <!-- Location header -->
-    <div class="d-flex align-items-center gap-3 mb-4">
-        <div class="stat-icon icon-sales mb-0" style="width:40px;height:40px;font-size:1.1rem;">
-            <i class="bi bi-router"></i>
+    <!-- Clickable header -->
+    <div class="dns-card-header" onclick="toggleDns('{{ location.id }}')">
+        <div style="width:36px;height:36px;background:rgba(67,97,238,0.12);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <i class="bi bi-router" style="color:var(--primary);"></i>
         </div>
         <div class="flex-grow-1">
-            <h6 class="mb-0">{{ location.site_name }}</h6>
+            <div class="fw-semibold" style="font-size:.9rem;">{{ location.site_name }}</div>
             <small class="text-muted">{{ location.get_location_type_display }} &mdash; {{ location.town_city }}</small>
         </div>
-        <span class="badge bg-success">Active</span>
+        <span class="badge bg-success me-2">Active</span>
+        <i class="bi bi-chevron-down dns-chevron"></i>
     </div>
 
-    <div class="row g-4">
+    <!-- Collapsible body -->
+    <div class="dns-card-body" id="dns-body-{{ location.id }}" style="display:none;">
+    <div class="row g-4 pt-3">
 
         <!-- LEFT: DNS input + save -->
         <div class="col-lg-5">
@@ -168,6 +191,7 @@ add action=allow comment="SpotPay API" dst-host={{ request.get_host }}
 
         </div>
     </div>
+    </div>
 </div>
 {% endfor %}
 
@@ -176,6 +200,12 @@ add action=allow comment="SpotPay API" dst-host={{ request.get_host }}
 
 {% block extra_js %}
 <script>
+function toggleDns(id) {
+    const card = document.getElementById('dns-card-' + id);
+    const body = document.getElementById('dns-body-' + id);
+    const open = card.classList.toggle('open');
+    body.style.display = open ? 'block' : 'none';
+}
 function copyScript(scriptId, btnId) {
     const text = document.getElementById(scriptId).innerText;
     navigator.clipboard.writeText(text).then(() => {

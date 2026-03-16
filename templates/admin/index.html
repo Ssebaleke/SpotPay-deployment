@@ -1,0 +1,640 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static log %}
+
+{% block content %}
+
+<style>
+html, body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+#container,
+#main,
+#content,
+#content-main,
+.main,
+.content,
+.dashboard,
+.dashboard #content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    box-sizing: border-box !important;
+}
+
+#nav-sidebar,
+.toggle-nav-sidebar {
+    display: none !important;
+}
+
+#content {
+    padding: 16px 18px !important;
+    box-sizing: border-box;
+}
+
+#content h1 {
+    margin-bottom: 18px;
+}
+
+/* ===== SIDEBAR TOGGLE BUTTON ===== */
+.sidebar-toggle {
+    display: none;
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 1200;
+    border: none;
+    border-radius: 10px;
+    background: #0f1620;
+    color: #fff;
+    font-size: 22px;
+    padding: 8px 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    cursor: pointer;
+}
+
+/* ===== LAYOUT ===== */
+.sp-layout {
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+    width: 100%;
+}
+
+.sp-main-content {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* ===== LEFT SIDEBAR ===== */
+.sp-leftbar {
+    background: #0c1218;
+    border-radius: 16px;
+    padding: 14px;
+    position: sticky;
+    top: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.18);
+}
+
+.sp-side-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #94a3b8;
+    margin: 6px 0 12px;
+}
+
+.sp-side-group {
+    margin-bottom: 14px;
+}
+
+.sp-side-group h3 {
+    margin: 0 0 8px;
+    padding: 10px 12px;
+    background: #3e7b97;
+    color: #fff;
+    font-size: 13px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    line-height: 1.35;
+}
+
+.sp-side-links {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sp-side-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-radius: 10px;
+    color: #7dd3fc;
+    background: rgba(255,255,255,.02);
+    transition: background .15s ease, transform .15s ease;
+}
+
+.sp-side-link:hover {
+    background: rgba(255,255,255,.06);
+    transform: translateX(2px);
+}
+
+.sp-side-link .label a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.sp-side-actions {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.sp-side-actions a {
+    color: #93c5fd;
+    text-decoration: none;
+}
+
+/* ===== CARDS ===== */
+.sp-cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+    width: 100%;
+}
+
+.sp-card {
+    border-radius: 16px;
+    padding: 18px;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(0,0,0,.18);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 170px;
+    overflow: hidden;
+}
+
+.sp-card .sp-val {
+    font-size: 1.9rem;
+    font-weight: 700;
+    line-height: 1.1;
+    word-break: break-word;
+}
+
+.sp-card .sp-lbl {
+    font-size: 1rem;
+    color: rgba(255,255,255,.95);
+    margin-top: 10px;
+}
+
+.sp-card .sp-sub {
+    font-size: .8rem;
+    color: rgba(255,255,255,.78);
+    margin-top: 8px;
+}
+
+.sp-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.sp-btn {
+    display: inline-block;
+    padding: .42rem .9rem;
+    border-radius: 9px;
+    font-size: .76rem;
+    font-weight: 600;
+    text-decoration: none;
+    background: rgba(255,255,255,0.18);
+    border: 1px solid rgba(255,255,255,0.32);
+    color: #fff;
+}
+
+.sp-btn:hover {
+    color: #fff;
+    background: rgba(255,255,255,0.28);
+}
+
+.sp-c1 { background: #2b52d1; }
+.sp-c2 { background: #1c9a3a; }
+.sp-c3 { background: #c96d05; }
+.sp-c4 { background: #1d81b8; }
+.sp-c5 { background: #6f2be3; }
+.sp-c6 { background: #c31218; }
+.sp-c7 { background: #14887f; }
+.sp-c8 { background: #b85714; }
+
+/* ===== RECENT ACTIONS ===== */
+.sp-dropdown {
+    background: #0f1620;
+    border-radius: 14px;
+    margin-bottom: 18px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.15);
+    overflow: hidden;
+}
+
+.sp-dropdown summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 14px 18px;
+    font-weight: 700;
+    font-size: 16px;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sp-dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+.sp-dropdown summary::after {
+    content: "▾";
+    font-size: 18px;
+    color: #94a3b8;
+    transition: transform .2s ease;
+}
+
+.sp-dropdown[open] summary::after {
+    transform: rotate(180deg);
+}
+
+.sp-dropdown-body {
+    padding: 0 18px 16px 18px;
+}
+
+.sp-actions {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.sp-actions li {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.sp-actions li:last-child {
+    border-bottom: none;
+}
+
+.sp-actions a {
+    color: #7dd3fc;
+    text-decoration: none;
+}
+
+.sp-actions small {
+    color: #a1a1aa;
+    display: block;
+    margin-top: 4px;
+}
+
+/* ===== CHARTS ===== */
+.sp-charts {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    width: 100%;
+}
+
+.sp-chart-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.07);
+    overflow: hidden;
+}
+
+.sp-chart-box h3 {
+    font-size: .95rem;
+    font-weight: 600;
+    margin: 0 0 12px;
+    color: #374151;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1200px) {
+    .sp-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sp-charts {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 900px) {
+    .sidebar-toggle {
+        display: block;
+    }
+
+    .sp-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .sp-leftbar {
+        position: fixed;
+        top: 0;
+        left: -260px;
+        width: 230px;
+        height: 100vh;
+        overflow-y: auto;
+        z-index: 1100;
+        border-radius: 0 16px 16px 0;
+        transition: left .25s ease;
+    }
+
+    .sp-leftbar.active {
+        left: 0;
+    }
+
+    .sp-main-content {
+        width: 100%;
+    }
+
+    #content {
+        padding-top: 60px !important;
+    }
+}
+
+@media (max-width: 600px) {
+    #content {
+        padding: 60px 14px 14px 14px !important;
+    }
+
+    .sp-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sp-card {
+        min-height: 150px;
+        padding: 16px;
+    }
+
+    .sp-card .sp-val {
+        font-size: 1.55rem;
+    }
+}
+
+@media (max-width: 420px) {
+    .sp-cards {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<button class="sidebar-toggle" type="button" onclick="toggleSidebar()">☰</button>
+
+<div class="sp-layout">
+
+    <aside class="sp-leftbar" id="spSidebar">
+        <div class="sp-side-title">Navigation</div>
+
+        {% for app in app_list %}
+            <div class="sp-side-group">
+                <h3>{{ app.name }}</h3>
+                <div class="sp-side-links">
+                    {% for model in app.models %}
+                        <div class="sp-side-link">
+                            <span class="label">
+                                {% if model.admin_url %}
+                                    <a href="{{ model.admin_url }}">{{ model.name }}</a>
+                                {% else %}
+                                    {{ model.name }}
+                                {% endif %}
+                            </span>
+
+                            <span class="sp-side-actions">
+                                {% if model.add_url %}
+                                    <a href="{{ model.add_url }}">Add</a>
+                                {% endif %}
+                                {% if model.admin_url %}
+                                    <a href="{{ model.admin_url }}">View</a>
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endfor %}
+    </aside>
+
+    <main class="sp-main-content">
+
+        <div class="sp-cards">
+            <div class="sp-card sp-c1">
+                <div>
+                    <div class="sp-val">UGX {{ sp_total_sales }}</div>
+                    <div class="sp-lbl">Platform Sales</div>
+                    <div class="sp-sub">All time</div>
+                </div>
+                <div class="sp-btns">
+                    <a href="/admin/payments/payment/" class="sp-btn">Payments</a>
+                </div>
+            </div>
+
+            <div class="sp-card sp-c2">
+                <div>
+                    <div class="sp-val">{{ sp_active_vendors }}/{{ sp_total_vendors }}</div>
+                    <div class="sp-lbl">Active Vendors</div>
+                    <div class="sp-sub">{{ sp_pending_vendors }} pending</div>
+                </div>
+                <div class="sp-btns">
+                    <a href="/admin/accounts/vendor/" class="sp-btn">All</a>
+                    <a href="/admin/accounts/vendor/?status__exact=PENDING" class="sp-btn">Pending</a>
+                </div>
+            </div>
+
+            <div class="sp-card sp-c3">
+                <div>
+                    <div class="sp-val">{{ sp_pending_vendors }}</div>
+                    <div class="sp-lbl">Awaiting Approval</div>
+                    <div class="sp-sub">Needs action</div>
+                </div>
+                <div class="sp-btns">
+                    <a href="/admin/accounts/vendor/?status__exact=PENDING" class="sp-btn">Review</a>
+                </div>
+            </div>
+
+            <div class="sp-card sp-c4">
+                <div>
+                    <div class="sp-val">{{ sp_active_locations }}/{{ sp_total_locations }}</div>
+                    <div class="sp-lbl">Locations</div>
+                    <div class="sp-sub">Active / Total</div>
+                </div>
+                <div class="sp-btns">
+                    <a href="/admin/hotspot/hotspotlocation/" class="sp-btn">All</a>
+                    <a href="/admin/hotspot/hotspotlocation/?status__exact=PENDING" class="sp-btn">Pending</a>
+                </div>
+            </div>
+
+            <div class="sp-card sp-c5">
+                <div>
+                    <div class="sp-val">{{ sp_total_txn }}</div>
+                    <div class="sp-lbl">Transactions</div>
+                    <div class="sp-sub">Last 30 days</div>
+                </div>
+                <div class="sp-btns">
+                    <a href="/admin/payments/payment/" class="sp-btn">View</a>
+                </div>
+            </div>
+
+            <div class="sp-card sp-c6">
+                <div>
+                    <div class="sp-val">{{ sp_failed_txn }}</div>
+                    <div class="sp-lbl">Failed / Pending</div>
+                    <div class="sp-sub">{{ sp_pending_txn }} pending</div>
+                </div>
+                <div class="sp-btns">
+                    <a href="/admin/payments/payment/?status__exact=FAILED" class="sp-btn">Failed</a>
+                    <a href="/admin/payments/payment/?status__exact=PENDING" class="sp-btn">Pending</a>
+                </div>
+            </div>
+
+            <div class="sp-card sp-c7">
+                <div>
+                    <div class="sp-val">UGX {{ sp_wallet_pool }}</div>
+                    <div class="sp-lbl">Wallet Pool</div>
+                    <div class="sp-sub">All vendors</div>
+                </div>
+                <div class="sp-btns">
+                    <a href="/admin/wallets/vendorwallet/" class="sp-btn">View</a>
+                </div>
+            </div>
+
+            <div class="sp-card sp-c8">
+                <div>
+                    <div class="sp-val">{{ sp_pending_withdrawals }}</div>
+                    <div class="sp-lbl">Withdrawals</div>
+                    <div class="sp-sub">UGX {{ sp_withdrawals_total }}</div>
+                </div>
+                <div class="sp-btns">
+                    <a href="/admin/wallets/withdrawalrequest/" class="sp-btn">Manage</a>
+                </div>
+            </div>
+        </div>
+
+        <details class="sp-dropdown" open>
+            <summary>Recent actions</summary>
+            <div class="sp-dropdown-body">
+                {% get_admin_log 10 as admin_log for_user user %}
+                <ul class="sp-actions">
+                    {% for entry in admin_log %}
+                        <li>
+                            <div>
+                                {% if entry.is_deletion or not entry.get_admin_url %}
+                                    {{ entry.object_repr }}
+                                {% else %}
+                                    <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                                {% endif %}
+                            </div>
+                            <small>{{ entry.content_type.name|capfirst }}</small>
+                        </li>
+                    {% empty %}
+                        <li>No recent actions available.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </details>
+
+        <div class="sp-charts">
+            <div class="sp-chart-box">
+                <h3>7-Day Revenue Trend</h3>
+                <div style="height:240px;">
+                    <canvas id="spTrend"></canvas>
+                </div>
+            </div>
+
+            <div class="sp-chart-box">
+                <h3>Transaction Breakdown</h3>
+                <div style="height:220px;">
+                    <canvas id="spDonut"></canvas>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:center;margin-top:8px;flex-wrap:wrap;">
+                    <span style="font-size:.72rem;color:#6b7280;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#10b981;margin-right:3px;"></span>Success</span>
+                    <span style="font-size:.72rem;color:#6b7280;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#ef4444;margin-right:3px;"></span>Failed</span>
+                    <span style="font-size:.72rem;color:#6b7280;"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#f59e0b;margin-right:3px;"></span>Pending</span>
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+{{ sp_trend_labels|json_script:"sp-tl" }}
+{{ sp_trend_values|json_script:"sp-tv" }}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function toggleSidebar() {
+    const sidebar = document.getElementById("spSidebar");
+    sidebar.classList.toggle("active");
+}
+
+(function(){
+    const labels = JSON.parse(document.getElementById('sp-tl').textContent);
+    const values = JSON.parse(document.getElementById('sp-tv').textContent);
+
+    new Chart(document.getElementById('spTrend'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'UGX',
+                data: values,
+                borderColor: '#4361ee',
+                backgroundColor: 'rgba(67,97,238,.1)',
+                fill: true,
+                tension: .35,
+                pointRadius: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(v){
+                            return 'UGX ' + v.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    const s = {{ sp_success_txn }};
+    const f = {{ sp_failed_txn }};
+    const p = {{ sp_pending_txn }};
+    const allZero = s === 0 && f === 0 && p === 0;
+
+    new Chart(document.getElementById('spDonut'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Success','Failed','Pending'],
+            datasets: [{
+                data: allZero ? [1,1,1] : [s,f,p],
+                backgroundColor: allZero ? ['#e2e8f0','#e2e8f0','#e2e8f0'] : ['#10b981','#ef4444','#f59e0b'],
+                borderWidth: 2,
+                borderColor: 'transparent',
+                hoverOffset: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx){
+                            return allZero ? ' No data yet' : ` ${ctx.label}: ${ctx.parsed}`;
+                        }
+                    }
+                }
+            }
+        }
+    });
+})();
+</script>
+
+{% endblock %}

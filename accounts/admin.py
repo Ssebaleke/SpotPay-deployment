@@ -1,12 +1,74 @@
 # accounts/admin.py
 from django.contrib import admin
+from django.contrib.admin import AdminSite
 from django.utils.html import format_html
 from django.contrib import messages
 from django.utils import timezone
+from django.db.models import Sum, Count, Q
+from decimal import Decimal
+from datetime import timedelta
+
 from .models import Vendor
 from sms.services.notifications import notify_vendor_approval
 
-@admin.register(Vendor)
+
+class SpotPayAdminSite(AdminSite):
+    site_header = "SpotPay Administration"
+    site_title = "SpotPay Admin"
+    index_title = "System Overview"
+
+    def index(self, request, extra_context=None):
+        from payments.models import Payment
+        from hotspot.models import HotspotLocation
+        from wallets.models import VendorWallet, WithdrawalRequest
+
+        now = timezone.now()
+        today = now.date()
+        month_start = now - timedelta(days=30)
+
+        txn_qs = Payment.objects.filter(purpose="TRANSACTION", initiated_at__gte=month_start)
+        success_qs = txn_qs.filter(status="SUCCESS")
+        failed_count = txn_qs.filter(status="FAILED").count()
+        pending_count = txn_qs.filter(status="PENDING").count()
+        total_count = txn_qs.count()
+        success_count = success_qs.count()
+
+        trend_labels, trend_values = [], []
+        for offset in range(6, -1, -1):
+            day = today - timedelta(days=offset)
+            total = Payment.objects.filter(
+                purpose="TRANSACTION", status="SUCCESS", completed_at__date=day
+            ).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+            trend_labels.append(day.strftime("%a %d"))
+            trend_values.append(float(total))
+
+        pending_wd_qs = WithdrawalRequest.objects.filter(status=WithdrawalRequest.STATUS_PENDING)
+
+        extra_context = extra_context or {}
+        extra_context.update({
+            "sp_total_sales": Payment.objects.filter(purpose="TRANSACTION", status="SUCCESS").aggregate(t=Sum("amount"))["t"] or Decimal("0"),
+            "sp_total_vendors": Vendor.objects.count(),
+            "sp_active_vendors": Vendor.objects.filter(status="ACTIVE").count(),
+            "sp_pending_vendors": Vendor.objects.filter(status="PENDING").count(),
+            "sp_total_locations": HotspotLocation.objects.count(),
+            "sp_active_locations": HotspotLocation.objects.filter(status="ACTIVE").count(),
+            "sp_total_txn": total_count,
+            "sp_success_txn": success_count,
+            "sp_failed_txn": failed_count,
+            "sp_pending_txn": pending_count,
+            "sp_success_rate": round((success_count / total_count) * 100) if total_count > 0 else 0,
+            "sp_wallet_pool": VendorWallet.objects.aggregate(t=Sum("balance"))["t"] or Decimal("0"),
+            "sp_pending_withdrawals": pending_wd_qs.count(),
+            "sp_withdrawals_total": pending_wd_qs.aggregate(t=Sum("amount"))["t"] or Decimal("0"),
+            "sp_trend_labels": trend_labels,
+            "sp_trend_values": trend_values,
+        })
+        return super().index(request, extra_context)
+
+
+admin_site = SpotPayAdminSite(name="spotpay_admin")
+
+
 class VendorAdmin(admin.ModelAdmin):
     list_display = ('company_name', 'contact_person', 'business_phone', 'status', 'created_at')
     list_filter = ('status', 'created_at')
@@ -22,9 +84,6 @@ class VendorAdmin(admin.ModelAdmin):
         }),
         ('Status', {
             'fields': ('status', 'approved_by', 'approved_at')
-        }),
-        ('Financial', {
-            'fields': ('sms_balance', 'wallet_balance')
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -65,3 +124,6 @@ class VendorAdmin(admin.ModelAdmin):
             vendor.user.save()
         self.message_user(request, f'{updated} vendor(s) suspended and deactivated.')
     suspend_vendors.short_description = "Suspend selected vendors"
+
+
+admin_site.register(Vendor, VendorAdmin)

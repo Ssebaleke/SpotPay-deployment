@@ -117,9 +117,15 @@ def admin_dashboard(request):
 
     total_vendors = Vendor.objects.count()
     active_vendors = Vendor.objects.filter(status="ACTIVE").count()
+    pending_vendors = Vendor.objects.filter(status="PENDING").count()
+
+    total_locations = HotspotLocation.objects.count()
+    active_locations = HotspotLocation.objects.filter(status="ACTIVE").count()
 
     total_transactions = transactions_scope.count()
     successful_transactions = transactions_scope.filter(status="SUCCESS").count()
+    failed_transactions = transactions_scope.filter(status="FAILED").count()
+    pending_transactions = transactions_scope.filter(status="PENDING").count()
 
     total_wallet_balance = (
         VendorWallet.objects.aggregate(total=Sum("balance"))["total"]
@@ -156,20 +162,91 @@ def admin_dashboard(request):
             if transaction_count > 0 else 0
         )
 
+    # 7-day daily trend for admin chart
+    admin_trend_labels = []
+    admin_trend_values = []
+    today_date = timezone.now().date()
+    for day_offset in range(6, -1, -1):
+        day = today_date - timedelta(days=day_offset)
+        day_total = (
+            Payment.objects.filter(
+                purpose="TRANSACTION",
+                status="SUCCESS",
+                completed_at__date=day
+            ).aggregate(total=Sum("amount"))["total"]
+            or Decimal("0.00")
+        )
+        admin_trend_labels.append(day.strftime("%a %d"))
+        admin_trend_values.append(float(day_total))
+
+    # vendor success rate for doughnut
+    success_rate = round((successful_transactions / total_transactions) * 100) if total_transactions > 0 else 0
+
+    pending_vendors_list = Vendor.objects.filter(status='PENDING').select_related('user').order_by('created_at')
+    all_vendors_list = Vendor.objects.select_related('user').order_by('-created_at')[:20]
+    all_locations_list = HotspotLocation.objects.select_related('vendor').order_by('-created_at')[:20]
+
     return render(request, 'accounts/admin_dashboard.html', {
         'period': period,
         'total_platform_sales': total_platform_sales,
         'total_vendors': total_vendors,
         'active_vendors': active_vendors,
+        'pending_vendors': pending_vendors,
+        'total_locations': total_locations,
+        'active_locations': active_locations,
         'total_transactions': total_transactions,
         'successful_transactions': successful_transactions,
+        'failed_transactions': failed_transactions,
+        'pending_transactions': pending_transactions,
+        'success_rate': success_rate,
         'total_wallet_balance': total_wallet_balance,
         'pending_withdrawals_count': pending_withdrawals_count,
         'pending_withdrawals_total': pending_withdrawals_total,
         'pending_withdrawals': pending_withdrawals_qs.select_related('wallet', 'wallet__vendor').order_by('-created_at')[:10],
         'recent_vendor_activity': recent_vendor_activity,
         'vendor_performance': vendor_performance,
+        'admin_trend_labels': admin_trend_labels,
+        'admin_trend_values': admin_trend_values,
+        'pending_vendors_list': pending_vendors_list,
+        'all_vendors_list': all_vendors_list,
+        'all_locations_list': all_locations_list,
     })
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_approve_vendor(request, vendor_id):
+    if request.method != 'POST':
+        return redirect('admin_dashboard')
+    vendor = Vendor.objects.select_related('user').filter(id=vendor_id).first()
+    if not vendor:
+        messages.error(request, 'Vendor not found.')
+        return redirect('admin_dashboard')
+    vendor.status = 'ACTIVE'
+    vendor.approved_by = request.user
+    vendor.approved_at = timezone.now()
+    vendor.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
+    vendor.user.is_active = True
+    vendor.user.save()
+    messages.success(request, f'{vendor.company_name} approved and activated.')
+    return redirect('admin_dashboard')
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_reject_vendor(request, vendor_id):
+    if request.method != 'POST':
+        return redirect('admin_dashboard')
+    vendor = Vendor.objects.select_related('user').filter(id=vendor_id).first()
+    if not vendor:
+        messages.error(request, 'Vendor not found.')
+        return redirect('admin_dashboard')
+    vendor.status = 'REJECTED'
+    vendor.save(update_fields=['status', 'updated_at'])
+    vendor.user.is_active = False
+    vendor.user.save()
+    messages.success(request, f'{vendor.company_name} rejected.')
+    return redirect('admin_dashboard')
 
 
 @login_required

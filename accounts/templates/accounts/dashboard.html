@@ -3,68 +3,64 @@
 
 {% block title %}Dashboard - SpotPay{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
-{% block page_subtitle %}Welcome back! Here's what's happening today.{% endblock %}
+{% block page_subtitle %}Welcome back, {% if vendor %}{{ vendor.company_name }}{% elif user.is_authenticated %}{{ user.username }}{% else %}Vendor{% endif %}! Here's what's happening today.{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Solid colored cards */
-    .stat-card {
-        border: none !important;
-        border-radius: 14px;
-        padding: 1rem 1.1rem;
-        color: #fff;
-        box-shadow: 0 4px 18px rgba(0,0,0,0.13);
+    .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 1.25rem;
     }
-    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+    @media (max-width: 992px) { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 576px) { .cards-grid { grid-template-columns: repeat(1, 1fr); } }
 
-    .card-sms       { background: linear-gradient(135deg, #6366f1, #818cf8); }
-    .card-wallet    { background: linear-gradient(135deg, #10b981, #34d399); }
-    .card-locations { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
-    .card-today     { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
-    .card-weekly    { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
-    .card-monthly   { background: linear-gradient(135deg, #ec4899, #f472b6); }
-    .card-annual    { background: linear-gradient(135deg, #14b8a6, #2dd4bf); }
-    .card-total     { background: linear-gradient(135deg, #f97316, #fb923c); }
+    .stat-card {
+        border-radius: 14px;
+        padding: 18px 16px 14px;
+        color: #fff;
+        box-shadow: 0 4px 18px rgba(0,0,0,.18);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 130px;
+        transition: transform .2s;
+    }
+    .stat-card:hover { transform: translateY(-4px); }
+    .card-sms      { background: linear-gradient(135deg, #4361ee, #3a0ca3); }
+    .card-wallet   { background: linear-gradient(135deg, #2dc653, #1a7a32); }
+    .card-locations{ background: linear-gradient(135deg, #4cc9f0, #1d81b8); }
+    .card-today    { background: linear-gradient(135deg, #7b2ff7, #4a0e8f); }
+    .card-weekly   { background: linear-gradient(135deg, #f77f00, #a04800); }
+    .card-monthly  { background: linear-gradient(135deg, #e63946, #9b1b25); }
+    .card-annual   { background: linear-gradient(135deg, #2ec4b6, #0d6e67); }
+    .card-total    { background: linear-gradient(135deg, #e07a2f, #8c4010); }
 
     .stat-card .stat-icon {
-        width: 36px; height: 36px;
-        background: rgba(255,255,255,0.2);
-        border-radius: 8px;
-        font-size: 1.1rem;
-        margin-bottom: 0.6rem;
+        width: 40px; height: 40px;
+        background: rgba(255,255,255,0.22);
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.2rem;
+        margin-bottom: .6rem;
     }
-
-    .stat-card .stat-value {
-        font-size: 1.15rem;
-        font-weight: 700;
-        color: #fff;
-        line-height: 1.2;
-    }
-
-    .stat-card .stat-label {
-        font-size: 0.75rem;
-        color: rgba(255,255,255,0.8);
-        margin-bottom: 0.5rem;
-    }
-
+    .stat-card .stat-value { font-size: 1.05rem; font-weight: 700; line-height: 1.2; }
+    .stat-card .stat-label { font-size: .7rem; color: rgba(255,255,255,.8); margin-bottom: .5rem; }
     .stat-card .stat-action {
-        font-size: 0.75rem;
-        background: rgba(255,255,255,0.2);
-        border: 1px solid rgba(255,255,255,0.35);
-        color: #fff;
-        border-radius: 6px;
-        padding: 0.2rem 0.65rem;
-        text-decoration: none;
         display: inline-block;
-        transition: background 0.2s;
+        align-self: flex-start;
+        padding: .22rem .6rem;
+        border-radius: 5px;
+        font-size: .7rem;
+        font-weight: 600;
+        text-decoration: none;
+        background: rgba(255,255,255,0.18);
+        border: 1px solid rgba(255,255,255,0.35);
+        color: #fff !important;
+        transition: background .15s;
     }
-    .stat-card .stat-action:hover { background: rgba(255,255,255,0.35); color: #fff; }
-
-    [data-theme="dark"] .summary-box {
-        background: var(--bg-primary);
-        border-radius: 8px;
-        padding: 0.75rem 1rem;
-    }
+    .stat-card .stat-action:hover { background: rgba(255,255,255,0.32); }
 </style>
 {% endblock %}
 
@@ -83,67 +79,63 @@
 </div>
 {% endif %}
 
-<!-- ── Stat Cards Row 1 ── -->
-<div class="row g-3 mb-3">
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-card card-sms">
+<!-- Stat Cards -->
+<div class="cards-grid">
+    <div class="stat-card card-sms">
+        <div>
             <div class="stat-icon"><i class="bi bi-chat-text"></i></div>
             <div class="stat-value">{{ sms_balance }}</div>
             <div class="stat-label">SMS Balance</div>
-            <a href="{% url 'sms:sms_topup' %}" class="stat-action">Buy SMS</a>
         </div>
+        <a href="{% url 'sms:sms_topup' %}" class="stat-action">Buy SMS</a>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-card card-wallet">
+    <div class="stat-card card-wallet">
+        <div>
             <div class="stat-icon"><i class="bi bi-wallet2"></i></div>
             <div class="stat-value">UGX {{ vendor.wallet.balance|default:"0" }}</div>
             <div class="stat-label">Wallet Balance</div>
-            <a href="{% url 'wallet_dashboard' %}" class="stat-action">Wallet</a>
         </div>
+        <a href="{% url 'wallet_dashboard' %}" class="stat-action">Wallet</a>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-card card-locations">
+    <div class="stat-card card-locations">
+        <div>
             <div class="stat-icon"><i class="bi bi-geo-alt"></i></div>
             <div class="stat-value">{{ locations_count|default:"0" }}</div>
             <div class="stat-label">Active Locations</div>
-            <a href="{% url 'locations_list' %}" class="stat-action">View All</a>
         </div>
+        <a href="{% url 'locations_list' %}" class="stat-action">View All</a>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-card card-today">
+    <div class="stat-card card-today">
+        <div>
             <div class="stat-icon"><i class="bi bi-calendar-day"></i></div>
             <div class="stat-value">UGX {{ todays_payments_total|default:"0" }}</div>
             <div class="stat-label">Today's Revenue</div>
-            <a href="{% url 'vendor_dashboard' %}" class="stat-action">Details</a>
         </div>
+        <a href="{% url 'vendor_dashboard' %}" class="stat-action">Details</a>
     </div>
-</div>
-
-<!-- ── Stat Cards Row 2 ── -->
-<div class="row g-3 mb-4">
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-card card-weekly">
+    <div class="stat-card card-weekly">
+        <div>
             <div class="stat-icon"><i class="bi bi-calendar-week"></i></div>
             <div class="stat-value">UGX {{ weekly_payments_total|default:"0" }}</div>
             <div class="stat-label">This Week</div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-card card-monthly">
+    <div class="stat-card card-monthly">
+        <div>
             <div class="stat-icon"><i class="bi bi-calendar-month"></i></div>
             <div class="stat-value">UGX {{ monthly_payments_total|default:"0" }}</div>
             <div class="stat-label">This Month</div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-card card-annual">
+    <div class="stat-card card-annual">
+        <div>
             <div class="stat-icon"><i class="bi bi-calendar-range"></i></div>
             <div class="stat-value">UGX {{ annual_payments_total|default:"0" }}</div>
             <div class="stat-label">This Year</div>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6">
-        <div class="stat-card card-total">
+    <div class="stat-card card-total">
+        <div>
             <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
             <div class="stat-value">UGX {{ total_payments_received|default:"0" }}</div>
             <div class="stat-label">Total Received</div>
