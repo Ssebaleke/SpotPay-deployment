@@ -6,12 +6,11 @@
 <div class="container-fluid px-4">
 
   <!-- Page Header -->
-  <div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div>
       <h3 class="fw-bold mb-1">Packages</h3>
       <p class="text-muted mb-0">Manage your internet packages</p>
     </div>
-
     <button class="btn btn-primary"
             data-bs-toggle="modal"
             data-bs-target="#packageModal"
@@ -20,8 +19,8 @@
     </button>
   </div>
 
-  <!-- Packages Table -->
-  <div class="card shadow-sm border-0">
+  <!-- Packages Table (desktop) -->
+  <div class="card shadow-sm border-0 d-none d-md-block">
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
@@ -35,61 +34,68 @@
             </tr>
           </thead>
           <tbody>
-
           {% for package in packages %}
             <tr>
               <td><strong>{{ package.name }}</strong></td>
               <td>{{ package.location.site_name }}</td>
               <td>UGX {{ package.price|intcomma }}</td>
-
               <td>
-                {% if package.is_active %}
-                  <span class="badge bg-success">Active</span>
-                {% else %}
-                  <span class="badge bg-secondary">Inactive</span>
-                {% endif %}
+                {% if package.is_active %}<span class="badge bg-success">Active</span>
+                {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
               </td>
-
               <td class="text-end">
-
-                <!-- EDIT -->
-                <button type="button"
-                        class="btn btn-sm btn-outline-primary edit-btn"
-                        data-id="{{ package.id }}"
-                        data-name="{{ package.name }}"
-                        data-price="{{ package.price }}"
-                        data-location="{{ package.location.id }}"
-                        data-active="{{ package.is_active|yesno:'true,false' }}">
-                  Edit
-                </button>
-
-                <!-- DELETE (SOFT DELETE) -->
+                <button type="button" class="btn btn-sm btn-outline-primary edit-btn"
+                        data-id="{{ package.id }}" data-name="{{ package.name }}"
+                        data-price="{{ package.price }}" data-location="{{ package.location.id }}"
+                        data-active="{{ package.is_active|yesno:'true,false' }}">Edit</button>
                 <form method="post" class="d-inline">
                   {% csrf_token %}
                   <input type="hidden" name="action" value="delete">
                   <input type="hidden" name="package_id" value="{{ package.id }}">
-              
-                  <button type="submit"
-                          class="btn btn-sm btn-outline-danger"
-                          onclick="return confirm('Disable this package?')">
-                      Delete
-                  </button>
-              </form>              
-
+                  <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Disable this package?')">Delete</button>
+                </form>
               </td>
             </tr>
           {% empty %}
-            <tr>
-              <td colspan="5" class="text-center py-4 text-muted">
-                No packages created yet
-              </td>
-            </tr>
+            <tr><td colspan="5" class="text-center py-4 text-muted">No packages created yet</td></tr>
           {% endfor %}
-
           </tbody>
         </table>
       </div>
     </div>
+  </div>
+
+  <!-- Packages Cards (mobile) -->
+  <div class="d-md-none">
+    {% for package in packages %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <div class="fw-bold">{{ package.name }}</div>
+            <small class="text-muted">{{ package.location.site_name }}</small>
+          </div>
+          {% if package.is_active %}<span class="badge bg-success">Active</span>
+          {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+        </div>
+        <div class="fw-semibold mb-3">UGX {{ package.price|intcomma }}</div>
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-sm btn-outline-primary flex-fill edit-btn"
+                  data-id="{{ package.id }}" data-name="{{ package.name }}"
+                  data-price="{{ package.price }}" data-location="{{ package.location.id }}"
+                  data-active="{{ package.is_active|yesno:'true,false' }}">Edit</button>
+          <form method="post" class="flex-fill">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="package_id" value="{{ package.id }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger w-100" onclick="return confirm('Disable this package?')">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-center text-muted py-4">No packages created yet</p>
+    {% endfor %}
   </div>
 
 </div>
