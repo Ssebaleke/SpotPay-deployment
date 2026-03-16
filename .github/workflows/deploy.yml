@@ -140,8 +140,8 @@ jobs:
             echo "Reloading nginx (zero downtime)..."
             docker compose up -d --no-deps nginx
 
-            echo "Pruning old containers..."
-            docker system prune -af --volumes
+            echo "Pruning old images only (no volumes)..."
+            docker image prune -f
 
             echo "Checking container status..."
             docker compose ps
