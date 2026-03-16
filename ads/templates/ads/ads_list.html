@@ -67,9 +67,9 @@
             <td>{{ ad.ad_type }}</td>
             <td>
               {% if ad.ad_type == 'IMAGE' %}
-                <img src="{{ ad.file.url }}" height="50">
+                <img src="{{ ad.file.url }}" height="60" style="border-radius:6px;object-fit:cover;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span class=text-danger>❌ File missing</span>')">
               {% else %}
-                <video src="{{ ad.file.url }}" height="50" muted></video>
+                <video src="{{ ad.file.url }}" height="60" muted controls style="border-radius:6px;"></video>
               {% endif %}
             </td>
             <td>{{ ad.location.site_name }}</td>

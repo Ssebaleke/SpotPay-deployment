@@ -32,7 +32,10 @@ def portal_data(request, uuid):
         vendor__status="ACTIVE"
     )
 
-    packages = location.packages.filter(is_active=True)
+    packages = location.packages.filter(
+        is_active=True,
+        vouchers__status='UNUSED'
+    ).distinct()
 
     ads = location.ads.filter(is_active=True)
 
