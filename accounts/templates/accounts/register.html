@@ -151,7 +151,7 @@
                     {% if form.contact_person.errors %}<div class="text-danger">{{ form.contact_person.errors }}</div>{% endif %}
                 </div>
                 <div class="col-6">
-                    <label class="form-label">Business Phone *</label>
+                    <label class="form-label">Phone *</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-telephone"></i></span>
                         <input type="tel" class="form-control" name="business_phone" placeholder="+256..." required>
@@ -159,23 +159,13 @@
                     {% if form.business_phone.errors %}<div class="text-danger">{{ form.business_phone.errors }}</div>{% endif %}
                 </div>
             </div>
-            <div class="row g-2 mb-3">
-                <div class="col-6">
-                    <label class="form-label">Business Email *</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                        <input type="email" class="form-control" name="business_email" placeholder="business@email.com" required>
-                    </div>
-                    {% if form.business_email.errors %}<div class="text-danger">{{ form.business_email.errors }}</div>{% endif %}
+            <div class="mb-3">
+                <label class="form-label">Business Address *</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-map"></i></span>
+                    <input type="text" class="form-control" name="business_address" placeholder="Address" required>
                 </div>
-                <div class="col-6">
-                    <label class="form-label">Business Address *</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-map"></i></span>
-                        <input type="text" class="form-control" name="business_address" placeholder="Address" required>
-                    </div>
-                    {% if form.business_address.errors %}<div class="text-danger">{{ form.business_address.errors }}</div>{% endif %}
-                </div>
+                {% if form.business_address.errors %}<div class="text-danger">{{ form.business_address.errors }}</div>{% endif %}
             </div>
 
             <div class="section-label">Account Details</div>

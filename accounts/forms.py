@@ -18,7 +18,6 @@ class VendorRegistrationForm(forms.Form):
     contact_person = forms.CharField(max_length=255)
     business_address = forms.CharField(max_length=100)
     business_phone = forms.CharField(max_length=15)
-    business_email = forms.EmailField()
 
     # ---------- FIELD VALIDATION ----------
 
@@ -44,7 +43,7 @@ class VendorRegistrationForm(forms.Form):
             self.add_error('confirm_password', "Passwords do not match.")
 
         phone = cleaned_data.get('business_phone')
-        if phone and not re.match(r'^\+?1?\d{9,15}$', phone):
+        if phone and not re.match(r'^\+?\d{9,15}$', phone):
             self.add_error('business_phone', "Enter a valid phone number.")
 
         return cleaned_data
@@ -67,7 +66,7 @@ class VendorRegistrationForm(forms.Form):
                     contact_person=self.cleaned_data['contact_person'],
                     business_address=self.cleaned_data['business_address'],
                     business_phone=self.cleaned_data['business_phone'],
-                    business_email=self.cleaned_data['business_email'],
+                    business_email=self.cleaned_data['email'],
                     status='PENDING'
                 )
 
