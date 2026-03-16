@@ -109,11 +109,16 @@ def payment_status(request, reference):
 
 @csrf_exempt
 def payment_callback(request):
-    data = _parse_body(request)
-
     import logging
     logger = logging.getLogger(__name__)
-    logger.warning(f"MAKYPAY WEBHOOK: {data}")
+
+    # Log raw body BEFORE parsing so we never miss anything
+    raw_body = request.body.decode("utf-8", errors="replace")
+    logger.warning(f"MAKYPAY WEBHOOK RAW BODY: {raw_body}")
+    logger.warning(f"MAKYPAY WEBHOOK HEADERS: {dict(request.headers)}")
+
+    data = _parse_body(request)
+    logger.warning(f"MAKYPAY WEBHOOK PARSED: {data}")
 
     # handle all possible reference field names MakyPay might send
     reference = (
@@ -134,7 +139,9 @@ def payment_callback(request):
     ).lower()
 
     if not reference:
-        return HttpResponse("MISSING_REFERENCE", status=400)
+        # No reference at all — log everything and return 200 so MakyPay doesn't retry
+        logger.warning(f"MAKYPAY WEBHOOK: no reference field found in data: {data}")
+        return HttpResponse("OK")
 
     is_success = status_raw in ("completed", "success", "successful", "paid")
     is_failed = status_raw in ("failed", "cancelled", "canceled", "rejected", "expired")
@@ -143,10 +150,14 @@ def payment_callback(request):
     run_success_handler = False
 
     with transaction.atomic():
-        try:
-            payment = Payment.objects.select_for_update().get(provider_reference=reference)
-        except Payment.DoesNotExist:
-            return HttpResponse("INVALID_PAYMENT", status=404)
+        # Try provider_reference first, then uuid (covers fallback case)
+        payment = (
+            Payment.objects.select_for_update().filter(provider_reference=reference).first()
+            or Payment.objects.select_for_update().filter(uuid=reference).first()
+        )
+        if not payment:
+            logger.warning(f"MAKYPAY WEBHOOK: no payment found for reference={reference}")
+            return HttpResponse("OK")
 
         if payment.status == "SUCCESS":
             return HttpResponse("OK")

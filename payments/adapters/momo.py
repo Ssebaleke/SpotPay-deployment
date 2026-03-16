@@ -1,6 +1,10 @@
+import logging
 import requests
 from requests.auth import HTTPBasicAuth
 from decimal import Decimal
+from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 class MomoAdapter:
@@ -56,19 +60,22 @@ class MomoAdapter:
         if not phone.startswith("256"):
             phone = "256" + phone   # Fallback, though ideally already mapped
 
+        webhook_url = f"{settings.SITE_URL}/payments/webhook/makypay/"
+
         payload = {
-            "phone_number": phone,              # required (256XXXXXXXXX)
-            "amount": str(amount_int),          # required (send as string in forms)
-            "country": "UG",                    # required by new API docs
-            "reference": str(payment.uuid),     # required
-            "currency": str(currency),          # optional
+            "phone_number": phone,
+            "amount": str(amount_int),
+            "country": "UG",
+            "reference": str(payment.uuid),
+            "currency": str(currency),
+            "callback_url": webhook_url,
+            "webhook_url": webhook_url,
         }
 
         url = f"{self.base_url}/api/v1/collections/collect-money"
 
-        print("MAKYPAY URL:", url)
-        print("MAKYPAY FORM PAYLOAD:", payload)
-        # ✅ use data= (form), NOT json=
+        logger.warning(f"MAKYPAY CHARGE REQUEST: url={url} payload={payload}")
+
         resp = requests.post(
             url,
             auth=HTTPBasicAuth(self.username, self.password),
@@ -77,26 +84,27 @@ class MomoAdapter:
             timeout=30,
         )
 
+        logger.warning(f"MAKYPAY CHARGE RESPONSE: status={resp.status_code} body={resp.text}")
+
         if resp.status_code >= 400:
-            raise ValueError(f"MakyPay {resp.status_code} at {resp.url}: {self._safe_json(resp)}")
+            raise ValueError(f"MakyPay {resp.status_code}: {resp.text}")
 
         res = self._safe_json(resp)
 
-        provider_reference = (
-            res.get("reference")
-            or res.get("transaction_id")
-            or res.get("uuid")
-            or res.get("id")
-        )
-
-        if not provider_reference and isinstance(res.get("data"), dict):
-            d = res["data"]
-            provider_reference = (
+        # Extract provider reference — try top-level then nested data{}
+        def _extract_ref(d):
+            return (
                 d.get("reference")
                 or d.get("transaction_id")
+                or d.get("transactionId")
                 or d.get("uuid")
                 or d.get("id")
             )
 
-        # fallback: at least store your own ref
+        provider_reference = _extract_ref(res)
+        if not provider_reference and isinstance(res.get("data"), dict):
+            provider_reference = _extract_ref(res["data"])
+
+        logger.warning(f"MAKYPAY provider_reference={provider_reference or '(fallback to uuid)'}")
+
         return str(provider_reference or payment.uuid)
