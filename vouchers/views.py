@@ -66,16 +66,19 @@ def voucher_list(request):
         )
 
         decoded_file = csv_file.read().decode('utf-8-sig').splitlines()
-        reader = csv.DictReader(decoded_file)
 
-        # Normalize headers to lowercase for flexible matching
-        reader.fieldnames = [f.strip().lower() for f in (reader.fieldnames or [])]
+        if not decoded_file:
+            messages.error(request, "CSV file is empty.")
+            return redirect('voucher_list')
+
+        reader = csv.DictReader(decoded_file)
 
         created_count = 0
         skipped_count = 0
 
         for row in reader:
-            # Support Mikhmon and common CSV formats
+            # Normalize row keys to lowercase for flexible matching
+            row = {k.strip().lower(): (v.strip() if v else '') for k, v in row.items()}
             code = (
                 row.get('username')
                 or row.get('password')
