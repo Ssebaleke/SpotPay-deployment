@@ -19,11 +19,12 @@ class PaymentProviderAdmin(admin.ModelAdmin):
         "environment",
         "base_url",
         "is_active",
+        "webhook_url_display",
         "created_at",
     )
     list_filter = ("provider_type", "environment", "is_active")
     search_fields = ("name", "base_url", "api_key")
-    readonly_fields = ("created_at",)
+    readonly_fields = ("created_at", "webhook_url_display")
 
     fieldsets = (
         ("Provider Info", {
@@ -32,10 +33,22 @@ class PaymentProviderAdmin(admin.ModelAdmin):
         ("API Settings", {
             "fields": ("base_url", "api_key", "api_secret")
         }),
+        ("Webhook URL (register this in MakyPay dashboard)", {
+            "fields": ("webhook_url_display",)
+        }),
         ("Meta", {
             "fields": ("created_at",)
         }),
     )
+
+    def webhook_url_display(self, obj):
+        from django.conf import settings
+        url = f"{settings.SITE_URL}/payments/webhook/makypay/"
+        return format_html(
+            '<code style="background:#f1f5f9;padding:4px 8px;border-radius:4px;">{}</code>',
+            url
+        )
+    webhook_url_display.short_description = "Webhook URL"
 
 
 @admin.register(PaymentSystemConfig)

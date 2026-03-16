@@ -111,14 +111,27 @@ def payment_status(request, reference):
 def payment_callback(request):
     data = _parse_body(request)
 
-    # DEBUG: log raw webhook payload
     import logging
     logger = logging.getLogger(__name__)
-    logger.warning(f"MAKYPAY WEBHOOK RAW BODY: {request.body}")
-    logger.warning(f"MAKYPAY WEBHOOK PARSED: {data}")
+    logger.warning(f"MAKYPAY WEBHOOK: {data}")
 
-    reference = data.get("reference") or data.get("provider_reference")
-    status_raw = (data.get("status") or "").lower()
+    # handle all possible reference field names MakyPay might send
+    reference = (
+        data.get("reference")
+        or data.get("provider_reference")
+        or data.get("transaction_id")
+        or data.get("transactionId")
+        or data.get("txn_id")
+        or data.get("id")
+    )
+
+    # handle all possible status field names
+    status_raw = (
+        data.get("status")
+        or data.get("transaction_status")
+        or data.get("transactionStatus")
+        or ""
+    ).lower()
 
     if not reference:
         return HttpResponse("MISSING_REFERENCE", status=400)
