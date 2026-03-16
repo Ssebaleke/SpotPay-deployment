@@ -50,7 +50,7 @@ def portal_data(request, uuid):
         ],
         "ads": [
             {
-                "type": ad.ad_type,
+                "type": ad.ad_type.lower(),
                 "url": request.build_absolute_uri(ad.file.url),
             }
             for ad in ads
