@@ -24,7 +24,7 @@ def analytics_dashboard(request):
         messages.error(request, 'You are not registered as a vendor.')
         return redirect('vendor_login')
 
-    locations = HotspotLocation.objects.filter(vendor=vendor, status='ACTIVE')
+    locations = HotspotLocation.objects.filter(vendor=vendor)
 
     # Per-location performance summary
     now = timezone.now()
