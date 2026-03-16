@@ -16,6 +16,7 @@ class SpotPayAdminSite(AdminSite):
     site_header = "SpotPay Administration"
     site_title = "SpotPay Admin"
     index_title = "System Overview"
+    index_template = "admin/index.html"
 
     def index(self, request, extra_context=None):
         from payments.models import Payment
