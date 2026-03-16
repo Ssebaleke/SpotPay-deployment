@@ -65,19 +65,24 @@ def voucher_list(request):
             source_filename=getattr(csv_file, 'name', ''),
         )
 
-        decoded_file = csv_file.read().decode('utf-8').splitlines()
+        decoded_file = csv_file.read().decode('utf-8-sig').splitlines()
         reader = csv.DictReader(decoded_file)
+
+        # Normalize headers to lowercase for flexible matching
+        reader.fieldnames = [f.strip().lower() for f in (reader.fieldnames or [])]
 
         created_count = 0
         skipped_count = 0
 
         for row in reader:
-            # Mikhmon CSV headers
+            # Support Mikhmon and common CSV formats
             code = (
-                row.get('Username')
-                or row.get('Password')
-                or row.get('username')
+                row.get('username')
                 or row.get('password')
+                or row.get('code')
+                or row.get('voucher')
+                or row.get('voucher_code')
+                or (list(row.values())[0] if row else None)
             )
 
             if not code:
