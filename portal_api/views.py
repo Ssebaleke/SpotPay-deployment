@@ -32,11 +32,7 @@ def portal_data(request, uuid):
         vendor__status="ACTIVE"
     )
 
-    # ✅ Show ONLY packages that still have UNUSED vouchers
-    packages = location.packages.filter(
-        is_active=True,
-        vouchers__status="UNUSED"
-    ).distinct()
+    packages = location.packages.filter(is_active=True)
 
     ads = location.ads.filter(is_active=True)
 
