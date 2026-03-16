@@ -120,23 +120,15 @@ def payment_callback(request):
     data = _parse_body(request)
     logger.warning(f"MAKYPAY WEBHOOK PARSED: {data}")
 
-    # handle all possible reference field names MakyPay might send
-    reference = (
-        data.get("reference")
-        or data.get("provider_reference")
-        or data.get("transaction_id")
-        or data.get("transactionId")
-        or data.get("txn_id")
-        or data.get("id")
-    )
+    # MakyPay webhook structure: data["transaction"]["reference"] and data["event_type"]
+    txn = data.get("transaction") or {}
+    reference = txn.get("reference") or txn.get("uuid")
 
-    # handle all possible status field names
-    status_raw = (
-        data.get("status")
-        or data.get("transaction_status")
-        or data.get("transactionStatus")
-        or ""
-    ).lower()
+    event_type = data.get("event_type", "")  # e.g. "collection.completed" / "collection.failed"
+    status_raw = txn.get("status", "").lower()  # e.g. "failed", "successful"
+
+    is_success = event_type == "collection.completed" or status_raw in ("successful", "success", "completed", "paid")
+    is_failed = event_type == "collection.failed" or status_raw in ("failed", "cancelled", "canceled", "rejected", "expired")
 
     if not reference:
         # No reference at all — log everything and return 200 so MakyPay doesn't retry
