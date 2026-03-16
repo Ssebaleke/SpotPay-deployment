@@ -145,7 +145,13 @@ def portal_buy_api(request, uuid):
 # =====================================================
 
 def portal_payment_status(request, reference):
-    payment = get_object_or_404(Payment, provider_reference=reference)
+    # try provider_reference first, then uuid
+    payment = (
+        Payment.objects.filter(provider_reference=reference).first()
+        or Payment.objects.filter(uuid=reference).first()
+    )
+    if not payment:
+        return JsonResponse({"success": False, "status": "NOT_FOUND"}, status=404)
 
     voucher = None
     try:

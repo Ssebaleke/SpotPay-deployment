@@ -17,9 +17,10 @@ def send_voucher_sms(*, vendor, phone, voucher_code, package_name):
         return False, "Insufficient SMS balance"
 
     message = (
-        "Your WiFi voucher is ready.\n"
-        f"Code: {voucher_code}\n"
-        f"Package: {package_name}"
+        f"SpotPay WiFi Access\n"
+        f"Package: {package_name}\n"
+        f"Voucher: {voucher_code}\n"
+        f"Enter this code on the login page to connect."
     )
 
     success, response = send_sms(
