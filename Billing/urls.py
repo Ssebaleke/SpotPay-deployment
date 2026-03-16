@@ -17,11 +17,19 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
-from django.conf.urls.static import static  
+from django.conf.urls.static import static
+from accounts.admin import admin_site
 
+# Copy all models registered on default admin to our custom admin site
+def _copy_registry():
+    for model, model_admin in admin.site._registry.items():
+        if model not in admin_site._registry:
+            admin_site.register(model, type(model_admin))
+
+_copy_registry()
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('admin/', admin_site.urls),
     path('', include('accounts.urls')),
     path('locations/', include('hotspot.urls')),
     path('packages/', include('packages.urls')),
