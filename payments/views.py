@@ -86,7 +86,13 @@ def initiate_payment(request):
 
 
 def payment_status(request, reference):
-    payment = get_object_or_404(Payment, provider_reference=reference)
+    payment = (
+        Payment.objects.filter(provider_reference=reference).first()
+        or Payment.objects.filter(uuid=reference).first()
+    )
+    if not payment:
+        from django.http import Http404
+        raise Http404
 
     resp = {
         "success": True,
@@ -131,12 +137,9 @@ def payment_callback(request):
     is_failed = event_type == "collection.failed" or status_raw in ("failed", "cancelled", "canceled", "rejected", "expired")
 
     if not reference:
-        # No reference at all — log everything and return 200 so MakyPay doesn't retry
         logger.warning(f"MAKYPAY WEBHOOK: no reference field found in data: {data}")
         return HttpResponse("OK")
 
-    is_success = status_raw in ("completed", "success", "successful", "paid")
-    is_failed = status_raw in ("failed", "cancelled", "canceled", "rejected", "expired")
 
     payment_id = None
     run_success_handler = False
