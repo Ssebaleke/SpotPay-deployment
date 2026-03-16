@@ -1,71 +1,89 @@
 {% extends 'accounts/base.html' %}
 
 {% block title %}Edit Location - SpotPay{% endblock %}
-{% block page_title %}Edit Hotspot Location{% endblock %}
-{% block page_subtitle %}Update your location details{% endblock %}
+{% block page_title %}Edit Location{% endblock %}
+{% block page_subtitle %}Update your hotspot location details{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-8">
+    <div class="col-lg-7">
+
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <a href="{% url 'locations_list' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <div>
+                <h5 class="mb-0">{{ location.site_name }}</h5>
+                <small class="text-muted">{{ location.get_location_type_display }} &mdash; {{ location.town_city }}</small>
+            </div>
+            {% if location.status == "ACTIVE" %}
+                <span class="badge bg-success ms-auto">Active</span>
+            {% elif location.status == "PENDING" %}
+                <span class="badge bg-warning text-dark ms-auto">Pending Approval</span>
+            {% elif location.status == "SUSPENDED" %}
+                <span class="badge bg-dark ms-auto">Suspended</span>
+            {% endif %}
+        </div>
+
         <div class="chart-container">
-            <h5 class="mb-4">Edit Location: {{ location.site_name }}</h5>
+            <div class="d-flex align-items-center gap-2 mb-4">
+                <div class="stat-icon icon-location mb-0" style="width:36px;height:36px;font-size:1rem;">
+                    <i class="bi bi-geo-alt"></i>
+                </div>
+                <h6 class="mb-0">Location Details</h6>
+            </div>
 
             <form method="POST">
                 {% csrf_token %}
-
                 <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Site Name *</label>
-                        {{ form.site_name }}
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Site Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="site_name"
+                               value="{{ location.site_name }}" required
+                               placeholder="e.g., Tech Cafe Westlands">
                         {% if form.site_name.errors %}
-                            <div class="text-danger small">{{ form.site_name.errors|striptags }}</div>
+                            <div class="text-danger small mt-1">{{ form.site_name.errors|striptags }}</div>
                         {% endif %}
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">Location Type *</label>
-                        {{ form.location_type }}
-                        {% if form.location_type.errors %}
-                            <div class="text-danger small">{{ form.location_type.errors|striptags }}</div>
-                        {% endif %}
+                        <label class="form-label fw-semibold">Location Type <span class="text-danger">*</span></label>
+                        <select class="form-select" name="location_type" required>
+                            {% for value, label in form.location_type.field.choices %}
+                                <option value="{{ value }}" {% if location.location_type == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">Town / City *</label>
-                        {{ form.town_city }}
-                        {% if form.town_city.errors %}
-                            <div class="text-danger small">{{ form.town_city.errors|striptags }}</div>
-                        {% endif %}
-                    </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label">Hotspot DNS</label>
-                        {{ form.hotspot_dns }}
-                        {% if form.hotspot_dns.errors %}
-                            <div class="text-danger small">{{ form.hotspot_dns.errors|striptags }}</div>
-                        {% endif %}
-                        <small class="text-muted d-block">DNS name on your MikroTik (default: hot.spot)</small>
+                        <label class="form-label fw-semibold">Town / City <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" name="town_city"
+                               value="{{ location.town_city }}" required
+                               placeholder="e.g., Kampala">
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label">Full Address *</label>
-                        {{ form.address }}
-                        {% if form.address.errors %}
-                            <div class="text-danger small">{{ form.address.errors|striptags }}</div>
-                        {% endif %}
+                        <label class="form-label fw-semibold">Full Address <span class="text-danger">*</span></label>
+                        <textarea class="form-control" name="address" rows="3" required
+                                  placeholder="e.g., Entebbe Road, Kajjansi">{{ location.address }}</textarea>
                     </div>
-                </div>
 
-                <div class="mt-4 d-flex gap-2">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-check-circle me-2"></i>Save Changes
-                    </button>
-                    <a href="{% url 'locations_list' %}" class="btn btn-outline-secondary">
-                        <i class="bi bi-x-circle me-2"></i>Cancel
-                    </a>
+                    <div class="col-12 d-flex gap-2 mt-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-check-circle me-2"></i>Save Changes
+                        </button>
+                        <a href="{% url 'locations_list' %}" class="btn btn-outline-secondary px-4">
+                            <i class="bi bi-x-circle me-2"></i>Cancel
+                        </a>
+                    </div>
+
                 </div>
             </form>
         </div>
+
     </div>
 </div>
 {% endblock %}

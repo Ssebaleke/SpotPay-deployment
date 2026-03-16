@@ -1,183 +1,193 @@
 {% extends 'accounts/base.html' %}
 
 {% block title %}Locations - SpotPay{% endblock %}
-
 {% block page_title %}Hotspot Locations{% endblock %}
 {% block page_subtitle %}Manage your hotspot locations{% endblock %}
 
+{% block extra_css %}
+<style>
+    .location-card {
+        background: var(--bg-secondary);
+        border-radius: 14px;
+        padding: 1.4rem;
+        box-shadow: 0 4px 20px var(--shadow);
+        border: 1px solid var(--border-color);
+        transition: transform 0.2s, box-shadow 0.2s;
+        height: 100%;
+    }
+    .location-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 28px var(--shadow-hover);
+    }
+    .location-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+    .modal-section-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-secondary);
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 
-<!-- Add New Location Button -->
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h5 class="mb-0">Your Locations</h5>
+    <span class="text-muted small">{{ locations|length }} location{{ locations|length|pluralize }} registered</span>
     <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addLocationModal">
-        <i class="bi bi-plus-circle me-2"></i> Add New Location
+        <i class="bi bi-plus-circle me-2"></i>Add Location
     </button>
 </div>
 
-<!-- Locations Table -->
-<div class="card">
-    <div class="card-body">
-        {% if locations %}
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>Site Name</th>
-                        <th>Type</th>
-                        <th>Address</th>
-                        <th>Status</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for location in locations %}
-                    <tr>
-                        <td>
-                            <strong>{{ location.site_name }}</strong>
-                            {% if location.status == "ACTIVE" and location.has_active_subscription %}
-                                <br>
-                                <small class="text-muted">{{ location.portal_url }}</small>
-                            {% endif %}
-                        </td>
+{% if locations %}
+<div class="row g-4">
+    {% for location in locations %}
+    <div class="col-lg-6 col-xl-4">
+        <div class="location-card">
 
-                        <td>{{ location.get_location_type_display }}</td>
+            <div class="d-flex align-items-start gap-3 mb-3">
+                <div class="location-icon {% if location.status == 'ACTIVE' and location.has_active_subscription %}icon-sales{% elif location.status == 'PENDING' %}icon-location{% else %}bg-light{% endif %}">
+                    <i class="bi bi-wifi"></i>
+                </div>
+                <div class="flex-grow-1" style="min-width:0;">
+                    <h6 class="mb-0 text-truncate">{{ location.site_name }}</h6>
+                    <small class="text-muted">{{ location.get_location_type_display }} &mdash; {{ location.town_city }}</small>
+                </div>
+                {% if location.status == "PENDING" %}
+                    <span class="badge bg-warning text-dark flex-shrink-0">Pending</span>
+                {% elif location.status == "ACTIVE" %}
+                    {% if location.has_active_subscription %}
+                        <span class="badge bg-success flex-shrink-0">Live</span>
+                    {% else %}
+                        <span class="badge bg-secondary flex-shrink-0">Inactive</span>
+                    {% endif %}
+                {% elif location.status == "REJECTED" %}
+                    <span class="badge bg-danger flex-shrink-0">Rejected</span>
+                {% elif location.status == "SUSPENDED" %}
+                    <span class="badge bg-dark flex-shrink-0">Suspended</span>
+                {% endif %}
+            </div>
 
-                        <td>{{ location.address|truncatewords:5 }}</td>
+            <div class="mb-2">
+                <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ location.address|truncatewords:8 }}</small>
+            </div>
 
-                        <!-- STATUS COLUMN -->
-                        <td>
-                            {% if location.status == "PENDING" %}
-                                <span class="badge bg-warning">Pending</span>
+            {% if location.status == "REJECTED" and location.rejection_reason %}
+            <div class="alert alert-danger py-2 px-3 mb-3" style="font-size:12px;">
+                <i class="bi bi-x-circle me-1"></i>{{ location.rejection_reason|truncatewords:10 }}
+            </div>
+            {% endif %}
 
-                            {% elif location.status == "ACTIVE" %}
-                                {% if location.has_active_subscription %}
-                                    <span class="badge bg-success">Live</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">Inactive</span>
-                                {% endif %}
+            <hr style="border-color:var(--border-color); margin:12px 0;">
 
-                            {% elif location.status == "REJECTED" %}
-                                <span class="badge bg-danger">Rejected</span>
-                                {% if location.rejection_reason %}
-                                    <small class="d-block text-muted">
-                                        {{ location.rejection_reason|truncatewords:5 }}
-                                    </small>
-                                {% endif %}
+            <div class="d-flex gap-2">
+                <a href="{% url 'edit_location' location.id %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-pencil me-1"></i>Edit
+                </a>
+                {% if location.status == "ACTIVE" and location.has_active_subscription %}
+                <a href="{% url 'portal_download_page' location.uuid %}" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="bi bi-download me-1"></i>Get Portal Files
+                </a>
+                {% endif %}
+            </div>
 
-                            {% elif location.status == "SUSPENDED" %}
-                                <span class="badge bg-dark">Suspended</span>
-                            {% endif %}
-                        </td>
-
-                        <td>{{ location.created_at|date:"M d, Y" }}</td>
-
-                        <!-- ACTIONS COLUMN -->
-                        <td>
-                            <div class="btn-group btn-group-sm" role="group">
-                                {% if location.status == "ACTIVE" and location.has_active_subscription %}
-                                    <a href="{% url 'portal_download_page' location.uuid %}"
-                                       class="btn btn-outline-primary"
-                                       title="View Portal">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                {% endif %}
-                                
-                                <a href="{% url 'edit_location' location.id %}"
-                                   class="btn btn-outline-secondary"
-                                   title="Edit Location">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-                            </div>
-                            
-                            {% if location.status == "PENDING" %}
-                                <small class="d-block text-muted mt-1">Pending approval</small>
-                            {% elif location.status == "SUSPENDED" %}
-                                <small class="d-block text-muted mt-1">Suspended</small>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
         </div>
-
-        {% else %}
-        <div class="text-center py-5">
-            <i class="bi bi-geo-alt" style="font-size: 3rem; color: #ccc;"></i>
-            <h5 class="mt-3">No locations yet</h5>
-            <p class="text-muted">Add your first hotspot location to get started</p>
-            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addLocationModal">
-                Add First Location
-            </button>
-        </div>
-        {% endif %}
     </div>
+    {% endfor %}
 </div>
 
-<!-- Add Location Modal -->
+{% else %}
+<div class="chart-container text-center py-5">
+    <div class="mb-3" style="font-size:3.5rem; opacity:0.25;"><i class="bi bi-wifi"></i></div>
+    <h5>No locations yet</h5>
+    <p class="text-muted mb-4">Add your first hotspot location to get started.</p>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addLocationModal">
+        <i class="bi bi-plus-circle me-2"></i>Add First Location
+    </button>
+</div>
+{% endif %}
+
+
+<!-- ADD LOCATION MODAL -->
 <div class="modal fade" id="addLocationModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add New Hotspot Location</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:16px; border:1px solid var(--border-color);">
+
+            <div class="modal-header border-0 pb-0 px-4 pt-4">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon icon-location mb-0" style="width:40px;height:40px;font-size:1.1rem;">
+                        <i class="bi bi-geo-alt"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-0">Add New Location</h5>
+                        <small class="text-muted">Fill in your hotspot location details</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close ms-auto" data-bs-dismiss="modal"></button>
             </div>
 
             <form method="POST" action="{% url 'add_location' %}">
                 {% csrf_token %}
-                <div class="modal-body">
+                <div class="modal-body px-4 py-3">
 
                     <div class="mb-3">
-                        <label class="form-label">Site Name *</label>
+                        <label class="form-label fw-semibold">Site Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="site_name" required
                                placeholder="e.g., SPEEDNET-HOTSPOT">
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Location Type *</label>
-                        <select class="form-select" name="location_type" required>
-                            <option value="">Select type...</option>
-                            <option value="CAFE">Cafe / Restaurant</option>
-                            <option value="HOTEL">Hotel / Lodge</option>
-                            <option value="HOSTEL">Student Hostel</option>
-                            <option value="APARTMENT">Apartment Building</option>
-                            <option value="OFFICE">Office / Co-working</option>
-                            <option value="PUBLIC">Public Space</option>
-                            <option value="OTHER">Other</option>
-                        </select>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Type <span class="text-danger">*</span></label>
+                            <select class="form-select" name="location_type" required>
+                                <option value="">Select...</option>
+                                <option value="CAFE">Cafe / Restaurant</option>
+                                <option value="HOTEL">Hotel / Lodge</option>
+                                <option value="HOSTEL">Student Hostel</option>
+                                <option value="APARTMENT">Apartment</option>
+                                <option value="OFFICE">Office / Co-working</option>
+                                <option value="PUBLIC">Public Space</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Town / City <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="town_city" required
+                                   placeholder="e.g., Kampala">
+                        </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Town / City *</label>
-                        <input type="text" class="form-control" name="town_city" required
-                               placeholder="e.g., Kampala">
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Full Address *</label>
+                        <label class="form-label fw-semibold">Full Address <span class="text-danger">*</span></label>
                         <textarea class="form-control" name="address" rows="3" required
                                   placeholder="e.g., Entebbe Road, Kajjansi"></textarea>
                     </div>
 
-                    <div class="alert alert-info">
-                        <i class="bi bi-info-circle"></i>
-                        Monthly subscription locations require admin approval.
-                        Percentage-based locations may go live immediately.
+                    <div class="alert alert-info py-2 px-3 mb-0" style="font-size:12px;">
+                        <i class="bi bi-clock me-1"></i>
+                        New locations require admin approval before going live.
                     </div>
 
                 </div>
 
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        Submit Location
+                <div class="modal-footer border-0 px-4 pb-4 pt-0">
+                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="bi bi-plus-circle me-2"></i>Submit Location
                     </button>
                 </div>
             </form>
+
         </div>
     </div>
 </div>

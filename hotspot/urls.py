@@ -8,4 +8,6 @@ urlpatterns = [
     path('status/<int:location_id>/', views.location_status, name='location_status'),
     path('locations/', views.locations_list, name='locations_list'),
     path('locations/<int:location_id>/edit/', views.edit_location, name='edit_location'),
+    path('dns-setup/', views.dns_setup, name='dns_setup'),
+    path('dns-setup/<int:location_id>/save/', views.save_dns, name='save_dns'),
 ]

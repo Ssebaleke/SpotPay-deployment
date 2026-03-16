@@ -1,0 +1,192 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}DNS Setup - SpotPay{% endblock %}
+{% block page_title %}DNS Setup{% endblock %}
+{% block page_subtitle %}Configure your MikroTik DNS and download portal files{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dns-card {
+        background: var(--bg-secondary);
+        border-radius: 14px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 20px var(--shadow);
+        border: 1px solid var(--border-color);
+        margin-bottom: 1.5rem;
+    }
+    .script-box {
+        background: #0d1117;
+        color: #c9d1d9;
+        border-radius: 10px;
+        padding: 1rem 1.2rem;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        line-height: 1.8;
+        white-space: pre;
+        overflow-x: auto;
+        border: 1px solid #30363d;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    .copy-btn {
+        background: rgba(255,255,255,0.08);
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        border-radius: 6px;
+        padding: 4px 12px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    .copy-btn:hover { background: rgba(255,255,255,0.15); }
+    .copy-btn.copied { color: #3fb950; border-color: #3fb950; }
+    .dns-input-group .input-group-text {
+        background: rgba(67,97,238,0.08);
+        border-color: rgba(67,97,238,0.25);
+        color: var(--primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if not locations %}
+<div class="chart-container text-center py-5">
+    <div class="mb-3" style="font-size:3.5rem; opacity:0.25;"><i class="bi bi-router"></i></div>
+    <h5>No active locations</h5>
+    <p class="text-muted mb-4">You need at least one approved active location to configure DNS.</p>
+    <a href="{% url 'locations_list' %}" class="btn btn-primary">
+        <i class="bi bi-geo-alt me-2"></i>Go to Locations
+    </a>
+</div>
+{% else %}
+
+{% for location in locations %}
+<div class="dns-card">
+
+    <!-- Location header -->
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="stat-icon icon-sales mb-0" style="width:40px;height:40px;font-size:1.1rem;">
+            <i class="bi bi-router"></i>
+        </div>
+        <div class="flex-grow-1">
+            <h6 class="mb-0">{{ location.site_name }}</h6>
+            <small class="text-muted">{{ location.get_location_type_display }} &mdash; {{ location.town_city }}</small>
+        </div>
+        <span class="badge bg-success">Active</span>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- LEFT: DNS input + save -->
+        <div class="col-lg-5">
+            <h6 class="fw-semibold mb-3"><i class="bi bi-globe2 me-2" style="color:var(--primary);"></i>Hotspot DNS Name</h6>
+
+            <form method="POST" action="{% url 'save_dns' location.id %}">
+                {% csrf_token %}
+                <div class="input-group dns-input-group mb-2">
+                    <span class="input-group-text"><i class="bi bi-globe2"></i></span>
+                    <input type="text" class="form-control" name="hotspot_dns"
+                           value="{{ location.hotspot_dns|default:'hot.spot' }}"
+                           placeholder="e.g., hot.spot"
+                           id="dns-input-{{ location.id }}">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check2 me-1"></i>Save
+                    </button>
+                </div>
+                <small class="text-muted">Must match exactly what is set in your MikroTik router.</small>
+            </form>
+
+            <div class="rounded p-3 mt-3" style="background:rgba(255,193,7,0.08); border:1px solid rgba(255,193,7,0.2);">
+                <p class="small fw-semibold text-warning mb-2">
+                    <i class="bi bi-exclamation-triangle me-1"></i>MikroTik must match
+                </p>
+                <code style="font-size:11px; display:block; background:rgba(0,0,0,0.06); padding:8px; border-radius:6px; line-height:1.8;">
+                    IP → Hotspot → Server Profiles<br>
+                    → DNS Name = <strong>{{ location.hotspot_dns|default:"hot.spot" }}</strong>
+                </code>
+            </div>
+
+            <div class="rounded p-3 mt-3" style="background:rgba(67,97,238,0.07); border:1px solid rgba(67,97,238,0.15);">
+                <p class="small fw-semibold mb-2" style="color:var(--primary);">
+                    <i class="bi bi-info-circle me-1"></i>How auto-login works
+                </p>
+                <ol class="small text-muted mb-0 ps-3">
+                    <li class="mb-1">Client pays via Mobile Money</li>
+                    <li class="mb-1">SpotPay redirects to:<br>
+                        <code style="font-size:11px;">http://{{ location.hotspot_dns|default:"hot.spot" }}/login</code>
+                    </li>
+                    <li>MikroTik logs client in automatically</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- RIGHT: MikroTik script -->
+        <div class="col-lg-7">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h6 class="fw-semibold mb-0"><i class="bi bi-terminal me-2" style="color:var(--primary);"></i>MikroTik Setup Script</h6>
+                <div class="d-flex gap-2">
+                    <button class="copy-btn" id="copy-btn-{{ location.id }}"
+                            onclick="copyScript('script-{{ location.id }}', 'copy-btn-{{ location.id }}')">
+                        <i class="bi bi-clipboard me-1"></i>Copy
+                    </button>
+                    <a href="{% url 'mikrotik_setup_script' location.uuid %}"
+                       class="btn btn-outline-secondary btn-sm"
+                       download="spotpay-{{ location.site_name|slugify }}.rsc">
+                        <i class="bi bi-download me-1"></i>.rsc
+                    </a>
+                </div>
+            </div>
+
+            <pre class="script-box" id="script-{{ location.id }}"># SpotPay MikroTik Setup — {{ location.site_name }}
+# Paste into MikroTik Terminal (New Terminal in Winbox)
+
+# 1. Walled Garden — allow SpotPay server
+/ip hotspot walled-garden ip
+add action=accept comment="SpotPay" dst-host={{ request.get_host }}
+
+/ip hotspot walled-garden
+add action=allow comment="SpotPay API" dst-host={{ request.get_host }}
+
+# 2. Download portal files
+/tool fetch url="{{ site_url }}/api/portal/{{ location.uuid }}/download/" \
+    dst-path="hotspot/hotspot-spotpay.zip"
+
+# 3. Extract (RouterOS 7.x only)
+/file extract hotspot/hotspot-spotpay.zip to=hotspot
+
+# 4. DNS name must be set to: {{ location.hotspot_dns|default:"hot.spot" }}
+#    IP -> Hotspot -> Server Profiles -> DNS Name
+
+:put "SpotPay setup complete."</pre>
+
+            <div class="d-flex gap-2 mt-3">
+                <a href="{% url 'portal_download_page' location.uuid %}" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="bi bi-download me-2"></i>Download Portal ZIP
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyScript(scriptId, btnId) {
+    const text = document.getElementById(scriptId).innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.getElementById(btnId);
+        btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+            btn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy';
+            btn.classList.remove('copied');
+        }, 2500);
+    });
+}
+</script>
+{% endblock %}

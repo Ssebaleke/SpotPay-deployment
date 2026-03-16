@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
-from django.core.exceptions import ValidationError
+from django.conf import settings
 
 from .models import HotspotLocation
 from .forms import HotspotLocationForm
@@ -54,8 +54,7 @@ def add_location(request):
             location = form.save(commit=False)
             location.vendor = request.user.vendor
 
-            if not location.hotspot_dns:
-                location.hotspot_dns = "hot.spot"
+            location.hotspot_dns = request.POST.get('hotspot_dns', '').strip() or 'hot.spot'
 
             location.save()
 
@@ -97,12 +96,7 @@ def edit_location(request, location_id):
         
         if form.is_valid():
             location = form.save(commit=False)
-            
-            if not location.hotspot_dns:
-                location.hotspot_dns = "hot.spot"
-            
             location.save()
-            
             messages.success(request, f'Location "{location.site_name}" updated successfully.')
             return redirect("locations_list")
     else:
@@ -146,3 +140,57 @@ def location_status(request, location_id):
         'location_uuid': str(location.uuid),
         'rejection_reason': location.rejection_reason or '',
     })
+
+
+# =====================================================
+# DNS SETUP PAGE
+# =====================================================
+
+@login_required
+def dns_setup(request):
+    if request.user.is_staff:
+        from accounts.models import Vendor
+        vendor = Vendor.objects.filter(status='ACTIVE').first()
+        if not vendor:
+            messages.error(request, 'No active vendors in the system.')
+            return redirect('admin_dashboard')
+    else:
+        try:
+            vendor = request.user.vendor
+        except:
+            messages.error(request, 'You are not registered as a vendor.')
+            return redirect('vendor_login')
+
+    locations = vendor.locations.filter(status='ACTIVE').order_by('-created_at')
+
+    return render(request, 'hotspot/dns_setup.html', {
+        'locations': locations,
+        'vendor': vendor,
+        'site_url': settings.SITE_URL,
+    })
+
+
+# =====================================================
+# SAVE DNS (POST per location)
+# =====================================================
+
+@login_required
+def save_dns(request, location_id):
+    if request.user.is_staff:
+        messages.warning(request, 'Staff users cannot edit DNS settings.')
+        return redirect('dns_setup')
+
+    try:
+        vendor = request.user.vendor
+    except:
+        return redirect('vendor_login')
+
+    location = get_object_or_404(HotspotLocation, id=location_id, vendor=vendor)
+
+    if request.method == 'POST':
+        dns = request.POST.get('hotspot_dns', '').strip() or 'hot.spot'
+        location.hotspot_dns = dns
+        location.save(update_fields=['hotspot_dns'])
+        messages.success(request, f'DNS for "{location.site_name}" updated to {dns}.')
+
+    return redirect('dns_setup')

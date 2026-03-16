@@ -1,178 +1,220 @@
-<!-- templates/dashboard/index.html -->
 {% extends 'accounts/base.html' %}
 {% load static %}
 
 {% block title %}Dashboard - SpotPay{% endblock %}
-
 {% block page_title %}Dashboard{% endblock %}
 {% block page_subtitle %}Welcome back! Here's what's happening today.{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Solid colored cards */
+    .stat-card {
+        border: none !important;
+        border-radius: 14px;
+        padding: 1rem 1.1rem;
+        color: #fff;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.13);
+    }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
+
+    .card-sms       { background: linear-gradient(135deg, #6366f1, #818cf8); }
+    .card-wallet    { background: linear-gradient(135deg, #10b981, #34d399); }
+    .card-locations { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+    .card-today     { background: linear-gradient(135deg, #3b82f6, #60a5fa); }
+    .card-weekly    { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+    .card-monthly   { background: linear-gradient(135deg, #ec4899, #f472b6); }
+    .card-annual    { background: linear-gradient(135deg, #14b8a6, #2dd4bf); }
+    .card-total     { background: linear-gradient(135deg, #f97316, #fb923c); }
+
+    .stat-card .stat-icon {
+        width: 36px; height: 36px;
+        background: rgba(255,255,255,0.2);
+        border-radius: 8px;
+        font-size: 1.1rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .stat-card .stat-value {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #fff;
+        line-height: 1.2;
+    }
+
+    .stat-card .stat-label {
+        font-size: 0.75rem;
+        color: rgba(255,255,255,0.8);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-card .stat-action {
+        font-size: 0.75rem;
+        background: rgba(255,255,255,0.2);
+        border: 1px solid rgba(255,255,255,0.35);
+        color: #fff;
+        border-radius: 6px;
+        padding: 0.2rem 0.65rem;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 0.2s;
+    }
+    .stat-card .stat-action:hover { background: rgba(255,255,255,0.35); color: #fff; }
+
+    [data-theme="dark"] .summary-box {
+        background: var(--bg-primary);
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<!-- Stats Row -->
+
 {% if subscription_warnings %}
-<div class="row mb-4">
+<div class="row mb-3">
     <div class="col-12">
         {% for warning in subscription_warnings %}
-            <div class="alert alert-{{ warning.level }} d-flex justify-content-between align-items-center mb-2">
-                <div>
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                    {{ warning.message }}
-                </div>
-
-                <a href="{% url 'pay_subscription' %}" class="btn btn-sm btn-danger">
-                    Pay Subscription
-                </a>
-            </div>
+        <div class="alert alert-{{ warning.level }} d-flex justify-content-between align-items-center mb-2">
+            <div><i class="bi bi-exclamation-triangle-fill me-2"></i>{{ warning.message }}</div>
+            <a href="{% url 'pay_subscription' %}" class="btn btn-sm btn-danger">Pay Subscription</a>
+        </div>
         {% endfor %}
     </div>
 </div>
 {% endif %}
 
-<div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="stat-card">
-            <div class="stat-icon icon-sms">
-                <i class="bi bi-chat-text"></i>
-            </div>
-            <h3 class="mb-1">{{ sms_balance }}</h3>
-            <p class="text-muted mb-2">SMS Balance</p>
-            <a href="{% url 'sms:sms_topup' %}" class="btn btn-sm btn-outline-primary">
-                Buy SMS
-            </a>                                
+<!-- ── Stat Cards Row 1 ── -->
+<div class="row g-3 mb-3">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card-sms">
+            <div class="stat-icon"><i class="bi bi-chat-text"></i></div>
+            <div class="stat-value">{{ sms_balance }}</div>
+            <div class="stat-label">SMS Balance</div>
+            <a href="{% url 'sms:sms_topup' %}" class="stat-action">Buy SMS</a>
         </div>
     </div>
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="stat-card">
-            <div class="stat-icon icon-wallet">
-                <i class="bi bi-wallet2"></i>
-            </div>
-    
-            <h3 class="mb-1">
-                UGX {{ vendor.wallet.balance|default:"0" }}
-            </h3>
-    
-            <p class="text-muted mb-2">Wallet Balance</p>
-    
-            <a href="{% url 'wallet_dashboard' %}" class="btn btn-sm btn-outline-primary">
-                Wallet
-            </a>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card-wallet">
+            <div class="stat-icon"><i class="bi bi-wallet2"></i></div>
+            <div class="stat-value">UGX {{ vendor.wallet.balance|default:"0" }}</div>
+            <div class="stat-label">Wallet Balance</div>
+            <a href="{% url 'wallet_dashboard' %}" class="stat-action">Wallet</a>
         </div>
     </div>
-    
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="stat-card">
-            <div class="stat-icon icon-location">
-                <i class="bi bi-geo-alt"></i>
-            </div>
-            <h3 class="mb-1">{{ locations_count|default:"0" }}</h3>
-            <p class="text-muted mb-2">Active Locations</p>
-            <a href="#" class="btn btn-sm btn-outline-primary">View All</a>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card-locations">
+            <div class="stat-icon"><i class="bi bi-geo-alt"></i></div>
+            <div class="stat-value">{{ locations_count|default:"0" }}</div>
+            <div class="stat-label">Active Locations</div>
+            <a href="{% url 'locations_list' %}" class="stat-action">View All</a>
         </div>
     </div>
-    
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="stat-card">
-            <div class="stat-icon icon-sales">
-                <i class="bi bi-graph-up-arrow"></i>
-            </div>
-            <h3 class="mb-1">UGX {{ todays_payments_total|default:"0" }}</h3>
-            <p class="text-muted mb-2">Today's Payments</p>
-            <a href="{% url 'vendor_dashboard' %}" class="btn btn-sm btn-outline-primary">Details</a>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card-today">
+            <div class="stat-icon"><i class="bi bi-calendar-day"></i></div>
+            <div class="stat-value">UGX {{ todays_payments_total|default:"0" }}</div>
+            <div class="stat-label">Today's Revenue</div>
+            <a href="{% url 'vendor_dashboard' %}" class="stat-action">Details</a>
         </div>
     </div>
 </div>
 
-<!-- Charts and Quick Stats -->
-<div class="row">
-    <!-- Weekly Chart -->
-    <div class="col-lg-8 mb-4">
-        <div class="chart-container">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 class="mb-0">7-Day Payment Trend</h5>
-            </div>
+<!-- ── Stat Cards Row 2 ── -->
+<div class="row g-3 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card-weekly">
+            <div class="stat-icon"><i class="bi bi-calendar-week"></i></div>
+            <div class="stat-value">UGX {{ weekly_payments_total|default:"0" }}</div>
+            <div class="stat-label">This Week</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card-monthly">
+            <div class="stat-icon"><i class="bi bi-calendar-month"></i></div>
+            <div class="stat-value">UGX {{ monthly_payments_total|default:"0" }}</div>
+            <div class="stat-label">This Month</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card-annual">
+            <div class="stat-icon"><i class="bi bi-calendar-range"></i></div>
+            <div class="stat-value">UGX {{ annual_payments_total|default:"0" }}</div>
+            <div class="stat-label">This Year</div>
+        </div>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <div class="stat-card card-total">
+            <div class="stat-icon"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="stat-value">UGX {{ total_payments_received|default:"0" }}</div>
+            <div class="stat-label">Total Received</div>
+        </div>
+    </div>
+</div>
 
-            <div style="height: 280px;">
+<!-- ── Chart + Summary ── -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="chart-container">
+            <h6 class="fw-semibold mb-3">7-Day Payment Trend</h6>
+            <div style="height:260px;">
                 <canvas id="paymentsTrendChart"></canvas>
             </div>
-
-            <div class="row g-3 mt-2">
-                <div class="col-md-3 col-6">
-                    <div class="p-3 rounded bg-light">
-                        <small class="text-muted d-block">Daily</small>
-                        <strong>UGX {{ todays_payments_total|default:"0" }}</strong>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="p-3 rounded bg-light">
-                        <small class="text-muted d-block">Weekly</small>
-                        <strong>UGX {{ weekly_payments_total|default:"0" }}</strong>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="p-3 rounded bg-light">
-                        <small class="text-muted d-block">Monthly</small>
-                        <strong>UGX {{ monthly_payments_total|default:"0" }}</strong>
-                    </div>
-                </div>
-                <div class="col-md-3 col-6">
-                    <div class="p-3 rounded bg-light">
-                        <small class="text-muted d-block">Annual</small>
-                        <strong>UGX {{ annual_payments_total|default:"0" }}</strong>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
-    
-    <!-- Quick Stats -->
-    <div class="col-lg-4 mb-4">
+    <div class="col-lg-4">
         <div class="chart-container">
-            <h5 class="mb-3">Payment Summary</h5>
-            
-            <div class="mb-4">
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Total Payments Received</span>
-                    <strong>UGX {{ total_payments_received|default:"0" }}</strong>
+            <h6 class="fw-semibold mb-3">Payment Summary</h6>
+            <div class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <small class="text-muted">Total Received</small>
+                    <small class="fw-semibold">UGX {{ total_payments_received|default:"0" }}</small>
                 </div>
-                <div class="progress" style="height: 10px;">
-                    <div class="progress-bar bg-primary" style="width: {{ total_received_percentage }}%"></div>
-                </div>
-            </div>
-            
-            <div class="mb-4">
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Successful Payments</span>
-                    <strong>{{ successful_payments_count|default:"0" }}</strong>
-                </div>
-                <div class="progress" style="height: 10px;">
-                    <div class="progress-bar bg-success" style="width: {{ successful_percentage }}%"></div>
+                <div class="progress" style="height:8px;">
+                    <div class="progress-bar bg-primary" style="width:{{ total_received_percentage }}%"></div>
                 </div>
             </div>
-            
-            <div class="mb-4">
-                <div class="d-flex justify-content-between mb-2">
-                    <span class="text-muted">Pending / Failed</span>
-                    <strong>{{ pending_payments_count|default:"0" }} / {{ failed_payments_count|default:"0" }}</strong>
+            <div class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <small class="text-muted">Successful</small>
+                    <small class="fw-semibold">{{ successful_payments_count|default:"0" }}</small>
                 </div>
-                <div class="progress" style="height: 10px;">
-                    <div class="progress-bar bg-warning" style="width: {{ pending_failed_percentage }}%"></div>
+                <div class="progress" style="height:8px;">
+                    <div class="progress-bar bg-success" style="width:{{ successful_percentage }}%"></div>
                 </div>
             </div>
+            <div class="mb-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <small class="text-muted">Pending / Failed</small>
+                    <small class="fw-semibold">{{ pending_payments_count|default:"0" }} / {{ failed_payments_count|default:"0" }}</small>
+                </div>
+                <div class="progress" style="height:8px;">
+                    <div class="progress-bar bg-warning" style="width:{{ pending_failed_percentage }}%"></div>
+                </div>
+            </div>
+
+            <hr class="my-3">
+
+            <h6 class="fw-semibold mb-1" style="font-size:0.85rem;">Weekly Performance</h6>
+            <small class="text-muted d-block mb-2" style="font-size:0.75rem;">Revenue per day this week</small>
+            <div style="height:180px; position:relative;">
+                <canvas id="weeklyDonutChart"></canvas>
+            </div>
+            <!-- Legend -->
+            <div id="donutLegend" class="mt-2 d-flex flex-wrap gap-1 justify-content-center"></div>
         </div>
     </div>
 </div>
 
-<!-- Recent Activity -->
-<div class="row mt-3">
+<!-- ── Recent Transactions ── -->
+<div class="row">
     <div class="col-12">
         <div class="chart-container">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0">Recent Transactions</h5>
+                <h6 class="fw-semibold mb-0">Recent Transactions</h6>
                 <a href="#" class="btn btn-sm btn-link">View All</a>
             </div>
-            
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover align-middle">
                     <thead>
                         <tr>
                             <th>ID</th>
@@ -189,7 +231,7 @@
                             <td>#{{ transaction.id }}</td>
                             <td>{{ transaction.phone|default:"N/A" }}</td>
                             <td>{{ transaction.package.name|default:"N/A" }}</td>
-                            <td class="fw-bold">{{ transaction.currency }} {{ transaction.amount }}</td>
+                            <td class="fw-semibold">{{ transaction.currency }} {{ transaction.amount }}</td>
                             <td>{{ transaction.initiated_at|date:"Y-m-d H:i" }}</td>
                             <td>
                                 {% if transaction.status == 'SUCCESS' %}
@@ -204,8 +246,8 @@
                         {% empty %}
                         <tr>
                             <td colspan="6" class="text-center py-5 text-muted">
-                                <i class="bi bi-receipt" style="font-size: 2rem;"></i>
-                                <p class="mt-2">No transactions yet</p>
+                                <i class="bi bi-receipt" style="font-size:2rem;"></i>
+                                <p class="mt-2 mb-0">No transactions yet</p>
                             </td>
                         </tr>
                         {% endfor %}
@@ -225,10 +267,9 @@
 <script>
     const trendLabels = JSON.parse(document.getElementById('trend-labels-data').textContent);
     const trendValues = JSON.parse(document.getElementById('trend-values-data').textContent);
-    const trendCtx = document.getElementById('paymentsTrendChart');
-
-    if (trendCtx) {
-        new Chart(trendCtx, {
+    const ctx = document.getElementById('paymentsTrendChart');
+    if (ctx) {
+        new Chart(ctx, {
             type: 'line',
             data: {
                 labels: trendLabels,
@@ -236,7 +277,7 @@
                     label: 'Payments (UGX)',
                     data: trendValues,
                     borderColor: '#4361ee',
-                    backgroundColor: 'rgba(67, 97, 238, 0.15)',
+                    backgroundColor: 'rgba(67,97,238,0.12)',
                     fill: true,
                     tension: 0.35,
                     pointRadius: 3,
@@ -246,19 +287,11 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
+                plugins: { legend: { display: false } },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return 'UGX ' + value;
-                            }
-                        }
+                        ticks: { callback: v => 'UGX ' + v }
                     }
                 }
             }

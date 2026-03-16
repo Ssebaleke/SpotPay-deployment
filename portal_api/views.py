@@ -10,6 +10,7 @@ import zipfile
 import io
 import tempfile
 import json
+import textwrap
 
 from hotspot.models import HotspotLocation
 from portal_api.models import PortalTemplate
@@ -150,12 +151,11 @@ def portal_buy_api(request, uuid):
 def portal_payment_status(request, reference):
     payment = get_object_or_404(Payment, provider_reference=reference)
 
-    # Try to expose voucher if your success handler stores it on Payment
     voucher = None
-    if hasattr(payment, "voucher_code") and payment.voucher_code:
-        voucher = payment.voucher_code
-    elif hasattr(payment, "voucher") and payment.voucher:
-        voucher = getattr(payment.voucher, "code", None)
+    try:
+        voucher = payment.issued_voucher.voucher.code
+    except Exception:
+        voucher = None
 
     return JsonResponse({
         "success": True,
@@ -207,7 +207,7 @@ def download_portal_zip(request, location_uuid):
                     text = text.replace("{{LOCATION_UUID}}", str(location.uuid))
                     text = text.replace(
                         "{{SUPPORT_PHONE}}",
-                        getattr(location.vendor, "support_phone", "")
+                        getattr(location.vendor, "business_phone", "") or ""
                     )
                     zip_out.writestr(str(arcname), text)
                 else:
@@ -237,8 +237,78 @@ def portal_download_page(request, location_uuid):
     return render(
         request,
         "portal_api/portal_download.html",
-        {"location": location}
+        {
+            "location": location,
+            "site_url": settings.SITE_URL,
+        }
     )
+
+
+# =====================================================
+# MIKROTIK SETUP SCRIPT
+# GET /api/portal/<uuid>/mikrotik-script/
+# Returns a plain-text RouterOS script the vendor
+# pastes into MikroTik Terminal to:
+#   1. Add walled-garden rules for SpotPay server
+#   2. Download all hotspot portal files via /tool fetch
+# =====================================================
+
+@login_required
+def mikrotik_setup_script(request, location_uuid):
+    vendor = request.user.vendor
+
+    location = get_object_or_404(
+        vendor.locations,
+        uuid=location_uuid,
+        status="ACTIVE"
+    )
+
+    # Parse host from SITE_URL  e.g. "69.164.245.17" or "spotpay.example.com"
+    from urllib.parse import urlparse
+    parsed = urlparse(settings.SITE_URL)
+    server_host = parsed.hostname or settings.SITE_URL
+
+    zip_url = f"{settings.SITE_URL}/api/portal/{location.uuid}/download/"
+    dns_name = location.hotspot_dns or "hot.spot"
+
+    script = textwrap.dedent(f"""\
+        # =======================================================
+        # SpotPay MikroTik Setup Script
+        # Location : {location.site_name}
+        # Generated: auto
+        # Paste this entire script into MikroTik Terminal
+        # =======================================================
+
+        # --- 1. Walled Garden: allow SpotPay server ---
+        /ip hotspot walled-garden ip
+        add action=accept comment="SpotPay Server" dst-host={server_host}
+
+        /ip hotspot walled-garden
+        add action=allow comment="SpotPay API" dst-host={server_host}
+
+        # --- 2. Download portal files to MikroTik ---
+        /tool fetch url="{zip_url}" dst-path="hotspot-spotpay.zip"
+
+        # --- 3. Extract ZIP into hotspot folder ---
+        /file
+        :local zipName "hotspot-spotpay.zip"
+        :local destDir "hotspot"
+        /tool fetch url="{zip_url}" dst-path=($destDir . "/hotspot-spotpay.zip")
+
+        # Note: RouterOS 7.x supports ZIP extraction natively.
+        # If on RouterOS 6.x, extract on your PC and upload via
+        # Winbox Files or FTP, then skip step 3.
+
+        # --- 4. Confirm DNS name matches this script ---
+        # Your MikroTik hotspot DNS name must be set to:
+        #   {dns_name}
+        # Go to: IP -> Hotspot -> Server Profiles -> DNS Name
+
+        :log info "SpotPay portal setup complete for {location.site_name}"
+        :put "Done. Reload hotspot to apply changes."
+    """)
+
+    return HttpResponse(script, content_type="text/plain; charset=utf-8")
 
 
 @login_required
