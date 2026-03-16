@@ -60,17 +60,26 @@ def vendor_login(request):
         if form.is_valid():
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
+            remember_me = request.POST.get('remember_me')
 
             user = authenticate(username=username, password=password)
 
             if user is not None and user.is_active:
                 if user.is_staff:
                     login(request, user)
+                    if not remember_me:
+                        request.session.set_expiry(0)
+                    else:
+                        request.session.set_expiry(1209600)  # 14 days
                     return redirect('admin_dashboard')
                 try:
                     vendor = user.vendor
                     if vendor.status == 'ACTIVE':
                         login(request, user)
+                        if not remember_me:
+                            request.session.set_expiry(0)
+                        else:
+                            request.session.set_expiry(1209600)  # 14 days
                         return redirect('vendor_dashboard')
                     else:
                         messages.error(

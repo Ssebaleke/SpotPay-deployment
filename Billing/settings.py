@@ -158,7 +158,6 @@ AUTH_PASSWORD_VALIDATORS = []
 # ==================================================
 # SESSIONS
 # ==================================================
-SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_SAVE_EVERY_REQUEST = True
 
 # ==================================================
