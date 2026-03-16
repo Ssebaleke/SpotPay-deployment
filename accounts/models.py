@@ -50,3 +50,5 @@ class Vendor(models.Model):
     
     def is_approved(self):
         return self.status == 'ACTIVE'
+    
+    #thhehhd
