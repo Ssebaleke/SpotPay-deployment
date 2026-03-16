@@ -197,13 +197,23 @@
     </div>
 </div>
 
-<!-- ── Recent Transactions ── -->
+<!-- ── Transactions ── -->
 <div class="row">
     <div class="col-12">
         <div class="chart-container">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="fw-semibold mb-0">Recent Transactions</h6>
-                <a href="#" class="btn btn-sm btn-link">View All</a>
+                <h6 class="fw-semibold mb-0">Transactions</h6>
+                <form method="get" class="d-flex gap-2 align-items-center">
+                    <input type="text" name="q" value="{{ search_q }}" placeholder="Search phone..." class="form-control form-control-sm" style="width:160px;">
+                    <select name="status" class="form-select form-select-sm" style="width:130px;">
+                        <option value="">All Status</option>
+                        <option value="SUCCESS" {% if status_filter == 'SUCCESS' %}selected{% endif %}>Success</option>
+                        <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+                        <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed</option>
+                    </select>
+                    <button class="btn btn-sm btn-primary">Filter</button>
+                    {% if search_q or status_filter %}<a href="{% url 'vendor_dashboard' %}" class="btn btn-sm btn-outline-secondary">Clear</a>{% endif %}
+                </form>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle">
@@ -218,34 +228,50 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for transaction in recent_transactions %}
+                        {% for txn in recent_transactions %}
                         <tr>
-                            <td>#{{ transaction.id }}</td>
-                            <td>{{ transaction.phone|default:"N/A" }}</td>
-                            <td>{{ transaction.package.name|default:"N/A" }}</td>
-                            <td class="fw-semibold">{{ transaction.currency }} {{ transaction.amount }}</td>
-                            <td>{{ transaction.initiated_at|date:"Y-m-d H:i" }}</td>
+                            <td>#{{ txn.id }}</td>
+                            <td>{{ txn.phone|default:"N/A" }}</td>
+                            <td>{{ txn.package.name|default:"N/A" }}</td>
+                            <td class="fw-semibold">{{ txn.currency }} {{ txn.amount }}</td>
+                            <td>{{ txn.initiated_at|date:"Y-m-d H:i" }}</td>
                             <td>
-                                {% if transaction.status == 'SUCCESS' %}
-                                    <span class="badge bg-success">Success</span>
-                                {% elif transaction.status == 'PENDING' %}
-                                    <span class="badge bg-warning text-dark">Pending</span>
-                                {% else %}
-                                    <span class="badge bg-danger">Failed</span>
-                                {% endif %}
+                                {% if txn.status == 'SUCCESS' %}<span class="badge bg-success">Success</span>
+                                {% elif txn.status == 'PENDING' %}<span class="badge bg-warning text-dark">Pending</span>
+                                {% else %}<span class="badge bg-danger">Failed</span>{% endif %}
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
                             <td colspan="6" class="text-center py-5 text-muted">
                                 <i class="bi bi-receipt" style="font-size:2rem;"></i>
-                                <p class="mt-2 mb-0">No transactions yet</p>
+                                <p class="mt-2 mb-0">No transactions found</p>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            <!-- Pagination -->
+            {% if recent_transactions.has_other_pages %}
+            <nav class="mt-3">
+                <ul class="pagination pagination-sm justify-content-center mb-0">
+                    {% if recent_transactions.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ recent_transactions.previous_page_number }}&q={{ search_q }}&status={{ status_filter }}">«</a></li>
+                    {% endif %}
+                    {% for num in recent_transactions.paginator.page_range %}
+                        {% if recent_transactions.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num >= recent_transactions.number|add:"-2" and num <= recent_transactions.number|add:"2" %}
+                        <li class="page-item"><a class="page-link" href="?page={{ num }}&q={{ search_q }}&status={{ status_filter }}">{{ num }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if recent_transactions.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ recent_transactions.next_page_number }}&q={{ search_q }}&status={{ status_filter }}">»</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
         </div>
     </div>
 </div>

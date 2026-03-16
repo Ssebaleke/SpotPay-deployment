@@ -468,7 +468,20 @@ def vendor_dashboard(request):
     # Total payments received percentage (always 100% if there are payments, 0% otherwise)
     total_received_percentage = 100 if total_payments_received > 0 else 0
 
-    recent_transactions = vendor_payments.select_related("package").order_by("-initiated_at")[:10]
+    # Search + filter
+    search_q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    txn_qs = vendor_payments.select_related("package", "location")
+    if search_q:
+        txn_qs = txn_qs.filter(phone__icontains=search_q)
+    if status_filter:
+        txn_qs = txn_qs.filter(status=status_filter)
+    txn_qs = txn_qs.order_by("-initiated_at")
+
+    from django.core.paginator import Paginator
+    paginator = Paginator(txn_qs, 15)
+    page_number = request.GET.get('page', 1)
+    recent_transactions = paginator.get_page(page_number)
 
     # -------------------------------------------------
     # SMS WALLET (REAL BALANCE)
@@ -499,6 +512,8 @@ def vendor_dashboard(request):
         'successful_percentage': successful_percentage,
         'pending_failed_percentage': pending_failed_percentage,
         'recent_transactions': recent_transactions,
+        'search_q': search_q,
+        'status_filter': status_filter,
         'trend_labels': trend_labels,
         'trend_values': trend_values,
     })

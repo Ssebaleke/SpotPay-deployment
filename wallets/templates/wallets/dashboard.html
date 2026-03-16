@@ -1,256 +1,180 @@
-/* ===== GLOBAL ===== */
-* {
-    box-sizing: border-box;
-}
+{% extends 'accounts/base.html' %}
 
-body {
-    margin: 0;
-    padding: 0;
-    background: #05070b;
-    color: #fff;
-}
+{% block title %}Wallet - SpotPay{% endblock %}
+{% block page_title %}My Wallet{% endblock %}
+{% block page_subtitle %}Manage your balance and withdrawals{% endblock %}
 
-/* ===== MAIN PAGE WRAPPER ===== */
-#content,
-.main,
-.content,
-#content-main {
-    width: 100%;
-}
-
-/* remove narrow centered feel */
-#content {
-    padding: 20px 24px !important;
-    max-width: 100% !important;
-}
-
-/* ===== TOP SUMMARY CARDS ===== */
-.dashboard-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 18px;
-    margin-bottom: 24px;
-    width: 100%;
-}
-
-.dashboard-card {
-    border-radius: 16px;
-    padding: 20px;
-    color: #fff;
-    min-height: 150px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.22);
-}
-
-.dashboard-card h2,
-.dashboard-card h3,
-.dashboard-card p {
-    margin: 0 0 8px 0;
-}
-
-/* ===== CHART SECTION ===== */
-.dashboard-charts {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-    margin-bottom: 28px;
-    width: 100%;
-}
-
-.chart-box {
-    background: #f7f7f7;
-    border-radius: 18px;
-    padding: 20px;
-    min-height: 300px;
-    overflow: hidden;
-}
-
-/* ===== LOWER SECTION: LEFT CONTENT + RIGHT SIDEBAR ===== */
-.dashboard-lower {
-    display: grid;
-    grid-template-columns: minmax(0, 2.2fr) 340px;
-    gap: 24px;
-    align-items: start;
-    width: 100%;
-}
-
-/* left side apps/modules */
-.dashboard-main {
-    min-width: 0;
-}
-
-/* right recent actions */
-.dashboard-sidebar {
-    background: #121417;
-    border-radius: 16px;
-    padding: 20px;
-    position: sticky;
-    top: 20px;
-}
-
-/* ===== DJANGO ADMIN APP LIST ===== */
-#content-related {
-    float: none !important;
-    width: 100% !important;
-    margin: 0 !important;
-}
-
-#content-main {
-    float: none !important;
-    width: 100% !important;
-}
-
-.app-list,
-.module {
-    width: 100%;
-}
-
-.module {
-    background: transparent !important;
-    border: none !important;
-    margin-bottom: 22px !important;
-}
-
-.module caption,
-.module h2 {
-    background: #2e5f73 !important;
-    color: #fff !important;
-    border-radius: 0 !important;
-    padding: 12px 14px !important;
-    font-size: 15px;
-    text-transform: uppercase;
-    letter-spacing: .4px;
-}
-
-.module table {
-    width: 100%;
-    background: transparent;
-}
-
-.module tbody tr {
-    background: transparent !important;
-    border-bottom: 1px solid rgba(255,255,255,.06);
-}
-
-.module tbody tr:hover {
-    background: rgba(255,255,255,.03) !important;
-}
-
-.module td,
-.module th {
-    padding: 14px 12px !important;
-    color: #fff !important;
-}
-
-/* ===== RECENT ACTIONS PANEL ===== */
-#recent-actions-module {
-    background: #17191d !important;
-    border-radius: 16px;
-    padding: 18px !important;
-    border: none !important;
-}
-
-#recent-actions-module h2 {
-    background: transparent !important;
-    padding: 0 !important;
-    margin: 0 0 16px 0 !important;
-    font-size: 18px;
-    text-transform: none;
-}
-
-#recent-actions-module ul,
-.actionlist {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
-
-.actionlist li {
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255,255,255,.06);
-}
-
-/* ===== FORCE DJANGO INDEX AREA INTO 2 COLUMNS ===== */
-.dashboard #content {
-    width: 100%;
-}
-
-.dashboard #content-main-wrapper,
-.dashboard .content-wrapper {
-    width: 100%;
-}
-
-/* if you wrap manually */
-.admin-bottom-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 2.2fr) 340px;
-    gap: 24px;
-    align-items: start;
-    width: 100%;
-}
-
-.admin-bottom-layout .left-column {
-    min-width: 0;
-}
-
-.admin-bottom-layout .right-column {
-    min-width: 0;
-}
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 1100px) {
-    .dashboard-charts {
-        grid-template-columns: 1fr;
+{% block extra_css %}
+<style>
+    .wallet-cards {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 1.25rem;
     }
+    @media (max-width: 992px) { .wallet-cards { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 576px) { .wallet-cards { grid-template-columns: repeat(2, 1fr); } }
 
-    .dashboard-lower,
-    .admin-bottom-layout {
-        grid-template-columns: 1fr;
+    .w-card {
+        border-radius: 14px; padding: 18px 16px; color: #fff;
+        box-shadow: 0 4px 18px rgba(0,0,0,.18);
+        display: flex; flex-direction: column; justify-content: space-between;
+        min-height: 120px; transition: transform .2s;
     }
+    .w-card:hover { transform: translateY(-3px); }
+    .w-card .w-icon { width: 38px; height: 38px; background: rgba(255,255,255,.22); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; margin-bottom: .5rem; }
+    .w-card .w-val { font-size: 1.1rem; font-weight: 800; line-height: 1.2; }
+    .w-card .w-lbl { font-size: .7rem; color: rgba(255,255,255,.75); margin-top: 3px; }
+    .wc1 { background: linear-gradient(135deg,#2dc653,#1a7a32); }
+    .wc2 { background: linear-gradient(135deg,#4361ee,#3a0ca3); }
+    .wc3 { background: linear-gradient(135deg,#e63946,#9b1b25); }
+    .wc4 { background: linear-gradient(135deg,#f77f00,#a04800); }
 
-    .dashboard-sidebar,
-    .admin-bottom-layout .right-column {
-        position: static;
+    .w-btn {
+        display: inline-flex; align-items: center; gap: 6px;
+        padding: .45rem 1rem; border-radius: 9px; font-size: .82rem;
+        font-weight: 600; text-decoration: none; transition: opacity .2s;
+        border: none; cursor: pointer;
     }
-}
+    .w-btn-primary { background: linear-gradient(135deg,#4361ee,#3a0ca3); color: #fff; }
+    .w-btn-danger  { background: linear-gradient(135deg,#e63946,#9b1b25); color: #fff; }
+    .w-btn:hover { opacity: .85; }
+</style>
+{% endblock %}
 
-@media (max-width: 700px) {
-    #content {
-        padding: 16px !important;
-    }
+{% block content %}
 
-    .dashboard-cards {
-        grid-template-columns: 1fr 1fr;
-    }
-}
-
-@media (max-width: 520px) {
-    .dashboard-cards {
-        grid-template-columns: 1fr;
-    }
-}
-
-<div class="dashboard-cards">
-    <div class="dashboard-card">...</div>
-    <div class="dashboard-card">...</div>
-    <div class="dashboard-card">...</div>
-    <div class="dashboard-card">...</div>
-    <div class="dashboard-card">...</div>
-    <div class="dashboard-card">...</div>
-    <div class="dashboard-card">...</div>
-    <div class="dashboard-card">...</div>
-</div>
-
-<div class="dashboard-charts">
-    <div class="chart-box">Revenue chart</div>
-    <div class="chart-box">Breakdown chart</div>
-</div>
-
-<div class="admin-bottom-layout">
-    <div class="left-column">
-        <!-- all your app tables/modules here -->
+<!-- Cards -->
+<div class="wallet-cards">
+    <div class="w-card wc1">
+        <div class="w-icon"><i class="bi bi-wallet2"></i></div>
+        <div>
+            <div class="w-val">UGX {{ wallet.balance }}</div>
+            <div class="w-lbl">Current Balance</div>
+        </div>
     </div>
-
-    <div class="right-column">
-        <!-- recent actions here -->
+    <div class="w-card wc2">
+        <div class="w-icon"><i class="bi bi-arrow-down-circle"></i></div>
+        <div>
+            <div class="w-val">UGX {{ total_credited }}</div>
+            <div class="w-lbl">Total Credited</div>
+        </div>
+    </div>
+    <div class="w-card wc3">
+        <div class="w-icon"><i class="bi bi-arrow-up-circle"></i></div>
+        <div>
+            <div class="w-val">UGX {{ total_withdrawn }}</div>
+            <div class="w-lbl">Total Withdrawn</div>
+        </div>
+    </div>
+    <div class="w-card wc4">
+        <div class="w-icon"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <div class="w-val">UGX {{ pending_withdrawals_total }}</div>
+            <div class="w-lbl">Pending Withdrawals</div>
+        </div>
     </div>
 </div>
+
+<!-- Actions -->
+<div class="d-flex gap-2 mb-4 flex-wrap">
+    <a href="{% url 'wallet_send_otp' %}" class="w-btn w-btn-primary">
+        <i class="bi bi-arrow-up-circle"></i> Withdraw Funds
+    </a>
+    <a href="{% url 'wallet_lock' %}" class="w-btn w-btn-danger">
+        <i class="bi bi-lock"></i> Lock Wallet
+    </a>
+</div>
+
+<div class="row g-3">
+    <!-- Recent Transactions -->
+    <div class="col-lg-7">
+        <div class="chart-container">
+            <h6 class="fw-semibold mb-3">Recent Transactions</h6>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for txn in transactions %}
+                        <tr>
+                            <td><small>{{ txn.created_at|date:"M d, H:i" }}</small></td>
+                            <td>
+                                {% if txn.transaction_type == 'CREDIT' %}
+                                    <span class="badge bg-success">Credit</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Debit</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-semibold">UGX {{ txn.amount }}</td>
+                            <td><small class="text-muted">{{ txn.reason|default:"—" }}</small></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">
+                                <i class="bi bi-receipt" style="font-size:2rem;"></i>
+                                <p class="mt-2 mb-0">No transactions yet</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdrawal History -->
+    <div class="col-lg-5">
+        <div class="chart-container">
+            <h6 class="fw-semibold mb-3">Withdrawal Requests</h6>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for w in withdrawals %}
+                        <tr>
+                            <td><small>{{ w.created_at|date:"M d, H:i" }}</small></td>
+                            <td class="fw-semibold">UGX {{ w.amount }}</td>
+                            <td>
+                                {% if w.status == 'APPROVED' %}
+                                    <span class="badge bg-success">Approved</span>
+                                {% elif w.status == 'PENDING' %}
+                                    <span class="badge bg-warning text-dark">Pending</span>
+                                {% elif w.status == 'PAID' %}
+                                    <span class="badge bg-primary">Paid</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center py-4 text-muted">
+                                <i class="bi bi-arrow-up-circle" style="font-size:2rem;"></i>
+                                <p class="mt-2 mb-0">No withdrawals yet</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-3">
+                <a href="{% url 'wallet_withdrawal_history' %}" class="btn btn-sm btn-outline-primary w-100">View All Withdrawals</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
