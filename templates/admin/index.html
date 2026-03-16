@@ -166,23 +166,33 @@ html, body {
     overflow: hidden;
 }
 
+.sp-card-icon {
+    width: 40px; height: 40px;
+    background: rgba(255,255,255,0.22);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: .6rem;
+    flex-shrink: 0;
+}
+
 .sp-card .sp-val {
-    font-size: 1.9rem;
+    font-size: 1.05rem;
     font-weight: 700;
-    line-height: 1.1;
+    line-height: 1.2;
     word-break: break-word;
 }
 
 .sp-card .sp-lbl {
-    font-size: 1rem;
-    color: rgba(255,255,255,.95);
-    margin-top: 10px;
+    font-size: .7rem;
+    color: rgba(255,255,255,.8);
+    margin-top: 4px;
 }
 
 .sp-card .sp-sub {
-    font-size: .8rem;
-    color: rgba(255,255,255,.78);
-    margin-top: 8px;
+    font-size: .65rem;
+    color: rgba(255,255,255,.6);
+    margin-top: 2px;
 }
 
 .sp-btns {
@@ -209,14 +219,14 @@ html, body {
     background: rgba(255,255,255,0.28);
 }
 
-.sp-c1 { background: #2b52d1; }
-.sp-c2 { background: #1c9a3a; }
-.sp-c3 { background: #c96d05; }
-.sp-c4 { background: #1d81b8; }
-.sp-c5 { background: #6f2be3; }
-.sp-c6 { background: #c31218; }
-.sp-c7 { background: #14887f; }
-.sp-c8 { background: #b85714; }
+.sp-c1 { background: linear-gradient(135deg, #4361ee, #3a0ca3); }
+.sp-c2 { background: linear-gradient(135deg, #2dc653, #1a7a32); }
+.sp-c3 { background: linear-gradient(135deg, #f77f00, #a04800); }
+.sp-c4 { background: linear-gradient(135deg, #4cc9f0, #1d81b8); }
+.sp-c5 { background: linear-gradient(135deg, #7b2ff7, #4a0e8f); }
+.sp-c6 { background: linear-gradient(135deg, #e63946, #9b1b25); }
+.sp-c7 { background: linear-gradient(135deg, #2ec4b6, #0d6e67); }
+.sp-c8 { background: linear-gradient(135deg, #e07a2f, #8c4010); }
 
 /* ===== RECENT ACTIONS ===== */
 .sp-dropdown {
@@ -419,6 +429,7 @@ html, body {
         <div class="sp-cards">
             <div class="sp-card sp-c1">
                 <div>
+                    <div class="sp-card-icon"><i class="bi bi-graph-up-arrow"></i></div>
                     <div class="sp-val">UGX {{ sp_total_sales }}</div>
                     <div class="sp-lbl">Platform Sales</div>
                     <div class="sp-sub">All time</div>
@@ -430,6 +441,7 @@ html, body {
 
             <div class="sp-card sp-c2">
                 <div>
+                    <div class="sp-card-icon"><i class="bi bi-people"></i></div>
                     <div class="sp-val">{{ sp_active_vendors }}/{{ sp_total_vendors }}</div>
                     <div class="sp-lbl">Active Vendors</div>
                     <div class="sp-sub">{{ sp_pending_vendors }} pending</div>
@@ -442,6 +454,7 @@ html, body {
 
             <div class="sp-card sp-c3">
                 <div>
+                    <div class="sp-card-icon"><i class="bi bi-hourglass-split"></i></div>
                     <div class="sp-val">{{ sp_pending_vendors }}</div>
                     <div class="sp-lbl">Awaiting Approval</div>
                     <div class="sp-sub">Needs action</div>
@@ -453,6 +466,7 @@ html, body {
 
             <div class="sp-card sp-c4">
                 <div>
+                    <div class="sp-card-icon"><i class="bi bi-geo-alt"></i></div>
                     <div class="sp-val">{{ sp_active_locations }}/{{ sp_total_locations }}</div>
                     <div class="sp-lbl">Locations</div>
                     <div class="sp-sub">Active / Total</div>
@@ -465,6 +479,7 @@ html, body {
 
             <div class="sp-card sp-c5">
                 <div>
+                    <div class="sp-card-icon"><i class="bi bi-receipt"></i></div>
                     <div class="sp-val">{{ sp_total_txn }}</div>
                     <div class="sp-lbl">Transactions</div>
                     <div class="sp-sub">Last 30 days</div>
@@ -476,6 +491,7 @@ html, body {
 
             <div class="sp-card sp-c6">
                 <div>
+                    <div class="sp-card-icon"><i class="bi bi-x-circle"></i></div>
                     <div class="sp-val">{{ sp_failed_txn }}</div>
                     <div class="sp-lbl">Failed / Pending</div>
                     <div class="sp-sub">{{ sp_pending_txn }} pending</div>
@@ -488,6 +504,7 @@ html, body {
 
             <div class="sp-card sp-c7">
                 <div>
+                    <div class="sp-card-icon"><i class="bi bi-wallet2"></i></div>
                     <div class="sp-val">UGX {{ sp_wallet_pool }}</div>
                     <div class="sp-lbl">Wallet Pool</div>
                     <div class="sp-sub">All vendors</div>
@@ -499,6 +516,7 @@ html, body {
 
             <div class="sp-card sp-c8">
                 <div>
+                    <div class="sp-card-icon"><i class="bi bi-arrow-up-circle"></i></div>
                     <div class="sp-val">{{ sp_pending_withdrawals }}</div>
                     <div class="sp-lbl">Withdrawals</div>
                     <div class="sp-sub">UGX {{ sp_withdrawals_total }}</div>

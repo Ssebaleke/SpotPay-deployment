@@ -53,7 +53,11 @@
         #content { margin-left: var(--sidebar-width); padding: 20px; min-height: 100vh; }
 
         /* Topbar */
-        .topbar { background: var(--card-bg); border-radius: 10px; padding: .85rem 1.4rem; margin-bottom: 1.5rem; box-shadow: 0 2px 10px var(--shadow); }
+        .topbar { background: #0c1218; border-radius: 10px; padding: .85rem 1.4rem; margin-bottom: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .topbar h5, .topbar .fw-semibold { color: #f1f5f9 !important; }
+        .topbar small, .topbar .text-muted { color: #94a3b8 !important; }
+        .topbar .theme-btn { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12) !important; color: #94a3b8; }
+        .topbar .theme-btn:hover { background: rgba(255,255,255,0.14); color: #f1f5f9; }
 
         /* Stat Cards */
         .cards-grid {
@@ -93,24 +97,20 @@
         .sc-btns  { display: flex; gap: 5px; flex-wrap: wrap; margin-top: .6rem; }
         .sc-btn {
             display: inline-block;
+            align-self: flex-start;
             padding: .22rem .6rem;
-            border-radius: 4px;
+            border-radius: 5px;
             font-size: .7rem;
-            font-weight: 700;
+            font-weight: 600;
             text-decoration: none;
-            background: rgba(255,255,255,0.95);
-            border: none;
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.35);
+            color: #fff !important;
             cursor: pointer;
             transition: background .15s;
             white-space: nowrap;
         }
-        .sc-btn:hover { background: #fff; }
-        .sc-btn-green  { color: #15803d; }
-        .sc-btn-red    { color: #b91c1c; }
-        .sc-btn-blue   { color: #1d4ed8; }
-        .sc-btn-orange { color: #c2410c; }
-        .sc-btn-purple { color: #6d28d9; }
-        .sc-btn-teal   { color: #0f766e; }
+        .sc-btn:hover { background: rgba(255,255,255,0.32); color: #fff !important; }
 
         /* Chart / Table containers */
         .panel { background: var(--card-bg); border-radius: 12px; padding: 1.25rem; box-shadow: 0 4px 18px var(--shadow); height: 100%; }
@@ -246,7 +246,7 @@
                 <div class="sc-sub">Period: {{ period }}</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/payments/payment/" class="sc-btn sc-btn-blue">Payments</a>
+                <a href="/admin/payments/payment/" class="sc-btn">Payments</a>
             </div>
         </div>
 
@@ -258,8 +258,8 @@
                 <div class="sc-sub">{{ pending_vendors }} pending</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/accounts/vendor/" class="sc-btn sc-btn-green">All</a>
-                <a href="/admin/accounts/vendor/?status__exact=PENDING" class="sc-btn sc-btn-orange">Pending</a>
+                <a href="/admin/accounts/vendor/" class="sc-btn">All</a>
+                <a href="/admin/accounts/vendor/?status__exact=PENDING" class="sc-btn">Pending</a>
             </div>
         </div>
 
@@ -271,7 +271,7 @@
                 <div class="sc-sub">Needs action</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/accounts/vendor/?status__exact=PENDING" class="sc-btn sc-btn-red">Review</a>
+                <a href="/admin/accounts/vendor/?status__exact=PENDING" class="sc-btn">Review</a>
             </div>
         </div>
 
@@ -283,8 +283,8 @@
                 <div class="sc-sub">Active / Total</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/hotspot/hotspotlocation/" class="sc-btn sc-btn-blue">All</a>
-                <a href="/admin/hotspot/hotspotlocation/?status__exact=PENDING" class="sc-btn sc-btn-orange">Pending</a>
+                <a href="/admin/hotspot/hotspotlocation/" class="sc-btn">All</a>
+                <a href="/admin/hotspot/hotspotlocation/?status__exact=PENDING" class="sc-btn">Pending</a>
             </div>
         </div>
 
@@ -296,7 +296,7 @@
                 <div class="sc-sub">Period: {{ period }}</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/payments/payment/" class="sc-btn sc-btn-purple">View</a>
+                <a href="/admin/payments/payment/" class="sc-btn">View</a>
             </div>
         </div>
 
@@ -308,7 +308,7 @@
                 <div class="sc-sub">{{ success_rate }}% rate</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/payments/payment/?status__exact=SUCCESS" class="sc-btn sc-btn-green">View</a>
+                <a href="/admin/payments/payment/?status__exact=SUCCESS" class="sc-btn">View</a>
             </div>
         </div>
 
@@ -320,8 +320,8 @@
                 <div class="sc-sub">{{ pending_transactions }} pending</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/payments/payment/?status__exact=FAILED" class="sc-btn sc-btn-red">Failed</a>
-                <a href="/admin/payments/payment/?status__exact=PENDING" class="sc-btn sc-btn-orange">Pending</a>
+                <a href="/admin/payments/payment/?status__exact=FAILED" class="sc-btn">Failed</a>
+                <a href="/admin/payments/payment/?status__exact=PENDING" class="sc-btn">Pending</a>
             </div>
         </div>
 
@@ -333,7 +333,7 @@
                 <div class="sc-sub">UGX {{ pending_withdrawals_total }}</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/wallets/withdrawalrequest/" class="sc-btn sc-btn-teal">Manage</a>
+                <a href="/admin/wallets/withdrawalrequest/" class="sc-btn">Manage</a>
             </div>
         </div>
 
