@@ -201,18 +201,24 @@
 <div class="row">
     <div class="col-12">
         <div class="chart-container">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="fw-semibold mb-0">Transactions</h6>
-                <form method="get" class="d-flex gap-2 align-items-center">
-                    <input type="text" name="q" value="{{ search_q }}" placeholder="Search phone..." class="form-control form-control-sm" style="width:160px;">
-                    <select name="status" class="form-select form-select-sm" style="width:130px;">
-                        <option value="">All Status</option>
-                        <option value="SUCCESS" {% if status_filter == 'SUCCESS' %}selected{% endif %}>Success</option>
-                        <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
-                        <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed</option>
-                    </select>
-                    <button class="btn btn-sm btn-primary">Filter</button>
-                    {% if search_q or status_filter %}<a href="{% url 'vendor_dashboard' %}" class="btn btn-sm btn-outline-secondary">Clear</a>{% endif %}
+            <div class="mb-3">
+                <h6 class="fw-semibold mb-2">Transactions</h6>
+                <form method="get" class="row g-2">
+                    <div class="col-12 col-sm-5 col-md-4">
+                        <input type="text" name="q" value="{{ search_q }}" placeholder="Search phone..." class="form-control form-control-sm w-100">
+                    </div>
+                    <div class="col-7 col-sm-4 col-md-3">
+                        <select name="status" class="form-select form-select-sm w-100">
+                            <option value="">All Status</option>
+                            <option value="SUCCESS" {% if status_filter == 'SUCCESS' %}selected{% endif %}>Success</option>
+                            <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
+                            <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed</option>
+                        </select>
+                    </div>
+                    <div class="col-5 col-sm-3 col-md-2 d-flex gap-1">
+                        <button class="btn btn-sm btn-primary w-100">Filter</button>
+                        {% if search_q or status_filter %}<a href="{% url 'vendor_dashboard' %}" class="btn btn-sm btn-outline-secondary w-100">Clear</a>{% endif %}
+                    </div>
                 </form>
             </div>
             <div class="table-responsive">
