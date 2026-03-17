@@ -381,10 +381,46 @@ html, body {
     }
 }
 
-@media (max-width: 420px) {
-    .sp-cards {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+.earn-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 4px;
+}
+.earn-box {
+    border-radius: 14px;
+    padding: 16px;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(0,0,0,.18);
+}
+.earn-icon {
+    width: 34px; height: 34px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+.earn-val { font-size: 1rem; font-weight: 800; line-height: 1.2; }
+.earn-lbl { font-size: .7rem; color: rgba(255,255,255,.75); margin-top: 3px; }
+.earn-tab {
+    padding: 6px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,.2);
+    background: rgba(255,255,255,.06);
+    color: #94a3b8;
+    font-size: .78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+}
+.earn-tab.active, .earn-tab:hover {
+    background: #4361ee;
+    color: #fff;
+    border-color: #4361ee;
+}
+@media (max-width: 600px) {
+    .earn-row { grid-template-columns: 1fr; }
 }
 </style>
 
@@ -529,6 +565,131 @@ html, body {
         </div>
 
         <details class="sp-dropdown" open>
+            <summary>SpotPay Earnings</summary>
+            <div class="sp-dropdown-body">
+
+                <!-- Period tabs -->
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+                    {% for period in "Today,Week,Month,Year,All Time"|split:"," %}
+                    {% endfor %}
+                    <button class="earn-tab active" onclick="switchEarn(this,'today')">Today</button>
+                    <button class="earn-tab" onclick="switchEarn(this,'week')">Week</button>
+                    <button class="earn-tab" onclick="switchEarn(this,'month')">Month</button>
+                    <button class="earn-tab" onclick="switchEarn(this,'year')">Year</button>
+                    <button class="earn-tab" onclick="switchEarn(this,'all')">All Time</button>
+                </div>
+
+                <!-- Commission cards -->
+                <div class="earn-period" id="earn-today">
+                    <div class="earn-row">
+                        <div class="earn-box" style="background:linear-gradient(135deg,#4361ee,#3a0ca3)">
+                            <div class="earn-icon"><i class="bi bi-percent"></i></div>
+                            <div class="earn-val">UGX {{ sp_earn_today }}</div>
+                            <div class="earn-lbl">Commission Today</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#2dc653,#1a7a32)">
+                            <div class="earn-icon"><i class="bi bi-receipt"></i></div>
+                            <div class="earn-val">UGX {{ sp_sub_today }}</div>
+                            <div class="earn-lbl">Subscriptions Today</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
+                            <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
+                            <div class="earn-val">UGX {{ sp_earn_today|add:sp_sub_today }}</div>
+                            <div class="earn-lbl">Total Today</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="earn-period" id="earn-week" style="display:none">
+                    <div class="earn-row">
+                        <div class="earn-box" style="background:linear-gradient(135deg,#4361ee,#3a0ca3)">
+                            <div class="earn-icon"><i class="bi bi-percent"></i></div>
+                            <div class="earn-val">UGX {{ sp_earn_week }}</div>
+                            <div class="earn-lbl">Commission This Week</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#2dc653,#1a7a32)">
+                            <div class="earn-icon"><i class="bi bi-receipt"></i></div>
+                            <div class="earn-val">UGX {{ sp_sub_week }}</div>
+                            <div class="earn-lbl">Subscriptions This Week</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
+                            <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
+                            <div class="earn-val">UGX {{ sp_earn_week|add:sp_sub_week }}</div>
+                            <div class="earn-lbl">Total This Week</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="earn-period" id="earn-month" style="display:none">
+                    <div class="earn-row">
+                        <div class="earn-box" style="background:linear-gradient(135deg,#4361ee,#3a0ca3)">
+                            <div class="earn-icon"><i class="bi bi-percent"></i></div>
+                            <div class="earn-val">UGX {{ sp_earn_month }}</div>
+                            <div class="earn-lbl">Commission This Month</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#2dc653,#1a7a32)">
+                            <div class="earn-icon"><i class="bi bi-receipt"></i></div>
+                            <div class="earn-val">UGX {{ sp_sub_month }}</div>
+                            <div class="earn-lbl">Subscriptions This Month</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
+                            <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
+                            <div class="earn-val">UGX {{ sp_earn_month|add:sp_sub_month }}</div>
+                            <div class="earn-lbl">Total This Month</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="earn-period" id="earn-year" style="display:none">
+                    <div class="earn-row">
+                        <div class="earn-box" style="background:linear-gradient(135deg,#4361ee,#3a0ca3)">
+                            <div class="earn-icon"><i class="bi bi-percent"></i></div>
+                            <div class="earn-val">UGX {{ sp_earn_year }}</div>
+                            <div class="earn-lbl">Commission This Year</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#2dc653,#1a7a32)">
+                            <div class="earn-icon"><i class="bi bi-receipt"></i></div>
+                            <div class="earn-val">UGX {{ sp_sub_year }}</div>
+                            <div class="earn-lbl">Subscriptions This Year</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
+                            <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
+                            <div class="earn-val">UGX {{ sp_earn_year|add:sp_sub_year }}</div>
+                            <div class="earn-lbl">Total This Year</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="earn-period" id="earn-all" style="display:none">
+                    <div class="earn-row">
+                        <div class="earn-box" style="background:linear-gradient(135deg,#4361ee,#3a0ca3)">
+                            <div class="earn-icon"><i class="bi bi-percent"></i></div>
+                            <div class="earn-val">UGX {{ sp_earn_alltime }}</div>
+                            <div class="earn-lbl">Total Commission</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#2dc653,#1a7a32)">
+                            <div class="earn-icon"><i class="bi bi-receipt"></i></div>
+                            <div class="earn-val">UGX {{ sp_sub_alltime }}</div>
+                            <div class="earn-lbl">Total Subscriptions</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
+                            <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
+                            <div class="earn-val">UGX {{ sp_earn_alltime|add:sp_sub_alltime }}</div>
+                            <div class="earn-lbl">Grand Total</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Commission trend chart -->
+                <div style="margin-top:16px;background:#fff;border-radius:12px;padding:14px;">
+                    <h3 style="font-size:.9rem;font-weight:600;margin:0 0 10px;color:#374151;">Commission Earned — Last 12 Months</h3>
+                    <div style="height:220px;"><canvas id="spCommissionChart"></canvas></div>
+                </div>
+
+            </div>
+        </details>
+
+        <details class="sp-dropdown" open>
             <summary>Recent actions</summary>
             <div class="sp-dropdown-body">
                 {% get_admin_log 10 as admin_log for_user user %}
@@ -601,6 +762,8 @@ html, body {
     </main>
 </div>
 
+{{ sp_commission_chart_labels|json_script:"sp-cl" }}
+{{ sp_commission_chart_values|json_script:"sp-cv" }}
 {{ sp_trend_labels|json_script:"sp-tl" }}
 {{ sp_trend_values|json_script:"sp-tv" }}
 {{ sp_monthly_labels|json_script:"sp-ml" }}
@@ -614,7 +777,36 @@ function toggleSidebar() {
     sidebar.classList.toggle("active");
 }
 
+function switchEarn(btn, period) {
+    document.querySelectorAll('.earn-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.earn-period').forEach(el => el.style.display = 'none');
+    document.getElementById('earn-' + period).style.display = 'block';
+}
+
 (function(){
+    // Commission chart
+    const cl = JSON.parse(document.getElementById('sp-cl').textContent);
+    const cv = JSON.parse(document.getElementById('sp-cv').textContent);
+    new Chart(document.getElementById('spCommissionChart'), {
+        type: 'bar',
+        data: {
+            labels: cl,
+            datasets: [{
+                label: 'Commission (UGX)',
+                data: cv,
+                backgroundColor: 'rgba(67,97,238,0.8)',
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + v.toLocaleString() } } }
+        }
+    });
+
     const labels = JSON.parse(document.getElementById('sp-tl').textContent);
     const values = JSON.parse(document.getElementById('sp-tv').textContent);
 

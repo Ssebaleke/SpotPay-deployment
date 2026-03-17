@@ -19,7 +19,7 @@ class SpotPayAdminSite(AdminSite):
     index_template = "admin/index.html"
 
     def index(self, request, extra_context=None):
-        from payments.models import Payment
+        from payments.models import Payment, PaymentSplit
         from hotspot.models import HotspotLocation
         from wallets.models import VendorWallet, WithdrawalRequest
 
@@ -27,6 +27,7 @@ class SpotPayAdminSite(AdminSite):
         today = now.date()
         month_start = now - timedelta(days=30)
 
+        # ── existing txn stats ──
         txn_qs = Payment.objects.filter(purpose="TRANSACTION", initiated_at__gte=month_start)
         success_qs = txn_qs.filter(status="SUCCESS")
         failed_count = txn_qs.filter(status="FAILED").count()
@@ -43,7 +44,6 @@ class SpotPayAdminSite(AdminSite):
             trend_labels.append(day.strftime("%a %d"))
             trend_values.append(float(total))
 
-        # Monthly revenue + payers (last 12 months)
         monthly_labels, monthly_revenue, monthly_payers = [], [], []
         for offset in range(11, -1, -1):
             month_date = (now - timedelta(days=offset * 30)).replace(day=1)
@@ -60,7 +60,6 @@ class SpotPayAdminSite(AdminSite):
             monthly_revenue.append(float(rev))
             monthly_payers.append(payers)
 
-        # Vendor status donut
         vendor_active = Vendor.objects.filter(status="ACTIVE").count()
         vendor_pending = Vendor.objects.filter(status="PENDING").count()
         vendor_suspended = Vendor.objects.filter(status="SUSPENDED").count()
@@ -84,13 +83,40 @@ class SpotPayAdminSite(AdminSite):
                     if resp.status_code == 200:
                         rdata = resp.json()
                         ugsms_balance_units = rdata.get("balance") or rdata.get("data", {}).get("balance", "N/A")
-                        cache.set("ugsms_balance", ugsms_balance_units, 300)  # cache 5 mins
+                        cache.set("ugsms_balance", ugsms_balance_units, 300)
                 except Exception:
                     pass
 
         total_sms_revenue = SMSPurchase.objects.filter(status="SUCCESS").aggregate(t=Sum("amount_paid"))["t"] or 0
-
         pending_wd_qs = WithdrawalRequest.objects.filter(status=WithdrawalRequest.STATUS_PENDING)
+
+        # ── SpotPay Commission Earnings ──
+        def commission_sum(qs):
+            return qs.aggregate(t=Sum("spotpay_amount"))["t"] or Decimal("0")
+
+        split_qs = PaymentSplit.objects.filter(payment__status="SUCCESS")
+        earn_today    = commission_sum(split_qs.filter(created_at__date=today))
+        earn_week     = commission_sum(split_qs.filter(created_at__gte=now - timedelta(days=7)))
+        earn_month    = commission_sum(split_qs.filter(created_at__gte=now - timedelta(days=30)))
+        earn_year     = commission_sum(split_qs.filter(created_at__gte=now - timedelta(days=365)))
+        earn_alltime  = commission_sum(split_qs)
+
+        # ── Subscription revenue (SUBSCRIPTION payments) ──
+        sub_qs = Payment.objects.filter(purpose="SUBSCRIPTION", status="SUCCESS")
+        sub_today   = sub_qs.filter(completed_at__date=today).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        sub_week    = sub_qs.filter(completed_at__gte=now - timedelta(days=7)).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        sub_month   = sub_qs.filter(completed_at__gte=now - timedelta(days=30)).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        sub_year    = sub_qs.filter(completed_at__gte=now - timedelta(days=365)).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        sub_alltime = sub_qs.aggregate(t=Sum("amount"))["t"] or Decimal("0")
+
+        # ── Commission chart (last 12 months) ──
+        commission_chart_labels, commission_chart_values = [], []
+        for offset in range(11, -1, -1):
+            month_date = (now - timedelta(days=offset * 30)).replace(day=1)
+            month_end = (month_date.replace(day=28) + timedelta(days=4)).replace(day=1)
+            val = commission_sum(split_qs.filter(created_at__gte=month_date, created_at__lt=month_end))
+            commission_chart_labels.append(month_date.strftime("%b %Y"))
+            commission_chart_values.append(float(val))
 
         extra_context = extra_context or {}
         extra_context.update({
@@ -119,6 +145,21 @@ class SpotPayAdminSite(AdminSite):
             "sp_vendor_pending": vendor_pending,
             "sp_vendor_suspended": vendor_suspended,
             "sp_vendor_rejected": vendor_rejected,
+            # commission
+            "sp_earn_today": earn_today,
+            "sp_earn_week": earn_week,
+            "sp_earn_month": earn_month,
+            "sp_earn_year": earn_year,
+            "sp_earn_alltime": earn_alltime,
+            # subscriptions
+            "sp_sub_today": sub_today,
+            "sp_sub_week": sub_week,
+            "sp_sub_month": sub_month,
+            "sp_sub_year": sub_year,
+            "sp_sub_alltime": sub_alltime,
+            # commission chart
+            "sp_commission_chart_labels": commission_chart_labels,
+            "sp_commission_chart_values": commission_chart_values,
         })
         return super().index(request, extra_context)
 
