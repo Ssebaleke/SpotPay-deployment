@@ -10,7 +10,6 @@ import zipfile
 import io
 import tempfile
 import json
-import textwrap
 
 from hotspot.models import HotspotLocation
 from portal_api.models import PortalTemplate
@@ -279,71 +278,19 @@ def mikrotik_setup_script(request, location_uuid):
     zip_url = f"{settings.SITE_URL}/api/portal/{location.uuid}/download/"
     dns_name = location.hotspot_dns or "hot.spot"
 
-    # Build per-file fetch commands from ZIP contents
-    file_fetch_lines = []
-    try:
-        template = PortalTemplate.objects.filter(is_active=True).first()
-        if template and template.zip_file:
-            with zipfile.ZipFile(template.zip_file.path, "r") as zf:
-                for name in zf.namelist():
-                    if name.endswith("/"):
-                        continue
-                    parts = name.split("/")
-                    rel = "/".join(parts[1:]) if len(parts) > 1 else parts[0]
-                    if not rel:
-                        continue
-                    file_url = f"{settings.SITE_URL}/api/portal/{location.uuid}/download/?file={rel}"
-                    dst = f"hotspot/{rel}"
-                    # create subdirectory fetch line if needed
-                    if "/" in rel:
-                        subdir = "hotspot/" + rel.rsplit("/", 1)[0]
-                        file_fetch_lines.append(f"/file/add name=\"{subdir}\" type=directory")
-                    file_fetch_lines.append(f"/tool fetch url=\"{file_url}\" dst-path=\"{dst}\" mode=https")
-    except Exception:
-        pass
-
-    fetch_block = "\r\n".join(file_fetch_lines) if file_fetch_lines else (
-        f"/tool fetch url=\"{zip_url}\" dst-path=\"hotspot-spotpay.zip\" mode=https\r\n"
-        f"# ROS 7: /file extract hotspot-spotpay.zip to=hotspot"
-    )
-
     script = (
-        f"# =====================================================\r\n"
         f"# SpotPay MikroTik Setup Script\r\n"
-        f"# Location : {location.site_name}\r\n"
-        f"# Works on RouterOS 6 and RouterOS 7\r\n"
-        f"# Paste this entire script into MikroTik Terminal\r\n"
-        f"# =====================================================\r\n"
+        f"# Location: {location.site_name}\r\n"
+        f"# RouterOS 7 only - paste into Terminal\r\n"
         f"\r\n"
-        f"# --- 1. Walled Garden IP (allow SpotPay server by IP) ---\r\n"
-        f"/ip hotspot walled-garden ip add action=accept comment=\"SpotPay Server\" dst-address={server_ip}\r\n"
+        f"/ip hotspot walled-garden ip add action=accept comment=\"SpotPay\" dst-address={server_ip}\r\n"
+        f"/ip hotspot walled-garden add action=allow comment=\"SpotPay\" dst-host={server_host}\r\n"
         f"\r\n"
-        f"# --- 2. Walled Garden Host (allow SpotPay server by domain) ---\r\n"
-        f"/ip hotspot walled-garden add action=allow comment=\"SpotPay API\" dst-host={server_host}\r\n"
-        f"/ip hotspot walled-garden add action=allow comment=\"SpotPay API www\" dst-host=www.{server_host}\r\n"
+        f"/tool fetch url=\"{zip_url}\" dst-path=\"hotspot-spotpay.zip\" mode=https\r\n"
+        f"/file extract hotspot-spotpay.zip to=hotspot\r\n"
+        f"/file remove hotspot-spotpay.zip\r\n"
         f"\r\n"
-        f"# --- 3. Install portal files (works on ROS 6 and ROS 7) ---\r\n"
-        f":local rosver [ /system resource get version ]\r\n"
-        f":local rosmajor [:tonum [:pick $rosver 0 1]]\r\n"
-        f"\r\n"
-        f":if ($rosmajor >= 7) do={{\r\n"
-        f"  :put \"RouterOS 7 detected - downloading ZIP and extracting...\"\r\n"
-        f"  /tool fetch url=\"{zip_url}\" dst-path=\"hotspot-spotpay.zip\" mode=https\r\n"
-        f"  /file extract hotspot-spotpay.zip to=hotspot\r\n"
-        f"  /file remove hotspot-spotpay.zip\r\n"
-        f"  :put \"Done. Portal files extracted into hotspot folder.\"\r\n"
-        f"}} else={{\r\n"
-        f"  :put \"RouterOS 6 detected - downloading files one by one...\"\r\n"
-        f"{fetch_block}\r\n"
-        f"  :put \"Done. Portal files downloaded into hotspot folder.\"\r\n"
-        f"}}\r\n"
-        f"\r\n"
-        f"# --- 4. Set hotspot DNS name ---\r\n"
-        f"# Go to: IP -> Hotspot -> Server Profiles -> DNS Name\r\n"
-        f"# Set it to: {dns_name}\r\n"
-        f"\r\n"
-        f":log info \"SpotPay portal setup complete for {location.site_name}\"\r\n"
-        f":put \"Setup complete! Reload hotspot to apply.\"\r\n"
+        f":put \"Done! Set DNS Name to '{dns_name}' in IP > Hotspot > Server Profiles\"\r\n"
     )
 
     return HttpResponse(script, content_type="text/plain; charset=utf-8")
