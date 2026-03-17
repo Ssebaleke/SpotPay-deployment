@@ -191,6 +191,31 @@ def admin_dashboard(request):
     # vendor success rate for doughnut
     success_rate = round((successful_transactions / total_transactions) * 100) if total_transactions > 0 else 0
 
+    from sms.models import SMSPurchase, SMSProvider
+    import requests as http_requests
+
+    # UGSMS live balance
+    ugsms_balance_units = "N/A"
+    sms_provider = SMSProvider.objects.filter(is_active=True).first()
+    if sms_provider:
+        try:
+            resp = http_requests.get(
+                "https://ugsms.com/api/v2/account/balance",
+                headers={"X-API-Key": sms_provider.api_key},
+                timeout=5
+            )
+            if resp.status_code == 200:
+                rdata = resp.json()
+                ugsms_balance_units = rdata.get("balance") or rdata.get("data", {}).get("balance", "N/A")
+        except Exception:
+            pass
+
+    # Total revenue from vendor SMS purchases
+    total_sms_revenue = (
+        SMSPurchase.objects.filter(status="SUCCESS").aggregate(total=Sum("amount_paid"))["total"]
+        or 0
+    )
+
     pending_vendors_list = Vendor.objects.filter(status='PENDING').select_related('user').order_by('created_at')
     all_vendors_list = Vendor.objects.select_related('user').order_by('-created_at')[:20]
     all_locations_list = HotspotLocation.objects.select_related('vendor').order_by('-created_at')[:20]
@@ -216,6 +241,8 @@ def admin_dashboard(request):
         'vendor_performance': vendor_performance,
         'admin_trend_labels': admin_trend_labels,
         'admin_trend_values': admin_trend_values,
+        'ugsms_balance_units': ugsms_balance_units,
+        'total_sms_revenue': total_sms_revenue,
         'pending_vendors_list': pending_vendors_list,
         'all_vendors_list': all_vendors_list,
         'all_locations_list': all_locations_list,

@@ -43,6 +43,10 @@ def sms_topup(request):
             messages.error(request, "Amount and phone number are required.")
             return redirect("sms:sms_topup")
 
+        if int(amount) < 500:
+            messages.error(request, "Minimum amount is 500 UGX.")
+            return redirect("sms:sms_topup")
+
         # Build a mutable POST copy for payment initiation
         post_data = request.POST.copy()
         post_data["payer_type"] = "VENDOR"

@@ -290,13 +290,14 @@
 
         <div class="stat-card sc-txn">
             <div>
-                <div class="sc-icon"><i class="bi bi-receipt"></i></div>
-                <div class="sc-value">{{ total_transactions }}</div>
-                <div class="sc-label">Transactions</div>
-                <div class="sc-sub">Period: {{ period }}</div>
+                <div class="sc-icon"><i class="bi bi-chat-dots"></i></div>
+                <div class="sc-value">{{ ugsms_balance_units }} SMS</div>
+                <div class="sc-label">UGSMS Balance</div>
+                <div class="sc-sub">UGX {{ total_sms_revenue }} earned</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/payments/payment/" class="sc-btn">View</a>
+                <a href="/sms/ugsms-balance/" class="sc-btn">Check</a>
+                <a href="/admin/sms/smspurchase/" class="sc-btn">Sales</a>
             </div>
         </div>
 
