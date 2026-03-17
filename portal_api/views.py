@@ -162,16 +162,46 @@ def download_portal_zip(request, location_uuid):
             .replace("{{SUPPORT_PHONE}}", support_phone)
         )
 
-    # Build ZIP: strip the top-level prefix (e.g. hotspot/) so files sit at
-    # root of ZIP. MikroTik extracts to=hotspot → hotspot/login.html ✅
+    # --- Single file mode: ?file=login.html or ?file=js/portal.js ---
+    # MikroTik fetches each file individually via this param
+    file_param = request.GET.get("file", "").strip().lstrip("/")
+    if file_param:
+        with zipfile.ZipFile(template.zip_file.path, "r") as zf:
+            match = None
+            for n in zf.namelist():
+                parts = n.split("/", 1)
+                rel = parts[1] if len(parts) == 2 else parts[0]
+                if rel == file_param:
+                    match = n
+                    break
+            if not match:
+                from django.http import Http404
+                raise Http404
+            content = zf.read(match)
+            ext = Path(file_param).suffix.lower()
+            if ext in (".html", ".js", ".css"):
+                content = replace_placeholders(
+                    content.decode("utf-8", errors="ignore")
+                ).encode("utf-8")
+            content_types = {
+                ".html": "text/html", ".js": "application/javascript",
+                ".css": "text/css", ".png": "image/png",
+                ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                ".woff": "font/woff", ".woff2": "font/woff2",
+                ".ttf": "font/ttf", ".svg": "image/svg+xml",
+            }
+            ct = content_types.get(ext, "application/octet-stream")
+            resp = HttpResponse(content, content_type=ct)
+            resp["Content-Disposition"] = f'inline; filename="{Path(file_param).name}"'
+            return resp
+
+    # --- Full ZIP mode (manual download) ---
     buffer = io.BytesIO()
     with zipfile.ZipFile(template.zip_file.path, "r") as zf_in:
         with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf_out:
             for item in zf_in.infolist():
-                # strip the first path component (the parent folder)
                 parts = item.filename.split("/", 1)
                 rel = parts[1] if len(parts) == 2 else parts[0]
-                # skip directory entries, empty paths, and dev files
                 if not rel or rel.endswith("/"):
                     continue
                 if any(rel.startswith(x) for x in (".vscode", ".git", "__MACOSX", ".DS_Store", "log.", "readme")):
@@ -245,16 +275,39 @@ def mikrotik_setup_script(request, location_uuid):
     zip_url = f"{settings.SITE_URL}/api/portal/{location.uuid}/download/"
     dns_name = location.hotspot_dns or "hot.spot"
 
-    # Single line using ; \ continuation — works on ROS 6 and ROS 7
-    # Checks prevent duplicate walled-garden rules on re-run
-    script = (
-        f":if ([:len [/ip hotspot walled-garden ip find where dst-address=\"{server_ip}\" and comment=\"SpotPay\"]] = 0) do={{/ip hotspot walled-garden ip add action=accept comment=\"SpotPay\" dst-address={server_ip}}}; "
-        f":if ([:len [/ip hotspot walled-garden find where dst-host=\"{server_host}\" and comment=\"SpotPay\"]] = 0) do={{/ip hotspot walled-garden add action=allow comment=\"SpotPay\" dst-host={server_host}}}; "
-        f"/tool fetch url=\"{zip_url}\" dst-path=\"hotspot-spotpay.zip\" mode=https; "
-        f"/file extract hotspot-spotpay.zip to=hotspot; "
-        f"/file remove hotspot-spotpay.zip; "
-        f":put \"SpotPay portal installed. Set DNS Name to {dns_name} under IP > Hotspot > Server Profiles\""
+    # Build per-file fetch commands from ZIP contents
+    # This works on ALL ROS versions — no extract needed
+    fetch_cmds = []
+    try:
+        template = PortalTemplate.objects.filter(is_active=True).first()
+        if template and template.zip_file:
+            with zipfile.ZipFile(template.zip_file.path, "r") as zf:
+                for name in sorted(zf.namelist()):
+                    if name.endswith("/"):
+                        continue
+                    parts = name.split("/", 1)
+                    rel = parts[1] if len(parts) == 2 else parts[0]
+                    if not rel:
+                        continue
+                    if any(rel.startswith(x) for x in (".vscode", ".git", "__MACOSX", ".DS_Store", "log.", "readme")):
+                        continue
+                    file_url = f"{settings.SITE_URL}/api/portal/{location.uuid}/download/?file={rel}"
+                    dst = f"hotspot/{rel}"
+                    fetch_cmds.append(f"/tool fetch url=\"{file_url}\" dst-path=\"{dst}\" mode=https")
+    except Exception:
+        pass
+
+    walled_garden = (
+        f":if ([:len [/ip hotspot walled-garden ip find where dst-address=\"{server_ip}\" and comment=\"SpotPay\"]] = 0) "
+        f"do={{/ip hotspot walled-garden ip add action=accept comment=\"SpotPay\" dst-address={server_ip}}}; "
+        f":if ([:len [/ip hotspot walled-garden find where dst-host=\"{server_host}\" and comment=\"SpotPay\"]] = 0) "
+        f"do={{/ip hotspot walled-garden add action=allow comment=\"SpotPay\" dst-host={server_host}}}; "
     )
+
+    fetch_block = "; ".join(fetch_cmds)
+    done_msg = f":put \"SpotPay portal installed. Set DNS Name to {dns_name} under IP > Hotspot > Server Profiles\""
+
+    script = walled_garden + fetch_block + "; " + done_msg
 
     return HttpResponse(script, content_type="text/plain; charset=utf-8")
 
