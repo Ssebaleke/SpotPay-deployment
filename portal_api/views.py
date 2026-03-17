@@ -271,7 +271,6 @@ def mikrotik_setup_script(request, location_uuid):
     parsed = urlparse(settings.SITE_URL)
     server_host = parsed.hostname or settings.SITE_URL
 
-    # Resolve IP for walled-garden ip rule
     try:
         server_ip = socket.gethostbyname(server_host)
     except Exception:
@@ -280,61 +279,73 @@ def mikrotik_setup_script(request, location_uuid):
     zip_url = f"{settings.SITE_URL}/api/portal/{location.uuid}/download/"
     dns_name = location.hotspot_dns or "hot.spot"
 
-    # Build per-file fetch commands by inspecting the active ZIP template
+    # Build per-file fetch commands from ZIP contents
     file_fetch_lines = []
     try:
-        from portal_api.models import PortalTemplate
         template = PortalTemplate.objects.filter(is_active=True).first()
         if template and template.zip_file:
             with zipfile.ZipFile(template.zip_file.path, "r") as zf:
                 for name in zf.namelist():
                     if name.endswith("/"):
                         continue
-                    # strip any leading folder from zip (e.g. hotspot/login.html -> login.html)
                     parts = name.split("/")
                     rel = "/".join(parts[1:]) if len(parts) > 1 else parts[0]
                     if not rel:
                         continue
                     file_url = f"{settings.SITE_URL}/api/portal/{location.uuid}/download/?file={rel}"
                     dst = f"hotspot/{rel}"
-                    file_fetch_lines.append(f"/tool fetch url=""{file_url}"" dst-path=""{dst}"" mode=https")
+                    # create subdirectory fetch line if needed
+                    if "/" in rel:
+                        subdir = "hotspot/" + rel.rsplit("/", 1)[0]
+                        file_fetch_lines.append(f"/file/add name=\"{subdir}\" type=directory")
+                    file_fetch_lines.append(f"/tool fetch url=\"{file_url}\" dst-path=\"{dst}\" mode=https")
     except Exception:
         pass
 
-    # Fallback: just fetch the zip and instruct manual extraction
-    if not file_fetch_lines:
-        file_fetch_lines = [
-            f"/tool fetch url=""{zip_url}"" dst-path=\"flash/hotspot-spotpay.zip\" mode=https",
-            "# Extract the ZIP manually via Winbox: Files -> right-click -> Extract",
-            "# Then move all extracted files into the hotspot folder",
-        ]
-
-    fetch_block = "\r\n".join(file_fetch_lines)
+    fetch_block = "\r\n".join(file_fetch_lines) if file_fetch_lines else (
+        f"/tool fetch url=\"{zip_url}\" dst-path=\"hotspot-spotpay.zip\" mode=https\r\n"
+        f"# ROS 7: /file extract hotspot-spotpay.zip to=hotspot"
+    )
 
     script = (
-        f"# =======================================================\r\n"
+        f"# =====================================================\r\n"
         f"# SpotPay MikroTik Setup Script\r\n"
         f"# Location : {location.site_name}\r\n"
+        f"# Works on RouterOS 6 and RouterOS 7\r\n"
         f"# Paste this entire script into MikroTik Terminal\r\n"
-        f"# =======================================================\r\n"
+        f"# =====================================================\r\n"
         f"\r\n"
-        f"# --- 1. Walled Garden IP (allow by IP address) ---\r\n"
+        f"# --- 1. Walled Garden IP (allow SpotPay server by IP) ---\r\n"
         f"/ip hotspot walled-garden ip\r\n"
         f"add action=accept comment=\"SpotPay Server\" dst-address={server_ip}\r\n"
         f"\r\n"
-        f"# --- 2. Walled Garden Host (allow by domain) ---\r\n"
+        f"# --- 2. Walled Garden Host (allow SpotPay server by domain) ---\r\n"
         f"/ip hotspot walled-garden\r\n"
         f"add action=allow comment=\"SpotPay API\" dst-host={server_host}\r\n"
+        f"add action=allow comment=\"SpotPay API www\" dst-host=www.{server_host}\r\n"
         f"\r\n"
-        f"# --- 3. Download portal files into hotspot folder ---\r\n"
+        f"# --- 3. Install portal files (works on ROS 6 and ROS 7) ---\r\n"
+        f":local rosver [ /system resource get version ]\r\n"
+        f":local rosmajor [:tonum [:pick $rosver 0 1]]\r\n"
+        f"\r\n"
+        f":if ($rosmajor >= 7) do={{\r\n"
+        f"  :put \"RouterOS 7 detected - downloading ZIP and extracting...\"\r\n"
+        f"  /tool fetch url=\"{zip_url}\" dst-path=\"hotspot-spotpay.zip\" mode=https\r\n"
+        f"  /file extract hotspot-spotpay.zip to=hotspot\r\n"
+        f"  /file remove hotspot-spotpay.zip\r\n"
+        f"  :put \"Done. Portal files extracted into hotspot folder.\"\r\n"
+        f"}} else={{\r\n"
+        f"  :put \"RouterOS 6 detected - downloading files one by one...\"\r\n"
         f"{fetch_block}\r\n"
+        f"  :put \"Done. Portal files downloaded into hotspot folder.\"\r\n"
+        f"}}\r\n"
         f"\r\n"
-        f"# --- 4. Confirm hotspot DNS name ---\r\n"
+        f"# --- 4. Set hotspot DNS name ---\r\n"
         f"# Go to: IP -> Hotspot -> Server Profiles -> DNS Name\r\n"
-        f"# Make sure it is set to: {dns_name}\r\n"
+        f"# Set it to: {dns_name}\r\n"
         f"\r\n"
         f":log info \"SpotPay portal setup complete for {location.site_name}\"\r\n"
-        f":put \"Done. Hotspot portal files installed.\"\r\n"
+        f":put \"Setup complete! Reload hotspot to apply.\"\r\n"
     )
 
     return HttpResponse(script, content_type="text/plain; charset=utf-8")
