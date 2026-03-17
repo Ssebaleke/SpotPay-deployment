@@ -101,17 +101,23 @@ def voucher_list(request):
                 }
             )
 
-            # Repair old vouchers without package
             if not created and voucher.package is None:
                 voucher.package = package
                 voucher.save()
 
             if created:
                 created_count += 1
+            else:
+                skipped_count += 1
 
         batch.total_uploaded = created_count
         if created_count == 0:
             batch.delete()
+            messages.warning(request,
+                f"0 new vouchers added — all {skipped_count} codes already exist in the system. "
+                f"Delete the existing batch first if you want to re-upload."
+            )
+            return redirect('voucher_list')
         else:
             batch.save(update_fields=['total_uploaded'])
 
