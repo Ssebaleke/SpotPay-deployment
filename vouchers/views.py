@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Q
+from django.core.paginator import Paginator
 
 from .models import Voucher, VoucherBatch, VoucherBatchDeletionLog
 from packages.models import Package
@@ -122,9 +123,12 @@ def voucher_list(request):
 
         return redirect('voucher_list')
 
+    paginator = Paginator(vouchers, 50)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     return render(request, 'vouchers/voucher_list.html', {
         'packages': packages,
-        'vouchers': vouchers,
+        'page_obj': page_obj,
         'batches': batches,
     })
 
