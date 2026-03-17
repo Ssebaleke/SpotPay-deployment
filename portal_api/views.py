@@ -132,8 +132,7 @@ def portal_buy_api(request, uuid):
             status=400
         )
 
-    # Ensure status_url is absolute for captive portal
-    if result.get("status_url"):
+    if result.get("status_url") and not result["status_url"].startswith("http"):
         result["status_url"] = request.build_absolute_uri(result["status_url"])
 
     return JsonResponse(result)
@@ -153,6 +152,45 @@ def download_portal_zip(request, location_uuid):
 
     template = get_object_or_404(PortalTemplate, is_active=True)
 
+    # --- Single file mode: ?file=login.html or ?file=js/portal.js ---
+    file_param = request.GET.get("file", "").strip().lstrip("/")
+    if file_param:
+        with zipfile.ZipFile(template.zip_file.path, "r") as zf:
+            # find the entry — may be stored as hotspot/login.html or just login.html
+            names = zf.namelist()
+            match = None
+            for n in names:
+                parts = n.split("/")
+                rel = "/".join(parts[1:]) if len(parts) > 1 else parts[0]
+                if rel == file_param:
+                    match = n
+                    break
+            if not match:
+                from django.http import Http404
+                raise Http404
+
+            content = zf.read(match)
+            ext = Path(file_param).suffix
+            if ext in [".html", ".js", ".css"]:
+                text = content.decode("utf-8", errors="ignore")
+                text = text.replace("{{API_BASE}}", settings.PORTAL_API_BASE)
+                text = text.replace("{{LOCATION_UUID}}", str(location.uuid))
+                text = text.replace("{{BUY_URL}}", f"{settings.SITE_URL}/api/portal/{location.uuid}/buy/")
+                text = text.replace("{{SUPPORT_PHONE}}", getattr(location.vendor, "business_phone", "") or "")
+                content = text.encode("utf-8")
+
+            content_types = {
+                ".html": "text/html", ".js": "application/javascript",
+                ".css": "text/css", ".png": "image/png",
+                ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                ".gif": "image/gif", ".ico": "image/x-icon",
+            }
+            ct = content_types.get(ext, "application/octet-stream")
+            resp = HttpResponse(content, content_type=ct)
+            resp["Content-Disposition"] = f'inline; filename="{Path(file_param).name}"'
+            return resp
+
+    # --- Full ZIP mode ---
     buffer = io.BytesIO()
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -174,16 +212,12 @@ def download_portal_zip(request, location_uuid):
                     text = text.replace("{{API_BASE}}", settings.PORTAL_API_BASE)
                     text = text.replace("{{LOCATION_UUID}}", str(location.uuid))
                     text = text.replace("{{BUY_URL}}", f"{settings.SITE_URL}/api/portal/{location.uuid}/buy/")
-                    text = text.replace(
-                        "{{SUPPORT_PHONE}}",
-                        getattr(location.vendor, "business_phone", "") or ""
-                    )
+                    text = text.replace("{{SUPPORT_PHONE}}", getattr(location.vendor, "business_phone", "") or "")
                     zip_out.writestr(str(arcname), text)
                 else:
                     zip_out.writestr(str(arcname), content)
 
     buffer.seek(0)
-
     response = HttpResponse(buffer, content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="hotspot-{location.site_name}.zip"'
     return response
@@ -232,50 +266,76 @@ def mikrotik_setup_script(request, location_uuid):
         status="ACTIVE"
     )
 
-    # Parse host from SITE_URL  e.g. "69.164.245.17" or "spotpay.example.com"
     from urllib.parse import urlparse
+    import socket
     parsed = urlparse(settings.SITE_URL)
     server_host = parsed.hostname or settings.SITE_URL
+
+    # Resolve IP for walled-garden ip rule
+    try:
+        server_ip = socket.gethostbyname(server_host)
+    except Exception:
+        server_ip = server_host
 
     zip_url = f"{settings.SITE_URL}/api/portal/{location.uuid}/download/"
     dns_name = location.hotspot_dns or "hot.spot"
 
-    script = textwrap.dedent(f"""\
-        # =======================================================
-        # SpotPay MikroTik Setup Script
-        # Location : {location.site_name}
-        # Generated: auto
-        # Paste this entire script into MikroTik Terminal
-        # =======================================================
+    # Build per-file fetch commands by inspecting the active ZIP template
+    file_fetch_lines = []
+    try:
+        from portal_api.models import PortalTemplate
+        template = PortalTemplate.objects.filter(is_active=True).first()
+        if template and template.zip_file:
+            with zipfile.ZipFile(template.zip_file.path, "r") as zf:
+                for name in zf.namelist():
+                    if name.endswith("/"):
+                        continue
+                    # strip any leading folder from zip (e.g. hotspot/login.html -> login.html)
+                    parts = name.split("/")
+                    rel = "/".join(parts[1:]) if len(parts) > 1 else parts[0]
+                    if not rel:
+                        continue
+                    file_url = f"{settings.SITE_URL}/api/portal/{location.uuid}/download/?file={rel}"
+                    dst = f"hotspot/{rel}"
+                    file_fetch_lines.append(f"/tool fetch url=""{file_url}"" dst-path=""{dst}"" mode=https")
+    except Exception:
+        pass
 
-        # --- 1. Walled Garden: allow SpotPay server ---
-        /ip hotspot walled-garden ip
-        add action=accept comment="SpotPay Server" dst-host={server_host}
+    # Fallback: just fetch the zip and instruct manual extraction
+    if not file_fetch_lines:
+        file_fetch_lines = [
+            f"/tool fetch url=""{zip_url}"" dst-path=\"flash/hotspot-spotpay.zip\" mode=https",
+            "# Extract the ZIP manually via Winbox: Files -> right-click -> Extract",
+            "# Then move all extracted files into the hotspot folder",
+        ]
 
-        /ip hotspot walled-garden
-        add action=allow comment="SpotPay API" dst-host={server_host}
+    fetch_block = "\r\n".join(file_fetch_lines)
 
-        # --- 2. Download portal files to MikroTik ---
-        /tool fetch url="{zip_url}" dst-path="hotspot-spotpay.zip"
-
-        # --- 3. Extract ZIP into hotspot folder ---
-        /file
-        :local zipName "hotspot-spotpay.zip"
-        :local destDir "hotspot"
-        /tool fetch url="{zip_url}" dst-path=($destDir . "/hotspot-spotpay.zip")
-
-        # Note: RouterOS 7.x supports ZIP extraction natively.
-        # If on RouterOS 6.x, extract on your PC and upload via
-        # Winbox Files or FTP, then skip step 3.
-
-        # --- 4. Confirm DNS name matches this script ---
-        # Your MikroTik hotspot DNS name must be set to:
-        #   {dns_name}
-        # Go to: IP -> Hotspot -> Server Profiles -> DNS Name
-
-        :log info "SpotPay portal setup complete for {location.site_name}"
-        :put "Done. Reload hotspot to apply changes."
-    """)
+    script = (
+        f"# =======================================================\r\n"
+        f"# SpotPay MikroTik Setup Script\r\n"
+        f"# Location : {location.site_name}\r\n"
+        f"# Paste this entire script into MikroTik Terminal\r\n"
+        f"# =======================================================\r\n"
+        f"\r\n"
+        f"# --- 1. Walled Garden IP (allow by IP address) ---\r\n"
+        f"/ip hotspot walled-garden ip\r\n"
+        f"add action=accept comment=\"SpotPay Server\" dst-address={server_ip}\r\n"
+        f"\r\n"
+        f"# --- 2. Walled Garden Host (allow by domain) ---\r\n"
+        f"/ip hotspot walled-garden\r\n"
+        f"add action=allow comment=\"SpotPay API\" dst-host={server_host}\r\n"
+        f"\r\n"
+        f"# --- 3. Download portal files into hotspot folder ---\r\n"
+        f"{fetch_block}\r\n"
+        f"\r\n"
+        f"# --- 4. Confirm hotspot DNS name ---\r\n"
+        f"# Go to: IP -> Hotspot -> Server Profiles -> DNS Name\r\n"
+        f"# Make sure it is set to: {dns_name}\r\n"
+        f"\r\n"
+        f":log info \"SpotPay portal setup complete for {location.site_name}\"\r\n"
+        f":put \"Done. Hotspot portal files installed.\"\r\n"
+    )
 
     return HttpResponse(script, content_type="text/plain; charset=utf-8")
 

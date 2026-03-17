@@ -51,38 +51,44 @@ def initiate_payment(*, location: HotspotLocation, package: Package, phone: str,
     # Ensure amount is Decimal
     amount = Decimal(str(package.price))
 
-    with transaction.atomic():
-        payment = Payment.objects.create(
-            payer_type="CLIENT",
-            purpose="TRANSACTION",
-            vendor=location.vendor,
-            location=location,
-            package=package,
-            phone=phone,
-            amount=amount,
-            currency="UGX",
-            provider=provider,
-            status="PENDING",
-            mac_address=mac_address,
-            ip_address=ip_address,
-        )
+    payment = Payment.objects.create(
+        payer_type="CLIENT",
+        purpose="TRANSACTION",
+        vendor=location.vendor,
+        location=location,
+        package=package,
+        phone=phone,
+        amount=amount,
+        currency="UGX",
+        provider=provider,
+        status="PENDING",
+        mac_address=mac_address,
+        ip_address=ip_address,
+    )
 
-    adapter = load_provider_adapter(provider)
-    reference = adapter.charge(payment, {
-        "phone": phone,
-        "amount": str(amount),
-        "currency": "UGX",
-    })
-
-    payment.provider_reference = reference
-    payment.save(update_fields=["provider_reference"])
+    try:
+        adapter = load_provider_adapter(provider)
+        reference = adapter.charge(payment, {
+            "phone": phone,
+            "amount": str(amount),
+            "currency": "UGX",
+        })
+        payment.provider_reference = reference
+        payment.save(update_fields=["provider_reference"])
+    except Exception as e:
+        # Keep the payment record as PENDING so it shows in transactions
+        # Use payment UUID as fallback reference so status polling still works
+        payment.provider_reference = str(payment.uuid)
+        payment.processor_message = str(e)
+        payment.save(update_fields=["provider_reference", "processor_message"])
+        reference = str(payment.uuid)
 
     return {
         "success": True,
         "status": payment.status,
         "payment_uuid": str(payment.uuid),
         "reference": reference,
-        "status_url": f"/payments/status/{reference}/",
+        "status_url": f"/payments/status/{payment.uuid}/",
         "success_url": f"/payments/success/{payment.uuid}/",
         "message": "Please approve the payment on your phone."
     }

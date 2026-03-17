@@ -87,8 +87,8 @@ def initiate_payment(request):
 
 def payment_status(request, reference):
     payment = (
-        Payment.objects.filter(provider_reference=reference).first()
-        or Payment.objects.filter(uuid=reference).first()
+        Payment.objects.filter(uuid=reference).first()
+        or Payment.objects.filter(provider_reference=reference).first()
     )
     if not payment:
         from django.http import Http404
