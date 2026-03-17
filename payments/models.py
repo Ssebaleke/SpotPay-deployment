@@ -54,16 +54,38 @@ class PaymentProvider(models.Model):
 # =====================================================
 
 class PaymentSystemConfig(models.Model):
-    base_system_percentage = models.DecimalField(
+    subscription_mode_percentage = models.DecimalField(
         max_digits=5,
         decimal_places=2,
-        help_text="Base commission applied to ALL transactions (e.g. 5%)"
+        default=5,
+        help_text="SpotPay commission % for MONTHLY SUBSCRIPTION locations (e.g. 5)"
+    )
+    percentage_mode_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=15,
+        help_text="SpotPay commission % for PERCENTAGE MODE locations (e.g. 15)"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Commission Config"
+        verbose_name_plural = "Commission Config"
+
+    def save(self, *args, **kwargs):
+        # enforce single row
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
 
     def __str__(self):
-        return "System Payment Configuration"
+        return f"Commission: {self.subscription_mode_percentage}% (subscription) / {self.percentage_mode_percentage}% (percentage mode)"
 
 
 # =====================================================
@@ -212,16 +234,15 @@ class PaymentSplit(models.Model):
         related_name="split"
     )
 
-    base_system_percentage = models.DecimalField(max_digits=5, decimal_places=2)
-    subscription_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-
-    admin_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    subscription_mode = models.CharField(max_length=20, default="MONTHLY")  # MONTHLY or PERCENTAGE
+    spotpay_percentage = models.DecimalField(max_digits=5, decimal_places=2)
+    spotpay_amount = models.DecimalField(max_digits=12, decimal_places=2)
     vendor_amount = models.DecimalField(max_digits=12, decimal_places=2)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Split for {self.payment.uuid}"
+        return f"Split {self.payment.uuid} | SpotPay {self.spotpay_percentage}% = {self.spotpay_amount} UGX"
 
 
 # =====================================================

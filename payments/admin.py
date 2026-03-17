@@ -53,8 +53,24 @@ class PaymentProviderAdmin(admin.ModelAdmin):
 
 @admin.register(PaymentSystemConfig)
 class PaymentSystemConfigAdmin(admin.ModelAdmin):
-    list_display = ("base_system_percentage", "created_at")
-    readonly_fields = ("created_at",)
+    list_display = ("subscription_mode_percentage", "percentage_mode_percentage", "updated_at")
+    readonly_fields = ("created_at", "updated_at")
+
+    fieldsets = (
+        ("SpotPay Commission Rates", {
+            "description": "Set how much SpotPay takes from each sale depending on the location's subscription mode.",
+            "fields": ("subscription_mode_percentage", "percentage_mode_percentage"),
+        }),
+        ("Timestamps", {
+            "fields": ("created_at", "updated_at"),
+        }),
+    )
+
+    def has_add_permission(self, request):
+        return not PaymentSystemConfig.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Payment)
@@ -161,13 +177,13 @@ class PaymentAdmin(admin.ModelAdmin):
 class PaymentSplitAdmin(admin.ModelAdmin):
     list_display = (
         "payment",
-        "base_system_percentage",
-        "subscription_percentage",
-        "admin_amount",
+        "subscription_mode",
+        "spotpay_percentage",
+        "spotpay_amount",
         "vendor_amount",
         "created_at",
     )
-    list_filter = ("created_at",)
+    list_filter = ("subscription_mode", "created_at")
     search_fields = ("payment__uuid",)
     readonly_fields = ("created_at",)
 
