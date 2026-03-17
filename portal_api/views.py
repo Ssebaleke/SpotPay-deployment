@@ -8,7 +8,6 @@ from django.views.decorators.http import require_POST
 from pathlib import Path
 import zipfile
 import io
-import tempfile
 import json
 
 from hotspot.models import HotspotLocation
@@ -142,79 +141,47 @@ def portal_buy_api(request, uuid):
 # =====================================================
 
 def download_portal_zip(request, location_uuid):
+    # Public endpoint — UUID is the access key, no login required
+    # MikroTik /tool fetch hits this directly
     location = get_object_or_404(
         HotspotLocation,
         uuid=location_uuid,
-        status="ACTIVE",
-        vendor__status="ACTIVE"
+        status="ACTIVE"
     )
 
     template = get_object_or_404(PortalTemplate, is_active=True)
 
-    # --- Single file mode: ?file=login.html or ?file=js/portal.js ---
-    file_param = request.GET.get("file", "").strip().lstrip("/")
-    if file_param:
-        with zipfile.ZipFile(template.zip_file.path, "r") as zf:
-            # find the entry — may be stored as hotspot/login.html or just login.html
-            names = zf.namelist()
-            match = None
-            for n in names:
-                parts = n.split("/")
-                rel = "/".join(parts[1:]) if len(parts) > 1 else parts[0]
-                if rel == file_param:
-                    match = n
-                    break
-            if not match:
-                from django.http import Http404
-                raise Http404
+    support_phone = getattr(location.vendor, "business_phone", "") or ""
 
-            content = zf.read(match)
-            ext = Path(file_param).suffix
-            if ext in [".html", ".js", ".css"]:
-                text = content.decode("utf-8", errors="ignore")
-                text = text.replace("{{API_BASE}}", settings.PORTAL_API_BASE)
-                text = text.replace("{{LOCATION_UUID}}", str(location.uuid))
-                text = text.replace("{{BUY_URL}}", f"{settings.SITE_URL}/api/portal/{location.uuid}/buy/")
-                text = text.replace("{{SUPPORT_PHONE}}", getattr(location.vendor, "business_phone", "") or "")
-                content = text.encode("utf-8")
+    def replace_placeholders(text):
+        return (
+            text
+            .replace("{{API_BASE}}", settings.PORTAL_API_BASE)
+            .replace("{{LOCATION_UUID}}", str(location.uuid))
+            .replace("{{BUY_URL}}", f"{settings.SITE_URL}/api/portal/{location.uuid}/buy/")
+            .replace("{{SUPPORT_PHONE}}", support_phone)
+        )
 
-            content_types = {
-                ".html": "text/html", ".js": "application/javascript",
-                ".css": "text/css", ".png": "image/png",
-                ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-                ".gif": "image/gif", ".ico": "image/x-icon",
-            }
-            ct = content_types.get(ext, "application/octet-stream")
-            resp = HttpResponse(content, content_type=ct)
-            resp["Content-Disposition"] = f'inline; filename="{Path(file_param).name}"'
-            return resp
-
-    # --- Full ZIP mode ---
+    # Build ZIP: strip the top-level prefix (e.g. hotspot/) so files sit at
+    # root of ZIP. MikroTik extracts to=hotspot → hotspot/login.html ✅
     buffer = io.BytesIO()
-
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
-
-        with zipfile.ZipFile(template.zip_file.path, "r") as zip_ref:
-            zip_ref.extractall(tmpdir)
-
-        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zip_out:
-            for file_path in tmpdir.rglob("*"):
-                if file_path.is_dir():
+    with zipfile.ZipFile(template.zip_file.path, "r") as zf_in:
+        with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf_out:
+            for item in zf_in.infolist():
+                # strip the first path component (the parent folder)
+                parts = item.filename.split("/", 1)
+                rel = parts[1] if len(parts) == 2 else parts[0]
+                # skip directory entries, empty paths, and dev files
+                if not rel or rel.endswith("/"):
                     continue
-
-                arcname = file_path.relative_to(tmpdir)
-                content = file_path.read_bytes()
-
-                if file_path.suffix in [".html", ".js", ".css"]:
-                    text = content.decode("utf-8", errors="ignore")
-                    text = text.replace("{{API_BASE}}", settings.PORTAL_API_BASE)
-                    text = text.replace("{{LOCATION_UUID}}", str(location.uuid))
-                    text = text.replace("{{BUY_URL}}", f"{settings.SITE_URL}/api/portal/{location.uuid}/buy/")
-                    text = text.replace("{{SUPPORT_PHONE}}", getattr(location.vendor, "business_phone", "") or "")
-                    zip_out.writestr(str(arcname), text)
-                else:
-                    zip_out.writestr(str(arcname), content)
+                if any(rel.startswith(x) for x in (".vscode", ".git", "__MACOSX", ".DS_Store", "log.", "readme")):
+                    continue
+                content = zf_in.read(item.filename)
+                if Path(rel).suffix.lower() in (".html", ".js", ".css"):
+                    content = replace_placeholders(
+                        content.decode("utf-8", errors="ignore")
+                    ).encode("utf-8")
+                zf_out.writestr(rel, content)
 
     buffer.seek(0)
     response = HttpResponse(buffer, content_type="application/zip")
@@ -278,19 +245,15 @@ def mikrotik_setup_script(request, location_uuid):
     zip_url = f"{settings.SITE_URL}/api/portal/{location.uuid}/download/"
     dns_name = location.hotspot_dns or "hot.spot"
 
+    # Single line using ; \ continuation — works on ROS 6 and ROS 7
+    # Checks prevent duplicate walled-garden rules on re-run
     script = (
-        f"# SpotPay MikroTik Setup Script\r\n"
-        f"# Location: {location.site_name}\r\n"
-        f"# RouterOS 7 only - paste into Terminal\r\n"
-        f"\r\n"
-        f"/ip hotspot walled-garden ip add action=accept comment=\"SpotPay\" dst-address={server_ip}\r\n"
-        f"/ip hotspot walled-garden add action=allow comment=\"SpotPay\" dst-host={server_host}\r\n"
-        f"\r\n"
-        f"/tool fetch url=\"{zip_url}\" dst-path=\"hotspot-spotpay.zip\" mode=https\r\n"
-        f"/file extract hotspot-spotpay.zip to=hotspot\r\n"
-        f"/file remove hotspot-spotpay.zip\r\n"
-        f"\r\n"
-        f":put \"Done! Set DNS Name to '{dns_name}' in IP > Hotspot > Server Profiles\"\r\n"
+        f":if ([:len [/ip hotspot walled-garden ip find where dst-address=\"{server_ip}\" and comment=\"SpotPay\"]] = 0) do={{/ip hotspot walled-garden ip add action=accept comment=\"SpotPay\" dst-address={server_ip}}}; "
+        f":if ([:len [/ip hotspot walled-garden find where dst-host=\"{server_host}\" and comment=\"SpotPay\"]] = 0) do={{/ip hotspot walled-garden add action=allow comment=\"SpotPay\" dst-host={server_host}}}; "
+        f"/tool fetch url=\"{zip_url}\" dst-path=\"hotspot-spotpay.zip\" mode=https; "
+        f"/file extract hotspot-spotpay.zip to=hotspot; "
+        f"/file remove hotspot-spotpay.zip; "
+        f":put \"SpotPay portal installed. Set DNS Name to {dns_name} under IP > Hotspot > Server Profiles\""
     )
 
     return HttpResponse(script, content_type="text/plain; charset=utf-8")
