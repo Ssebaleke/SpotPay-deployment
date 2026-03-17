@@ -68,21 +68,25 @@ class SpotPayAdminSite(AdminSite):
 
         from sms.models import SMSPurchase, SMSProvider
         import requests as http_requests
+        from django.core.cache import cache
 
-        ugsms_balance_units = "N/A"
-        sms_provider = SMSProvider.objects.filter(is_active=True).first()
-        if sms_provider:
-            try:
-                resp = http_requests.get(
-                    "https://ugsms.com/api/v2/account/balance",
-                    headers={"X-API-Key": sms_provider.api_key},
-                    timeout=5
-                )
-                if resp.status_code == 200:
-                    rdata = resp.json()
-                    ugsms_balance_units = rdata.get("balance") or rdata.get("data", {}).get("balance", "N/A")
-            except Exception:
-                pass
+        ugsms_balance_units = cache.get("ugsms_balance")
+        if ugsms_balance_units is None:
+            ugsms_balance_units = "N/A"
+            sms_provider = SMSProvider.objects.filter(is_active=True).first()
+            if sms_provider:
+                try:
+                    resp = http_requests.get(
+                        "https://ugsms.com/api/v2/account/balance",
+                        headers={"X-API-Key": sms_provider.api_key},
+                        timeout=5
+                    )
+                    if resp.status_code == 200:
+                        rdata = resp.json()
+                        ugsms_balance_units = rdata.get("balance") or rdata.get("data", {}).get("balance", "N/A")
+                        cache.set("ugsms_balance", ugsms_balance_units, 300)  # cache 5 mins
+                except Exception:
+                    pass
 
         total_sms_revenue = SMSPurchase.objects.filter(status="SUCCESS").aggregate(t=Sum("amount_paid"))["t"] or 0
 
