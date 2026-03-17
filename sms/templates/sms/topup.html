@@ -45,8 +45,8 @@
 
                 <div class="mb-3">
                     <label class="form-label">Amount ({{ pricing.currency|default:"UGX" }})</label>
-                    <input type="number" name="amount" id="amount-input" class="form-control" min="{{ pricing.price_per_sms }}" step="100" required placeholder="Enter amount">
-                    <small class="form-text text-muted">Minimum: {{ pricing.price_per_sms }} {{ pricing.currency }}</small>
+                    <input type="number" name="amount" id="amount-input" class="form-control" min="{{ pricing.price_per_sms|default:1 }}" step="100" required placeholder="Enter amount">
+                    <small class="form-text text-muted">Minimum: {{ pricing.price_per_sms|default:"-" }} {{ pricing.currency|default:"" }}</small>
                 </div>
 
                 <div class="mb-3">
