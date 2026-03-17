@@ -570,8 +570,6 @@ html, body {
 
                 <!-- Period tabs -->
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
-                    {% for period in "Today,Week,Month,Year,All Time"|split:"," %}
-                    {% endfor %}
                     <button class="earn-tab active" onclick="switchEarn(this,'today')">Today</button>
                     <button class="earn-tab" onclick="switchEarn(this,'week')">Week</button>
                     <button class="earn-tab" onclick="switchEarn(this,'month')">Month</button>
@@ -594,7 +592,7 @@ html, body {
                         </div>
                         <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
                             <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
-                            <div class="earn-val">UGX {{ sp_earn_today|add:sp_sub_today }}</div>
+                            <div class="earn-val">UGX {{ sp_total_today }}</div>
                             <div class="earn-lbl">Total Today</div>
                         </div>
                     </div>
@@ -614,7 +612,7 @@ html, body {
                         </div>
                         <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
                             <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
-                            <div class="earn-val">UGX {{ sp_earn_week|add:sp_sub_week }}</div>
+                            <div class="earn-val">UGX {{ sp_total_week }}</div>
                             <div class="earn-lbl">Total This Week</div>
                         </div>
                     </div>
@@ -634,7 +632,7 @@ html, body {
                         </div>
                         <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
                             <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
-                            <div class="earn-val">UGX {{ sp_earn_month|add:sp_sub_month }}</div>
+                            <div class="earn-val">UGX {{ sp_total_month }}</div>
                             <div class="earn-lbl">Total This Month</div>
                         </div>
                     </div>
@@ -654,7 +652,7 @@ html, body {
                         </div>
                         <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
                             <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
-                            <div class="earn-val">UGX {{ sp_earn_year|add:sp_sub_year }}</div>
+                            <div class="earn-val">UGX {{ sp_total_year }}</div>
                             <div class="earn-lbl">Total This Year</div>
                         </div>
                     </div>
@@ -674,7 +672,7 @@ html, body {
                         </div>
                         <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
                             <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
-                            <div class="earn-val">UGX {{ sp_earn_alltime|add:sp_sub_alltime }}</div>
+                            <div class="earn-val">UGX {{ sp_total_alltime }}</div>
                             <div class="earn-lbl">Grand Total</div>
                         </div>
                     </div>

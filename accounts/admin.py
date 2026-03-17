@@ -157,6 +157,12 @@ class SpotPayAdminSite(AdminSite):
             "sp_sub_month": sub_month,
             "sp_sub_year": sub_year,
             "sp_sub_alltime": sub_alltime,
+            # combined totals (pre-calculated to avoid template Decimal issues)
+            "sp_total_today": earn_today + sub_today,
+            "sp_total_week": earn_week + sub_week,
+            "sp_total_month": earn_month + sub_month,
+            "sp_total_year": earn_year + sub_year,
+            "sp_total_alltime": earn_alltime + sub_alltime,
             # commission chart
             "sp_commission_chart_labels": commission_chart_labels,
             "sp_commission_chart_values": commission_chart_values,
