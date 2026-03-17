@@ -122,33 +122,7 @@
         </div>
 
         <div class="position-relative">
-            <pre class="script-box" id="mikrotik-script"># =======================================================
-# SpotPay MikroTik Setup Script
-# Location : {{ location.site_name }}
-# Paste this entire block into MikroTik Terminal
-# =======================================================
-
-# --- 1. Walled Garden: allow SpotPay server IP ---
-/ip hotspot walled-garden ip
-add action=accept comment="SpotPay Server" dst-host={{ site_url|slice:"7:" }}
-
-/ip hotspot walled-garden
-add action=allow comment="SpotPay API" dst-host={{ site_url|slice:"7:" }}
-
-# --- 2. Download portal ZIP from SpotPay ---
-/tool fetch url="{{ site_url }}/api/portal/{{ location.uuid }}/download/" \
-    dst-path="hotspot/hotspot-spotpay.zip"
-
-# --- 3. RouterOS 7.x: extract ZIP in place ---
-# (Skip this on RouterOS 6.x — extract on PC and upload via Winbox Files)
-/file extract hotspot/hotspot-spotpay.zip to=hotspot
-
-# --- 4. Confirm DNS name in hotspot profile ---
-# IP -> Hotspot -> Server Profiles -> DNS Name must be:
-#   {{ location.hotspot_dns|default:"hot.spot" }}
-
-:log info "SpotPay setup complete: {{ location.site_name }}"
-:put "Done. Reload hotspot to apply."</pre>
+            <pre class="script-box" id="mikrotik-script">Loading script...</pre>
             <button class="copy-btn" id="copy-script-btn" onclick="copyScript()">
                 <i class="bi bi-clipboard me-1"></i>Copy
             </button>
@@ -225,8 +199,14 @@ add action=allow comment="SpotPay API" dst-host={{ site_url|slice:"7:" }}
 
 {% block extra_js %}
 <script>
+// Load script dynamically from the view so it always reflects latest server code
+fetch("{% url 'mikrotik_setup_script' location.uuid %}")
+    .then(r => r.text())
+    .then(text => { document.getElementById('mikrotik-script').textContent = text; })
+    .catch(() => { document.getElementById('mikrotik-script').textContent = 'Failed to load script. Try refreshing.'; });
+
 function copyScript() {
-    const text = document.getElementById('mikrotik-script').innerText;
+    const text = document.getElementById('mikrotik-script').textContent;
     navigator.clipboard.writeText(text).then(() => {
         const btn = document.getElementById('copy-script-btn');
         btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied!';
