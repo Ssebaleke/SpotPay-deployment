@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import sms_topup, sms_pricing_info, sms_wallet_info, ugsms_balance, sms_send_bulk, sms_logs
+from .views import sms_topup, sms_pricing_info, sms_wallet_info, ugsms_balance, sms_send_bulk, sms_logs, sell_voucher_sms
 
 app_name = "sms"
 
@@ -10,4 +10,5 @@ urlpatterns = [
     path("send/bulk/", sms_send_bulk, name="sms_send_bulk"),
     path("provider/balance/", ugsms_balance, name="ugsms_balance"),
     path("logs/", sms_logs, name="sms_logs"),
+    path("sell-voucher/", sell_voucher_sms, name="sell_voucher_sms"),
 ]

@@ -87,7 +87,10 @@
             <div class="stat-value">{{ sms_balance }}</div>
             <div class="stat-label">SMS Balance</div>
         </div>
-        <a href="{% url 'sms:sms_topup' %}" class="stat-action">Buy SMS</a>
+        <div class="d-flex gap-2">
+            <a href="{% url 'sms:sms_topup' %}" class="stat-action">Buy SMS</a>
+            <button type="button" class="stat-action" data-bs-toggle="modal" data-bs-target="#sellVoucherModal">Sell Voucher</button>
+        </div>
     </div>
     <div class="stat-card card-wallet">
         <div>
@@ -284,6 +287,44 @@
 
 {{ trend_labels|json_script:"trend-labels-data" }}
 {{ trend_values|json_script:"trend-values-data" }}
+
+<!-- Sell Voucher Modal -->
+<div class="modal fade" id="sellVoucherModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-ticket-perforated me-2"></i>Sell Voucher via SMS</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="sellVoucherAlert" class="alert d-none"></div>
+        <div class="mb-3">
+          <label class="form-label">Package</label>
+          <select id="svPackage" class="form-select">
+            <option value="">-- Select Package --</option>
+            {% for pkg in vendor_packages %}
+            <option value="{{ pkg.id }}">{{ pkg.location.site_name }} — {{ pkg.name }} (UGX {{ pkg.price }})</option>
+            {% empty %}
+            <option disabled>No packages found</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Client Phone Number</label>
+          <input type="text" id="svPhone" class="form-control" placeholder="256XXXXXXXXX">
+          <small class="text-muted">Format: 256XXXXXXXXX</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="svSubmitBtn">
+          <span id="svBtnText"><i class="bi bi-send me-1"></i>Send Voucher</span>
+          <span id="svBtnSpinner" class="d-none"><span class="spinner-border spinner-border-sm me-1"></span>Sending...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -321,5 +362,48 @@
             }
         });
     }
+
+    // Sell Voucher Modal
+    document.getElementById('svSubmitBtn').addEventListener('click', function () {
+        const phone = document.getElementById('svPhone').value.trim();
+        const package_id = document.getElementById('svPackage').value;
+        const alertEl = document.getElementById('sellVoucherAlert');
+        alertEl.className = 'alert d-none';
+
+        if (!package_id || !phone) {
+            alertEl.className = 'alert alert-warning';
+            alertEl.textContent = 'Please select a package and enter a phone number.';
+            return;
+        }
+
+        document.getElementById('svBtnText').classList.add('d-none');
+        document.getElementById('svBtnSpinner').classList.remove('d-none');
+        this.disabled = true;
+
+        const fd = new FormData();
+        fd.append('phone', phone);
+        fd.append('package_id', package_id);
+        fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('{% url "sms:sell_voucher_sms" %}', { method: 'POST', body: fd })
+            .then(r => r.json())
+            .then(data => {
+                alertEl.className = 'alert ' + (data.success ? 'alert-success' : 'alert-danger');
+                alertEl.textContent = data.message;
+                if (data.success) {
+                    document.getElementById('svPhone').value = '';
+                    document.getElementById('svPackage').value = '';
+                }
+            })
+            .catch(() => {
+                alertEl.className = 'alert alert-danger';
+                alertEl.textContent = 'Network error. Please try again.';
+            })
+            .finally(() => {
+                document.getElementById('svBtnText').classList.remove('d-none');
+                document.getElementById('svBtnSpinner').classList.add('d-none');
+                document.getElementById('svSubmitBtn').disabled = false;
+            });
+    });
 </script>
 {% endblock %}

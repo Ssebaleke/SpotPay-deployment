@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import redirect, render
 from django.contrib import messages
 from django.http import JsonResponse
-from django.db import transaction
+from django.db import transaction, models as django_models
 from django.core.paginator import Paginator
 
 import json
@@ -13,12 +13,11 @@ import requests
 
 from payments.views import initiate_payment
 from .models import SMSPricing, VendorSMSWallet, SMSProvider, SMSLog
-from .services.sms_gateway import send_bulk_sms
+from .services.sms_gateway import send_bulk_sms, send_sms
 
 
 @login_required
 def sms_topup(request):
-    # Allow staff to view first vendor's SMS wallet for testing
     if request.user.is_staff:
         from accounts.models import Vendor
         vendor = Vendor.objects.filter(status='ACTIVE').first()
@@ -31,7 +30,7 @@ def sms_topup(request):
         except:
             messages.error(request, 'You are not registered as a vendor.')
             return redirect('vendor_login')
-    
+
     pricing = SMSPricing.objects.filter(is_active=True).first()
     wallet, _ = VendorSMSWallet.objects.get_or_create(vendor=vendor)
 
@@ -47,7 +46,6 @@ def sms_topup(request):
             messages.error(request, "Minimum amount is 500 UGX.")
             return redirect("sms:sms_topup")
 
-        # Build a mutable POST copy for payment initiation
         post_data = request.POST.copy()
         post_data["payer_type"] = "VENDOR"
         post_data["purpose"] = "SMS_PURCHASE"
@@ -63,10 +61,7 @@ def sms_topup(request):
             messages.error(request, "Payment initiation failed.")
             return redirect("sms:sms_topup")
 
-        messages.success(
-            request,
-            "Payment request sent. Approve it on your phone."
-        )
+        messages.success(request, "Payment request sent. Approve it on your phone.")
         return redirect("vendor_dashboard")
 
     return render(request, "sms/topup.html", {
@@ -87,7 +82,7 @@ def sms_pricing_info(request):
             vendor = request.user.vendor
         except:
             return JsonResponse({"success": False, "message": "Not a vendor"}, status=403)
-    
+
     pricing = SMSPricing.objects.filter(is_active=True).first()
     wallet, _ = VendorSMSWallet.objects.get_or_create(vendor=vendor)
 
@@ -112,7 +107,7 @@ def sms_wallet_info(request):
             vendor = request.user.vendor
         except:
             return JsonResponse({"success": False, "message": "Not a vendor"}, status=403)
-    
+
     wallet, _ = VendorSMSWallet.objects.get_or_create(vendor=vendor)
     return JsonResponse({
         "success": True,
@@ -173,10 +168,7 @@ def sms_send_bulk(request):
         if not number or not message_body:
             return JsonResponse({"success": False, "message": "Each message needs number and message_body"}, status=400)
 
-        normalized_messages.append({
-            "number": number,
-            "message_body": message_body,
-        })
+        normalized_messages.append({"number": number, "message_body": message_body})
         estimated_units += max(1, ceil(len(message_body) / 160))
 
     vendor = request.user.vendor
@@ -222,12 +214,10 @@ def sms_send_bulk(request):
     actual_units = 0
     for item in successful_messages:
         actual_units += int(item.get("number_of_messages") or 1)
-
     actual_units = max(actual_units, 0)
 
     with transaction.atomic():
         wallet = VendorSMSWallet.objects.select_for_update().get(vendor=vendor)
-
         if estimated_units > actual_units:
             wallet.balance_units += (estimated_units - actual_units)
             wallet.save(update_fields=["balance_units", "updated_at"])
@@ -244,6 +234,73 @@ def sms_send_bulk(request):
         "actual_units": actual_units,
         "summary": summary,
         "provider_response": gateway_response,
+    })
+
+
+@login_required
+def sell_voucher_sms(request):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "message": "POST required"}, status=405)
+
+    try:
+        vendor = request.user.vendor
+    except Exception:
+        return JsonResponse({"success": False, "message": "Vendor account required"}, status=403)
+
+    phone = (request.POST.get("phone") or "").strip()
+    package_id = request.POST.get("package_id")
+
+    if not phone or not package_id:
+        return JsonResponse({"success": False, "message": "Phone and package are required"}, status=400)
+
+    from packages.models import Package
+    from vouchers.models import Voucher
+
+    package = Package.objects.filter(id=package_id, location__vendor=vendor, is_active=True).first()
+    if not package:
+        return JsonResponse({"success": False, "message": "Package not found"}, status=404)
+
+    with transaction.atomic():
+        wallet = VendorSMSWallet.objects.select_for_update().filter(vendor=vendor).first()
+        if not wallet or wallet.balance_units < 1:
+            return JsonResponse({"success": False, "message": "Insufficient SMS balance. Please top up."}, status=400)
+
+        voucher = Voucher.objects.select_for_update().filter(package=package, status="UNUSED").first()
+        if not voucher:
+            return JsonResponse({"success": False, "message": "No available vouchers for this package"}, status=400)
+
+        voucher.status = "RESERVED"
+        voucher.save(update_fields=["status"])
+
+        wallet.balance_units -= 1
+        wallet.save(update_fields=["balance_units", "updated_at"])
+
+    message = (
+        f"Your {package.name} voucher: {voucher.code}. "
+        f"Connect to {package.location.site_name} WiFi and enter this code to get online."
+    )
+
+    success, result = send_sms(
+        vendor=vendor,
+        phone=phone,
+        message=message,
+        purpose="VOUCHER_SALE",
+        voucher_code=voucher.code,
+    )
+
+    if not success:
+        with transaction.atomic():
+            from vouchers.models import Voucher as V
+            V.objects.filter(id=voucher.id).update(status="UNUSED")
+            VendorSMSWallet.objects.filter(vendor=vendor).update(
+                balance_units=django_models.F("balance_units") + 1
+            )
+        return JsonResponse({"success": False, "message": f"SMS failed: {result}"}, status=502)
+
+    return JsonResponse({
+        "success": True,
+        "message": f"Voucher {voucher.code} sent to {phone}",
+        "voucher_code": voucher.code,
     })
 
 

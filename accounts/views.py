@@ -502,11 +502,14 @@ def vendor_dashboard(request):
     # -------------------------------------------------
     # SMS WALLET (REAL BALANCE)
     # -------------------------------------------------
-    sms_wallet = VendorSMSWallet.objects.filter(
-        vendor=vendor
-    ).first()
-
+    sms_wallet = VendorSMSWallet.objects.filter(vendor=vendor).first()
     sms_balance = sms_wallet.balance_units if sms_wallet else 0
+
+    # Packages for sell-voucher modal
+    from packages.models import Package
+    vendor_packages = Package.objects.filter(
+        location__vendor=vendor, is_active=True
+    ).select_related('location').order_by('location__site_name', 'price')
 
     # -------------------------------------------------
     # DASHBOARD RENDER
@@ -515,7 +518,8 @@ def vendor_dashboard(request):
         'vendor': vendor,
         'locations_count': locations.filter(is_active=True).count(),
         'subscription_warnings': subscription_warnings,
-        'sms_balance': sms_balance,   # 🔥 REAL SMS UNITS
+        'sms_balance': sms_balance,
+        'vendor_packages': vendor_packages,
         'total_payments_received': total_payments_received,
         'todays_payments_total': todays_payments_total,
         'weekly_payments_total': weekly_payments_total,
