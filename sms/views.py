@@ -275,9 +275,13 @@ def sell_voucher_sms(request):
         wallet.balance_units -= 1
         wallet.save(update_fields=["balance_units", "updated_at"])
 
+    location = package.location
+    login_link = f"http://{location.hotspot_dns}/login?username={voucher.code}&password={voucher.code}"
     message = (
-        f"Your {package.name} voucher: {voucher.code}. "
-        f"Connect to {package.location.site_name} WiFi and enter this code to get online."
+        f"{location.site_name} WiFi\n"
+        f"Package: {package.name}\n"
+        f"Code: {voucher.code}\n"
+        f"Tap to login: {login_link}"
     )
 
     success, result = send_sms(
