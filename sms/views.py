@@ -124,7 +124,7 @@ def ugsms_balance(request):
     if not provider:
         return JsonResponse({"success": False, "message": "No active SMS provider"}, status=400)
 
-    endpoint = "https://www.ugsms.com/api/v2/account/balance"
+    endpoint = "https://ugsms.com/api/v2/account/balance"
     headers = {"X-API-Key": provider.api_key}
 
     try:

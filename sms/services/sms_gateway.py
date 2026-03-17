@@ -10,6 +10,16 @@ def _is_ugsms_provider(provider):
     return (provider.provider_type or "").upper() in ("UGSMS", "YOUGANDA")
 
 
+def _format_phone_ugsms(phone):
+    """UGSMS accepts 07XXXXXXXX or +256XXXXXXXXX format"""
+    phone = (phone or "").strip()
+    if phone.startswith("+256"):
+        phone = "0" + phone[4:]
+    elif phone.startswith("256") and len(phone) == 12:
+        phone = "0" + phone[3:]
+    return phone
+
+
 def send_sms(*, vendor, phone, message, purpose=None, voucher_code=None, payment=None):
     provider = _active_provider()
 
@@ -29,9 +39,9 @@ def send_sms(*, vendor, phone, message, purpose=None, voucher_code=None, payment
         provider_type = (provider.provider_type or "").upper()
 
         if _is_ugsms_provider(provider):
-            endpoint = "https://www.ugsms.com/api/v2/sms/send"
+            endpoint = "https://ugsms.com/api/v2/sms/send"
             payload = {
-                "numbers": phone,
+                "numbers": _format_phone_ugsms(phone),
                 "message_body": message,
                 "sender_id": provider.sender_id,
             }
@@ -97,7 +107,7 @@ def send_bulk_sms(*, vendor, messages, sender_id=None, reference=None):
         if not _is_ugsms_provider(provider):
             raise ValueError(f"SMS provider '{provider_type}' not yet integrated")
 
-        endpoint = "https://www.ugsms.com/api/v2/sms/send/bulk"
+        endpoint = "https://ugsms.com/api/v2/sms/send/bulk"
         payload = {
             "messages": messages,
             "sender_id": sender_id or provider.sender_id,
