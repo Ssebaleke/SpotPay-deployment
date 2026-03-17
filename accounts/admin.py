@@ -66,6 +66,26 @@ class SpotPayAdminSite(AdminSite):
         vendor_suspended = Vendor.objects.filter(status="SUSPENDED").count()
         vendor_rejected = Vendor.objects.filter(status="REJECTED").count()
 
+        from sms.models import SMSPurchase, SMSProvider
+        import requests as http_requests
+
+        ugsms_balance_units = "N/A"
+        sms_provider = SMSProvider.objects.filter(is_active=True).first()
+        if sms_provider:
+            try:
+                resp = http_requests.get(
+                    "https://ugsms.com/api/v2/account/balance",
+                    headers={"X-API-Key": sms_provider.api_key},
+                    timeout=5
+                )
+                if resp.status_code == 200:
+                    rdata = resp.json()
+                    ugsms_balance_units = rdata.get("balance") or rdata.get("data", {}).get("balance", "N/A")
+            except Exception:
+                pass
+
+        total_sms_revenue = SMSPurchase.objects.filter(status="SUCCESS").aggregate(t=Sum("amount_paid"))["t"] or 0
+
         pending_wd_qs = WithdrawalRequest.objects.filter(status=WithdrawalRequest.STATUS_PENDING)
 
         extra_context = extra_context or {}
@@ -76,6 +96,8 @@ class SpotPayAdminSite(AdminSite):
             "sp_pending_vendors": Vendor.objects.filter(status="PENDING").count(),
             "sp_total_locations": HotspotLocation.objects.count(),
             "sp_active_locations": HotspotLocation.objects.filter(status="ACTIVE").count(),
+            "sp_ugsms_balance": ugsms_balance_units,
+            "sp_total_sms_revenue": total_sms_revenue,
             "sp_total_txn": total_count,
             "sp_success_txn": success_count,
             "sp_failed_txn": failed_count,

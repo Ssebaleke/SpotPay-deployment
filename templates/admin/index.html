@@ -479,13 +479,14 @@ html, body {
 
             <div class="sp-card sp-c5">
                 <div>
-                    <div class="sp-card-icon"><i class="bi bi-receipt"></i></div>
-                    <div class="sp-val">{{ sp_total_txn }}</div>
-                    <div class="sp-lbl">Transactions</div>
-                    <div class="sp-sub">Last 30 days</div>
+                    <div class="sp-card-icon"><i class="bi bi-chat-dots"></i></div>
+                    <div class="sp-val">{{ sp_ugsms_balance }} SMS</div>
+                    <div class="sp-lbl">UGSMS Balance</div>
+                    <div class="sp-sub">UGX {{ sp_total_sms_revenue }} earned</div>
                 </div>
                 <div class="sp-btns">
-                    <a href="/admin/payments/payment/" class="sp-btn">View</a>
+                    <a href="/admin/sms/smspurchase/" class="sp-btn">Sales</a>
+                    <a href="/admin/sms/vendorsmswallet/" class="sp-btn">Wallets</a>
                 </div>
             </div>
 
