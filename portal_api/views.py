@@ -23,6 +23,13 @@ from payments.models import Payment
 # =====================================================
 
 def portal_data(request, uuid):
+    from django.core.cache import cache
+
+    cache_key = f"portal_data_{uuid}"
+    cached = cache.get(cache_key)
+    if cached:
+        return JsonResponse(cached)
+
     location = get_object_or_404(
         HotspotLocation,
         uuid=uuid,
@@ -37,7 +44,7 @@ def portal_data(request, uuid):
 
     ads = location.ads.filter(is_active=True)
 
-    return JsonResponse({
+    data = {
         "location": {
             "name": location.site_name,
         },
@@ -56,7 +63,10 @@ def portal_data(request, uuid):
             }
             for ad in ads
         ],
-    })
+    }
+
+    cache.set(cache_key, data, 60)  # cache for 60 seconds
+    return JsonResponse(data)
 
 
 # =====================================================
