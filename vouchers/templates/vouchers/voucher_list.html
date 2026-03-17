@@ -145,12 +145,16 @@
 
   <!-- BATCHES -->
   <div class="section-card mb-4">
-    <div class="section-header">
+    <div class="section-header" data-bs-toggle="collapse" data-bs-target="#batchesCollapse" style="cursor:pointer;">
       <h6><i class="bi bi-collection me-2 text-primary"></i>Voucher Batches</h6>
-      <span class="badge bg-primary badge-pill">{{ batches|length }} batch{{ batches|length|pluralize:"es" }}</span>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-primary badge-pill">{{ batches|length }} batch{{ batches|length|pluralize:"es" }}</span>
+        <i class="bi bi-chevron-down text-muted" id="batchChevron" style="transition: transform .3s;"></i>
+      </div>
     </div>
-    <div class="table-responsive">
-      <table class="table table-hover mb-0">
+    <div class="collapse" id="batchesCollapse">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
         <thead class="table-light">
           <tr>
             <th>Batch</th>
@@ -182,24 +186,13 @@
               <small class="text-muted">{{ batch.created_at|date:"M d, Y" }}</small>
             </td>
             <td class="text-end">
-              <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                  <i class="bi bi-three-dots"></i>
+              <form method="post" action="{% url 'voucher_batch_delete' batch.id %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger"
+                  onclick="return confirm('Delete batch #{{ batch.id }} and all its unused vouchers?');">
+                  <i class="bi bi-trash me-1"></i>Delete
                 </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                  <li><span class="dropdown-item-text text-muted" style="font-size:0.78rem;">Batch #{{ batch.id }} &bull; {{ batch.vouchers_count }} vouchers</span></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li>
-                    <form method="post" action="{% url 'voucher_batch_delete' batch.id %}">
-                      {% csrf_token %}
-                      <button type="submit" class="dropdown-item text-danger"
-                        onclick="return confirm('Delete batch #{{ batch.id }} and all its unused vouchers?');">
-                        <i class="bi bi-trash me-2"></i>Delete Batch
-                      </button>
-                    </form>
-                  </li>
-                </ul>
-              </div>
+              </form>
             </td>
           </tr>
           {% empty %}
@@ -212,6 +205,7 @@
         </tbody>
       </table>
     </div>
+    </div><!-- end collapse -->
   </div>
 
   <!-- VOUCHERS TABLE -->
@@ -306,4 +300,15 @@
   </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  var batchCollapse = document.getElementById('batchesCollapse');
+  var chevron = document.getElementById('batchChevron');
+  if (batchCollapse) {
+    batchCollapse.addEventListener('show.bs.collapse', function () { chevron.style.transform = 'rotate(180deg)'; });
+    batchCollapse.addEventListener('hide.bs.collapse', function () { chevron.style.transform = 'rotate(0deg)'; });
+  }
+</script>
 {% endblock %}
