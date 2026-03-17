@@ -70,6 +70,22 @@ class VendorRegistrationForm(forms.Form):
                     status='PENDING'
                 )
 
+                # Send SMS notification to vendor
+                try:
+                    from sms.services.sms_gateway import send_sms
+                    send_sms(
+                        vendor=vendor,
+                        phone=self.cleaned_data['business_phone'],
+                        message=(
+                            f"Hello {self.cleaned_data['contact_person']}, "
+                            f"your SpotPay vendor account has been received. "
+                            f"Please wait for admin approval before you can sign in."
+                        ),
+                        purpose="REGISTRATION",
+                    )
+                except Exception:
+                    pass
+
                 return vendor
 
         except IntegrityError:
