@@ -61,13 +61,7 @@ def notify_vendor_approval(vendor):
         text=text,
     )
 
-    if vendor.business_phone:
-        send_sms(
-            vendor=vendor,
-            phone=vendor.business_phone,
-            message="Your SpotPay account is approved. You can now log in.",
-            purpose="ACCOUNT_APPROVED",
-        )
+
 
 
 def notify_withdrawal_status(withdrawal, status_text):
