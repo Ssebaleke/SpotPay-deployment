@@ -15,7 +15,7 @@ from datetime import timedelta
 from payments.models import Payment, PaymentProvider
 from sms.models import VendorSMSWallet
 from wallets.models import VendorWallet, WithdrawalRequest, WalletTransaction
-from sms.services.notifications import notify_withdrawal_status
+from sms.services.notifications import notify_withdrawal_status, notify_vendor_approval
 
 from .forms import VendorRegistrationForm, VendorProfileForm
 from .models import Vendor
@@ -264,6 +264,7 @@ def admin_approve_vendor(request, vendor_id):
     vendor.save(update_fields=['status', 'approved_by', 'approved_at', 'updated_at'])
     vendor.user.is_active = True
     vendor.user.save()
+    notify_vendor_approval(vendor)
     messages.success(request, f'{vendor.company_name} approved and activated.')
     return redirect('admin_dashboard')
 
