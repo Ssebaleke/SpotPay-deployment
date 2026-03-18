@@ -1,0 +1,97 @@
+{% extends 'accounts/base.html' %}
+{% block title %}MikroTik Manager - SpotPay{% endblock %}
+{% block page_title %}MikroTik Manager{% endblock %}
+{% block page_subtitle %}Voucher generation and router management{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="chart-container text-center py-3">
+            <div style="font-size:2rem;" class="mb-1"><i class="bi bi-router text-primary"></i></div>
+            <div class="fw-bold fs-4">{{ routers.count }}</div>
+            <small class="text-muted">Routers</small>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="chart-container text-center py-3">
+            <div style="font-size:2rem;" class="mb-1"><i class="bi bi-ticket-perforated text-success"></i></div>
+            <div class="fw-bold fs-4">{{ unused_vouchers }}</div>
+            <small class="text-muted">Unused Vouchers</small>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="chart-container text-center py-3">
+            <div style="font-size:2rem;" class="mb-1"><i class="bi bi-archive text-warning"></i></div>
+            <div class="fw-bold fs-4">{{ total_vouchers }}</div>
+            <small class="text-muted">Total Generated</small>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <a href="{% url 'mikrotik:router_list' %}" class="text-decoration-none">
+            <div class="chart-container p-4 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon icon-location" style="width:44px;height:44px;font-size:1.2rem;">
+                        <i class="bi bi-router"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold">Router Connections</div>
+                        <small class="text-muted">Add and manage routers</small>
+                    </div>
+                    <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{% url 'mikrotik:profile_list' %}" class="text-decoration-none">
+            <div class="chart-container p-4 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon icon-sales" style="width:44px;height:44px;font-size:1.2rem;">
+                        <i class="bi bi-sliders"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold">Voucher Profiles</div>
+                        <small class="text-muted">Time, data and price settings</small>
+                    </div>
+                    <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{% url 'mikrotik:generate' %}" class="text-decoration-none">
+            <div class="chart-container p-4 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon icon-sms" style="width:44px;height:44px;font-size:1.2rem;">
+                        <i class="bi bi-ticket-perforated"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold">Generate Vouchers</div>
+                        <small class="text-muted">Create and push to router</small>
+                    </div>
+                    <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-4">
+        <a href="{% url 'mikrotik:batch_list' %}" class="text-decoration-none">
+            <div class="chart-container p-4 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon" style="width:44px;height:44px;font-size:1.2rem;background:rgba(99,102,241,.12);color:#6366f1;">
+                        <i class="bi bi-printer"></i>
+                    </div>
+                    <div>
+                        <div class="fw-semibold">Print Vouchers</div>
+                        <small class="text-muted">View batches and print</small>
+                    </div>
+                    <i class="bi bi-chevron-right ms-auto text-muted"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+{% endblock %}

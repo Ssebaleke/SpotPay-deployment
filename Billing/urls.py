@@ -40,6 +40,7 @@ urlpatterns = [
     path('payments/', include('payments.urls')),
     path("sms/", include("sms.urls")),
     path('analytics/', include('analytics.urls')),
+    path('mikrotik/', include('mikrotik.urls', namespace='mikrotik')),
 ]
 
 if settings.DEBUG:

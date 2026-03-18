@@ -1,0 +1,47 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Generate Vouchers - SpotPay{% endblock %}
+{% block page_title %}Generate Vouchers{% endblock %}
+{% block page_subtitle %}Create vouchers and push directly to your router{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-md-7">
+<div class="chart-container p-4">
+    <a href="{% url 'mikrotik:dashboard' %}" class="btn btn-outline-secondary btn-sm mb-4">
+        <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+    {% if not profiles %}
+    <div class="alert alert-warning">
+        You need to <a href="{% url 'mikrotik:router_add' %}">add a router</a> and
+        <a href="{% url 'mikrotik:profile_add' %}">create a profile</a> first.
+    </div>
+    {% else %}
+    <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Voucher Profile <span class="text-danger">*</span></label>
+            <select class="form-select" name="profile_id" required>
+                <option value="">Select profile...</option>
+                {% for p in profiles %}
+                <option value="{{ p.pk }}">{{ p.name }} — UGX {{ p.price }} / {{ p.validity_hours }}h ({{ p.router.name }})</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" name="quantity" value="10" min="1" max="500" required>
+            <div class="form-text">Maximum 500 per batch.</div>
+        </div>
+        <div class="alert alert-info py-2 px-3 small mb-3">
+            <i class="bi bi-info-circle me-1"></i>
+            Vouchers are pushed to the router immediately. If the router is unreachable, vouchers are saved in SpotPay and you can retry later.
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-ticket-perforated me-2"></i>Generate Vouchers
+        </button>
+    </form>
+    {% endif %}
+</div>
+</div>
+</div>
+{% endblock %}

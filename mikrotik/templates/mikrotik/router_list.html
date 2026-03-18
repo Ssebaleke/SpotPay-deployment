@@ -1,0 +1,77 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Routers - SpotPay{% endblock %}
+{% block page_title %}Router Connections{% endblock %}
+{% block page_subtitle %}Manage your MikroTik routers{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <a href="{% url 'mikrotik:dashboard' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+    <a href="{% url 'mikrotik:router_add' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-plus-circle me-1"></i>Add Router
+    </a>
+</div>
+
+{% if routers %}
+<div class="row g-3">
+    {% for router in routers %}
+    <div class="col-md-6">
+        <div class="chart-container p-4">
+            <div class="d-flex align-items-start gap-3">
+                <div class="stat-icon icon-location" style="width:44px;height:44px;font-size:1.1rem;flex-shrink:0;">
+                    <i class="bi bi-router"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold">{{ router.name }}</div>
+                    <small class="text-muted">{{ router.host }}:{{ router.port }}</small>
+                    {% if router.location %}
+                    <div><small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ router.location.site_name }}</small></div>
+                    {% endif %}
+                    {% if router.last_seen %}
+                    <div><small class="text-success"><i class="bi bi-check-circle me-1"></i>Last seen {{ router.last_seen|timesince }} ago</small></div>
+                    {% endif %}
+                </div>
+                <div class="d-flex flex-column gap-2 align-items-end">
+                    <button class="btn btn-outline-primary btn-sm test-btn" data-url="{% url 'mikrotik:router_test' router.pk %}">
+                        <i class="bi bi-activity me-1"></i>Test
+                    </button>
+                    <a href="{% url 'mikrotik:sessions' router.pk %}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-people me-1"></i>Sessions
+                    </a>
+                    <form method="POST" action="{% url 'mikrotik:router_delete' router.pk %}" onsubmit="return confirm('Delete this router?')">
+                        {% csrf_token %}
+                        <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="chart-container text-center py-5">
+    <div style="font-size:3rem;opacity:.2;" class="mb-2"><i class="bi bi-router"></i></div>
+    <h6>No routers added yet</h6>
+    <p class="text-muted small">Add your first MikroTik router to get started.</p>
+    <a href="{% url 'mikrotik:router_add' %}" class="btn btn-primary btn-sm">Add Router</a>
+</div>
+{% endif %}
+
+<script>
+document.querySelectorAll('.test-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        fetch(this.dataset.url)
+            .then(r => r.json())
+            .then(d => {
+                this.innerHTML = d.ok
+                    ? '<i class="bi bi-check-circle text-success me-1"></i>Online'
+                    : '<i class="bi bi-x-circle text-danger me-1"></i>Offline';
+                this.disabled = false;
+            });
+    });
+});
+</script>
+{% endblock %}

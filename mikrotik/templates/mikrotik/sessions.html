@@ -1,0 +1,51 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Active Sessions - SpotPay{% endblock %}
+{% block page_title %}Active Sessions{% endblock %}
+{% block page_subtitle %}{{ router.name }} — live connected users{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+    <a href="{% url 'mikrotik:router_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+</div>
+
+{% if error %}
+<div class="alert alert-danger"><i class="bi bi-x-circle me-2"></i>{{ error }}</div>
+{% endif %}
+
+{% if sessions %}
+<div class="chart-container p-0">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th class="px-4 py-3">User</th>
+                <th>IP Address</th>
+                <th>MAC</th>
+                <th>Uptime</th>
+                <th>Bytes In</th>
+                <th>Bytes Out</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for s in sessions %}
+            <tr>
+                <td class="px-4 fw-semibold">{{ s.user }}</td>
+                <td>{{ s.address }}</td>
+                <td><small class="text-muted">{{ s.mac-address|default:"-" }}</small></td>
+                <td>{{ s.uptime }}</td>
+                <td>{{ s.bytes-in|default:"-" }}</td>
+                <td>{{ s.bytes-out|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="chart-container text-center py-5">
+    <div style="font-size:3rem;opacity:.2;" class="mb-2"><i class="bi bi-people"></i></div>
+    <h6>No active sessions</h6>
+    <p class="text-muted small">No users currently connected on this router.</p>
+</div>
+{% endif %}
+{% endblock %}

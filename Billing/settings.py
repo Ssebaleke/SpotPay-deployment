@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     "wallets",
     "sms",
     "payments",
+    "mikrotik",
 ]
 
 # ==================================================
