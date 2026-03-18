@@ -14,23 +14,28 @@ class Migration(migrations.Migration):
             name='paymentsystemconfig',
             options={'verbose_name': 'Commission Config', 'verbose_name_plural': 'Commission Config'},
         ),
-        migrations.RenameField(
-            model_name='paymentsplit',
-            old_name='admin_amount',
-            new_name='spotpay_amount',
-        ),
-        migrations.RenameField(
-            model_name='paymentsplit',
-            old_name='base_system_percentage',
-            new_name='spotpay_percentage',
-        ),
-        migrations.RemoveField(
-            model_name='paymentsplit',
-            name='subscription_percentage',
-        ),
-        migrations.RemoveField(
-            model_name='paymentsystemconfig',
-            name='base_system_percentage',
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.RenameField(
+                    model_name='paymentsplit',
+                    old_name='admin_amount',
+                    new_name='spotpay_amount',
+                ),
+                migrations.RenameField(
+                    model_name='paymentsplit',
+                    old_name='base_system_percentage',
+                    new_name='spotpay_percentage',
+                ),
+                migrations.RemoveField(
+                    model_name='paymentsplit',
+                    name='subscription_percentage',
+                ),
+                migrations.RemoveField(
+                    model_name='paymentsystemconfig',
+                    name='base_system_percentage',
+                ),
+            ],
+            database_operations=[],
         ),
         migrations.AddField(
             model_name='paymentsplit',
