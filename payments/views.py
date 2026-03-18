@@ -14,7 +14,7 @@ from .services.payment_success import handle_payment_success
 
 from wallets.models import VendorWallet
 from sms.services.sms_topup import credit_sms_wallet
-from sms.services.notifications import notify_vendor_payment_received
+from sms.services.notifications import notify_vendor_payment_received, notify_vendor_receipt
 
 
 def _parse_body(request):
@@ -224,7 +224,10 @@ def payment_callback(request):
                     payment.save(update_fields=["processor_message"])
 
             if payment.vendor_id:
-                notify_vendor_payment_received(payment)
+                if payment.purpose in ("SMS_PURCHASE", "SUBSCRIPTION"):
+                    notify_vendor_receipt(payment)
+                else:
+                    notify_vendor_payment_received(payment)
 
             payment_id = payment.id
             run_success_handler = True

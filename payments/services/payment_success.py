@@ -3,6 +3,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from vouchers.services.issue_voucher import issue_voucher
 from sms.services.voucher_pay import send_voucher_sms
+from sms.services.notifications import notify_vendor_receipt
 from payments.models import PaymentVoucher, PaymentSplit, PaymentSystemConfig
 
 
@@ -63,3 +64,5 @@ def handle_payment_success(payment):
             package_name=package.name,
             payment=payment,
         )
+
+    notify_vendor_receipt(payment)

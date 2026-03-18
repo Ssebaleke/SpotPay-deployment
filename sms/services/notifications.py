@@ -39,7 +39,39 @@ def notify_vendor_payment_received(payment):
         )
 
 
-def notify_vendor_approval(vendor):
+def notify_vendor_receipt(payment):
+    """Email receipt to vendor for SMS purchase or subscription payment."""
+    vendor = payment.vendor
+    if not vendor:
+        return
+
+    purpose_label = {
+        "SMS_PURCHASE": "SMS Units Purchase",
+        "SUBSCRIPTION": "Subscription Payment",
+        "TRANSACTION": "WiFi Transaction",
+    }.get(payment.purpose, payment.purpose)
+
+    subject = f"Payment Receipt - {purpose_label} - SpotPay"
+    html = (
+        f"<p>Hello {vendor.company_name},</p>"
+        f"<p>Your payment has been received successfully.</p>"
+        f"<table style='border-collapse:collapse; width:100%; font-size:14px;'>"
+        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Type</strong></td><td style='padding:8px; border:1px solid #ddd;'>{purpose_label}</td></tr>"
+        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Amount</strong></td><td style='padding:8px; border:1px solid #ddd;'>{payment.currency} {payment.amount}</td></tr>"
+        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Reference</strong></td><td style='padding:8px; border:1px solid #ddd;'>{payment.provider_reference or payment.uuid}</td></tr>"
+        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Date</strong></td><td style='padding:8px; border:1px solid #ddd;'>{payment.completed_at or payment.initiated_at}</td></tr>"
+        f"</table>"
+        f"<p>Thank you for using SpotPay.</p>"
+    )
+
+    send_email(
+        to_email=vendor.business_email or vendor.user.email,
+        subject=subject,
+        html=html,
+    )
+
+
+
     subject = "Your SpotPay Vendor Account is Approved"
     text = (
         f"Hello {vendor.company_name},\n\n"
