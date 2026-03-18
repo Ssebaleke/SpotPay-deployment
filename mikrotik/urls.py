@@ -16,5 +16,6 @@ urlpatterns = [
     path("generate/", views.generate, name="generate"),
     path("batches/", views.batch_list, name="batch_list"),
     path("batches/<uuid:uuid>/print/", views.batch_print, name="batch_print"),
+    path("batches/<uuid:uuid>/retry/", views.batch_retry, name="batch_retry"),
     path("sessions/<int:router_pk>/", views.sessions, name="sessions"),
 ]

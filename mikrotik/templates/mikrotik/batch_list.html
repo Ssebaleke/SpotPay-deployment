@@ -24,24 +24,33 @@
     </thead>
     <tbody>
       {% for b in batches %}
+      {% with pushed=b.vouchers.pushed_count failed=b.vouchers.failed_count %}
       <tr>
         <td style="font-weight:600; color:#e6edf3;">{{ b.profile.name }}</td>
         <td><span class="mk-badge blue">{{ b.router.name }}</span></td>
         <td>{{ b.quantity }}</td>
-        <td style="color:var(--mk-green);">{{ b.vouchers.filter.pushed_to_router|default:b.vouchers.all.count }}</td>
+        <td style="color:var(--mk-green);">{{ b.pushed_count }}</td>
         <td>
-          {% with failed=b.vouchers.all %}
-          {% for v in failed %}{% if not v.pushed_to_router %}{% endif %}{% endfor %}
-          —
-          {% endwith %}
+          {% if b.failed_count > 0 %}
+          <span style="color:var(--mk-red);">{{ b.failed_count }}</span>
+          {% else %}—{% endif %}
         </td>
         <td style="color:var(--mk-muted);">{{ b.created_at|date:"d M Y H:i" }}</td>
-        <td>
+        <td style="display:flex; gap:6px; flex-wrap:wrap;">
           <a href="{% url 'mikrotik:batch_print' b.uuid %}" class="mk-btn sm primary" target="_blank">
             <i class="bi bi-printer"></i> Print
           </a>
+          {% if b.failed_count > 0 %}
+          <form method="post" action="{% url 'mikrotik:batch_retry' b.uuid %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit" class="mk-btn sm" style="background:#b45309; border-color:#b45309;">
+              <i class="bi bi-arrow-repeat"></i> Retry {{ b.failed_count }}
+            </button>
+          </form>
+          {% endif %}
         </td>
       </tr>
+      {% endwith %}
       {% endfor %}
     </tbody>
   </table>

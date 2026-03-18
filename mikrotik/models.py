@@ -16,6 +16,12 @@ class RouterConnection(models.Model):
     api_username = models.CharField(max_length=100, default="admin")
     api_password = models.CharField(max_length=255, blank=True)
     is_active = models.BooleanField(default=True)
+    api_mode = models.CharField(
+        max_length=10,
+        choices=[("rest", "REST (v7)"), ("binary", "Binary API (v6/v7)")],
+        default="binary",
+        help_text="Auto-detected on connection test"
+    )
     last_seen = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -59,6 +65,14 @@ class VoucherBatch(models.Model):
 
     def __str__(self):
         return f"Batch {self.uuid} — {self.quantity} vouchers"
+
+    @property
+    def pushed_count(self):
+        return self.vouchers.filter(pushed_to_router=True).count()
+
+    @property
+    def failed_count(self):
+        return self.vouchers.filter(pushed_to_router=False).count()
 
 
 class MikrotikVoucher(models.Model):

@@ -220,7 +220,7 @@ def generate(request):
                 if not MikrotikVoucher.objects.filter(code=code).exists():
                     break
 
-            ok, err = mt.add_hotspot_user(router, code, profile.name, limit_uptime, limit_bytes)
+            ok, err = mt.add_hotspot_user(router, code, profile.name, limit_uptime, limit_bytes, profile.shared_users)
             MikrotikVoucher.objects.create(
                 batch=batch, code=code,
                 pushed_to_router=ok,
@@ -242,6 +242,44 @@ def generate(request):
         return redirect("mikrotik:batch_list")
 
     return render(request, "mikrotik/generate.html", {"vendor": vendor, "profiles": profiles})
+
+
+# ─── Retry Failed Push ───────────────────────────────────────────────────────
+
+@login_required
+@_vendor_required
+def batch_retry(request, uuid):
+    """Re-push all failed vouchers in a batch to the router."""
+    vendor = _get_vendor(request)
+    batch = get_object_or_404(VoucherBatch, uuid=uuid, vendor=vendor)
+    failed_vouchers = batch.vouchers.filter(pushed_to_router=False)
+
+    if not failed_vouchers.exists():
+        messages.info(request, "No failed vouchers in this batch.")
+        return redirect("mikrotik:batch_list")
+
+    profile = batch.profile
+    router = batch.router
+    h = profile.validity_hours
+    limit_uptime = f"{h:02d}:00:00"
+    limit_bytes = (profile.data_limit_mb * 1024 * 1024) if profile.data_limit_mb else None
+
+    pushed, still_failed = 0, 0
+    for v in failed_vouchers:
+        ok, err = mt.add_hotspot_user(router, v.code, profile.name, limit_uptime, limit_bytes, profile.shared_users)
+        v.pushed_to_router = ok
+        v.push_error = "" if ok else (err or "")
+        v.save(update_fields=["pushed_to_router", "push_error"])
+        if ok:
+            pushed += 1
+        else:
+            still_failed += 1
+
+    if still_failed == 0:
+        messages.success(request, f"All {pushed} vouchers pushed successfully.")
+    else:
+        messages.warning(request, f"{pushed} pushed, {still_failed} still failing: check router connection.")
+    return redirect("mikrotik:batch_list")
 
 
 # ─── Batches & Print ─────────────────────────────────────────────────────────
