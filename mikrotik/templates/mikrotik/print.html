@@ -4,49 +4,58 @@
 <meta charset="UTF-8">
 <title>Vouchers — {{ batch.profile.name }}</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Arial, sans-serif; background: #fff; }
-  .grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px; }
-  .card {
-    width: 180px; border: 1.5px dashed #555; border-radius: 8px;
-    padding: 10px 12px; text-align: center;
-  }
-  .card .brand { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: #888; text-transform: uppercase; }
-  .card .profile { font-size: 11px; color: #444; margin: 2px 0 6px; }
-  .card .code { font-size: 18px; font-weight: 900; letter-spacing: .12em; color: #111; }
-  .card .meta { font-size: 10px; color: #777; margin-top: 6px; }
-  .card .price { font-size: 13px; font-weight: 700; color: #1a7f4b; margin-top: 4px; }
-  @media print {
-    .no-print { display: none; }
-    body { background: #fff; }
-  }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #fff; color: #111; }
+.toolbar {
+  background: #161b22; color: #c9d1d9; padding: 10px 16px;
+  display: flex; align-items: center; gap: 12px; font-size: 13px;
+}
+.toolbar strong { color: #e6edf3; }
+.toolbar .spacer { flex: 1; }
+.toolbar button {
+  padding: 6px 16px; border-radius: 5px; border: none; cursor: pointer;
+  font-size: 12px; font-weight: 600;
+}
+.toolbar .btn-print { background: #58a6ff; color: #000; }
+.toolbar .btn-close { background: #30363d; color: #c9d1d9; }
+.grid { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px; }
+.vcard {
+  width: 175px; border: 1.5px dashed #555; border-radius: 8px;
+  padding: 10px 12px; text-align: center;
+}
+.vcard .brand { font-size: 9px; font-weight: 700; letter-spacing: .1em; color: #888; text-transform: uppercase; }
+.vcard .profile { font-size: 11px; color: #555; margin: 2px 0 6px; }
+.vcard .code { font-size: 19px; font-weight: 900; letter-spacing: .12em; color: #111; }
+.vcard .meta { font-size: 10px; color: #777; margin-top: 5px; }
+.vcard .price { font-size: 13px; font-weight: 700; color: #1a7f4b; margin-top: 4px; }
+@media print {
+  .toolbar { display: none; }
+  body { background: #fff; }
+  .vcard { break-inside: avoid; }
+}
 </style>
 </head>
 <body>
 
-<div class="no-print" style="padding:16px; background:#f8f9fa; border-bottom:1px solid #ddd; display:flex; gap:12px; align-items:center;">
-  <strong>{{ vouchers|length }} vouchers</strong> &mdash; {{ batch.profile.name }} &mdash; {{ batch.created_at|date:"d M Y" }}
-  <button onclick="window.print()" style="margin-left:auto; padding:8px 20px; background:#0d6efd; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:14px;">
-    🖨 Print
-  </button>
-  <button onclick="window.close()" style="padding:8px 16px; background:#6c757d; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:14px;">
-    Close
-  </button>
+<div class="toolbar">
+  <strong>{{ batch.profile.name }}</strong>
+  <span style="color:#8b949e;">{{ vouchers|length }} vouchers &mdash; {{ batch.created_at|date:"d M Y" }}</span>
+  <span class="spacer"></span>
+  <button class="btn-print" onclick="window.print()">🖨 Print</button>
+  <button class="btn-close" onclick="window.close()">✕ Close</button>
 </div>
 
 <div class="grid">
   {% for v in vouchers %}
-  <div class="card">
+  <div class="vcard">
     <div class="brand">SpotPay WiFi</div>
     <div class="profile">{{ batch.profile.name }}</div>
     <div class="code">{{ v.code }}</div>
     <div class="meta">
       ⏱ {{ batch.profile.validity_hours }}h
-      {% if batch.profile.data_limit_mb %} &nbsp;📶 {{ batch.profile.data_limit_mb }}MB{% endif %}
+      {% if batch.profile.data_limit_mb %}&nbsp; 📶 {{ batch.profile.data_limit_mb }}MB{% endif %}
     </div>
-    {% if batch.profile.price %}
-    <div class="price">UGX {{ batch.profile.price }}</div>
-    {% endif %}
+    {% if batch.profile.price %}<div class="price">UGX {{ batch.profile.price }}</div>{% endif %}
   </div>
   {% empty %}
   <p style="padding:20px; color:#888;">No unused vouchers in this batch.</p>

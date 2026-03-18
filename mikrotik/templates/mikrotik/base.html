@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}MikroTik Manager — SpotPay{% endblock %}</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+<style>
+:root {
+  --mk-bg: #0d1117;
+  --mk-sidebar: #161b22;
+  --mk-card: #1c2128;
+  --mk-border: #30363d;
+  --mk-text: #c9d1d9;
+  --mk-muted: #8b949e;
+  --mk-accent: #58a6ff;
+  --mk-green: #3fb950;
+  --mk-red: #f85149;
+  --mk-yellow: #d29922;
+  --mk-sidebar-w: 210px;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: 'Segoe UI', system-ui, sans-serif; background: var(--mk-bg); color: var(--mk-text); font-size: 13px; }
+
+/* ── Sidebar ── */
+#mk-sidebar {
+  width: var(--mk-sidebar-w);
+  background: var(--mk-sidebar);
+  border-right: 1px solid var(--mk-border);
+  position: fixed; top: 0; left: 0; height: 100vh;
+  display: flex; flex-direction: column;
+  z-index: 100; overflow-y: auto;
+}
+.mk-logo {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--mk-border);
+  display: flex; align-items: center; gap: 10px;
+}
+.mk-logo .icon {
+  width: 32px; height: 32px; background: var(--mk-accent);
+  border-radius: 7px; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: #000; flex-shrink: 0;
+}
+.mk-logo .brand { font-weight: 700; font-size: 14px; color: #fff; line-height: 1.1; }
+.mk-logo .sub { font-size: 10px; color: var(--mk-muted); }
+
+.mk-nav { flex: 1; padding: 8px 0; }
+.mk-section { font-size: 10px; font-weight: 700; letter-spacing: .08em; color: var(--mk-muted); padding: 10px 16px 4px; text-transform: uppercase; }
+.mk-nav a {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 16px; color: var(--mk-muted); text-decoration: none;
+  font-size: 12.5px; transition: all .15s; border-left: 2px solid transparent;
+}
+.mk-nav a i { font-size: 13px; width: 16px; flex-shrink: 0; }
+.mk-nav a:hover { color: var(--mk-text); background: rgba(88,166,255,.07); }
+.mk-nav a.active { color: var(--mk-accent); background: rgba(88,166,255,.1); border-left-color: var(--mk-accent); }
+.mk-nav a.danger { color: var(--mk-red); }
+.mk-nav a.danger:hover { background: rgba(248,81,73,.08); }
+.mk-nav hr { border-color: var(--mk-border); margin: 6px 12px; }
+
+.mk-user {
+  padding: 10px 14px; border-top: 1px solid var(--mk-border);
+  display: flex; align-items: center; gap: 9px;
+}
+.mk-user .av {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(88,166,255,.2); display: flex; align-items: center; justify-content: center;
+  font-size: 12px; color: var(--mk-accent); flex-shrink: 0;
+}
+.mk-user .name { font-size: 12px; color: #e6edf3; font-weight: 500; }
+.mk-user .co { font-size: 10px; color: var(--mk-muted); }
+
+/* ── Main ── */
+#mk-main { margin-left: var(--mk-sidebar-w); min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── Topbar ── */
+.mk-topbar {
+  background: var(--mk-sidebar); border-bottom: 1px solid var(--mk-border);
+  padding: 10px 20px; display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+}
+.mk-topbar .page-title { font-size: 14px; font-weight: 600; color: #e6edf3; }
+.mk-topbar .page-sub { font-size: 11px; color: var(--mk-muted); }
+.mk-topbar .actions { display: flex; align-items: center; gap: 8px; }
+.mk-topbar .actions a, .mk-topbar .actions button {
+  font-size: 12px; padding: 5px 12px; border-radius: 6px;
+  border: 1px solid var(--mk-border); background: var(--mk-card);
+  color: var(--mk-text); text-decoration: none; cursor: pointer;
+  display: flex; align-items: center; gap: 5px; transition: all .15s;
+}
+.mk-topbar .actions a:hover, .mk-topbar .actions button:hover { border-color: var(--mk-accent); color: var(--mk-accent); }
+.mk-topbar .actions a.primary { background: var(--mk-accent); color: #000; border-color: var(--mk-accent); font-weight: 600; }
+.mk-topbar .actions a.primary:hover { background: #79c0ff; }
+
+/* ── Content ── */
+.mk-content { padding: 18px 20px; flex: 1; }
+
+/* ── Cards ── */
+.mk-card {
+  background: var(--mk-card); border: 1px solid var(--mk-border);
+  border-radius: 8px; overflow: hidden;
+}
+.mk-card-header {
+  padding: 10px 16px; border-bottom: 1px solid var(--mk-border);
+  font-size: 12px; font-weight: 600; color: #e6edf3;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.mk-card-body { padding: 14px 16px; }
+
+/* ── Stat boxes ── */
+.mk-stat {
+  background: var(--mk-card); border: 1px solid var(--mk-border);
+  border-radius: 8px; padding: 14px 16px;
+}
+.mk-stat .val { font-size: 22px; font-weight: 700; color: #e6edf3; line-height: 1; }
+.mk-stat .lbl { font-size: 11px; color: var(--mk-muted); margin-top: 3px; }
+.mk-stat .ico { font-size: 20px; opacity: .6; }
+
+/* ── Table ── */
+.mk-table { width: 100%; border-collapse: collapse; }
+.mk-table th { font-size: 11px; font-weight: 600; color: var(--mk-muted); text-transform: uppercase; letter-spacing: .05em; padding: 8px 12px; border-bottom: 1px solid var(--mk-border); background: rgba(0,0,0,.2); }
+.mk-table td { padding: 9px 12px; border-bottom: 1px solid var(--mk-border); color: var(--mk-text); vertical-align: middle; }
+.mk-table tr:last-child td { border-bottom: none; }
+.mk-table tr:hover td { background: rgba(88,166,255,.04); }
+
+/* ── Badges ── */
+.mk-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+.mk-badge.green { background: rgba(63,185,80,.15); color: var(--mk-green); }
+.mk-badge.red { background: rgba(248,81,73,.15); color: var(--mk-red); }
+.mk-badge.yellow { background: rgba(210,153,34,.15); color: var(--mk-yellow); }
+.mk-badge.blue { background: rgba(88,166,255,.15); color: var(--mk-accent); }
+.mk-badge.gray { background: rgba(139,148,158,.15); color: var(--mk-muted); }
+
+/* ── Buttons ── */
+.mk-btn { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--mk-border); background: var(--mk-card); color: var(--mk-text); text-decoration: none; transition: all .15s; }
+.mk-btn:hover { border-color: var(--mk-accent); color: var(--mk-accent); }
+.mk-btn.primary { background: var(--mk-accent); color: #000; border-color: var(--mk-accent); font-weight: 600; }
+.mk-btn.primary:hover { background: #79c0ff; }
+.mk-btn.danger { border-color: var(--mk-red); color: var(--mk-red); }
+.mk-btn.danger:hover { background: rgba(248,81,73,.1); }
+.mk-btn.success { border-color: var(--mk-green); color: var(--mk-green); }
+.mk-btn.success:hover { background: rgba(63,185,80,.1); }
+.mk-btn.sm { padding: 3px 9px; font-size: 11px; }
+
+/* ── Forms ── */
+.mk-form-group { margin-bottom: 14px; }
+.mk-label { display: block; font-size: 11px; font-weight: 600; color: var(--mk-muted); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+.mk-input, .mk-select, .mk-textarea {
+  width: 100%; background: var(--mk-bg); border: 1px solid var(--mk-border);
+  border-radius: 6px; padding: 7px 10px; color: var(--mk-text); font-size: 13px;
+  outline: none; transition: border-color .15s;
+}
+.mk-input:focus, .mk-select:focus, .mk-textarea:focus { border-color: var(--mk-accent); }
+.mk-input::placeholder { color: var(--mk-muted); }
+.mk-select option { background: var(--mk-card); }
+.mk-hint { font-size: 11px; color: var(--mk-muted); margin-top: 4px; }
+
+/* ── Alert ── */
+.mk-alert { padding: 9px 13px; border-radius: 6px; font-size: 12px; margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px; }
+.mk-alert.info { background: rgba(88,166,255,.1); border: 1px solid rgba(88,166,255,.25); color: #79c0ff; }
+.mk-alert.warning { background: rgba(210,153,34,.1); border: 1px solid rgba(210,153,34,.25); color: #e3b341; }
+.mk-alert.danger { background: rgba(248,81,73,.1); border: 1px solid rgba(248,81,73,.25); color: #ff7b72; }
+.mk-alert.success { background: rgba(63,185,80,.1); border: 1px solid rgba(63,185,80,.25); color: #56d364; }
+
+/* ── Empty state ── */
+.mk-empty { text-align: center; padding: 48px 20px; color: var(--mk-muted); }
+.mk-empty i { font-size: 40px; opacity: .25; display: block; margin-bottom: 12px; }
+.mk-empty h6 { color: var(--mk-text); margin-bottom: 6px; }
+
+/* ── Voucher print cards ── */
+.vcard { width: 160px; border: 1.5px dashed var(--mk-border); border-radius: 7px; padding: 10px; text-align: center; background: var(--mk-card); }
+.vcard .vbrand { font-size: 9px; font-weight: 700; letter-spacing: .1em; color: var(--mk-muted); text-transform: uppercase; }
+.vcard .vprofile { font-size: 10px; color: var(--mk-muted); margin: 2px 0 5px; }
+.vcard .vcode { font-size: 17px; font-weight: 900; letter-spacing: .1em; color: #e6edf3; }
+.vcard .vmeta { font-size: 10px; color: var(--mk-muted); margin-top: 5px; }
+.vcard .vprice { font-size: 12px; font-weight: 700; color: var(--mk-green); margin-top: 3px; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  #mk-sidebar { transform: translateX(-100%); transition: transform .25s; }
+  #mk-sidebar.open { transform: translateX(0); }
+  #mk-main { margin-left: 0; }
+  .mk-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 99; }
+  .mk-overlay.open { display: block; }
+}
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div class="mk-overlay" id="mkOverlay" onclick="closeSidebar()"></div>
+
+<!-- Sidebar -->
+<nav id="mk-sidebar">
+  <div class="mk-logo">
+    <div class="icon"><i class="bi bi-router-fill"></i></div>
+    <div>
+      <div class="brand">MikroTik</div>
+      <div class="sub">SpotPay Manager</div>
+    </div>
+  </div>
+
+  <div class="mk-nav">
+    <div class="mk-section">Overview</div>
+    <a href="{% url 'mikrotik:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+      <i class="bi bi-grid-1x2"></i> Dashboard
+    </a>
+
+    <div class="mk-section">Router</div>
+    <a href="{% url 'mikrotik:router_list' %}" class="{% if 'router' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="bi bi-router"></i> Routers
+    </a>
+    <a href="{% url 'mikrotik:router_add' %}">
+      <i class="bi bi-plus-circle"></i> Add Router
+    </a>
+
+    <div class="mk-section">Vouchers</div>
+    <a href="{% url 'mikrotik:profile_list' %}" class="{% if 'profile' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="bi bi-sliders"></i> Profiles
+    </a>
+    <a href="{% url 'mikrotik:generate' %}" class="{% if request.resolver_match.url_name == 'generate' %}active{% endif %}">
+      <i class="bi bi-ticket-perforated"></i> Generate
+    </a>
+    <a href="{% url 'mikrotik:batch_list' %}" class="{% if 'batch' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="bi bi-printer"></i> Print / Batches
+    </a>
+
+    <hr>
+    <a href="{% url 'vendor_dashboard' %}">
+      <i class="bi bi-arrow-left-circle"></i> Back to SpotPay
+    </a>
+    <a href="{% url 'vendor_logout' %}" class="danger">
+      <i class="bi bi-box-arrow-right"></i> Logout
+    </a>
+  </div>
+
+  <div class="mk-user">
+    <div class="av"><i class="bi bi-person-fill"></i></div>
+    <div>
+      <div class="name">{{ user.username }}</div>
+      <div class="co">{% if vendor %}{{ vendor.company_name }}{% endif %}</div>
+    </div>
+  </div>
+</nav>
+
+<!-- Main -->
+<div id="mk-main">
+  <!-- Topbar -->
+  <div class="mk-topbar">
+    <div>
+      <button onclick="openSidebar()" style="display:none;background:none;border:none;color:var(--mk-text);font-size:18px;cursor:pointer;padding:0 8px 0 0;" id="mkHamburger">
+        <i class="bi bi-list"></i>
+      </button>
+      <span class="page-title">{% block page_title %}Dashboard{% endblock %}</span>
+      <div class="page-sub">{% block page_subtitle %}{% endblock %}</div>
+    </div>
+    <div class="actions">
+      {% block topbar_actions %}{% endblock %}
+      <a href="{% url 'mikrotik:generate' %}" class="primary"><i class="bi bi-plus-lg"></i> New Vouchers</a>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div style="padding: 0 20px;">
+    {% for message in messages %}
+    <div class="mk-alert {% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% elif message.tags == 'success' %}success{% else %}info{% endif %}" style="margin-top:12px;">
+      <i class="bi bi-{% if message.tags == 'error' %}x-circle{% elif message.tags == 'warning' %}exclamation-triangle{% elif message.tags == 'success' %}check-circle{% else %}info-circle{% endif %}"></i>
+      {{ message }}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Content -->
+  <div class="mk-content">
+    {% block content %}{% endblock %}
+  </div>
+
+  <div style="padding: 12px 20px; border-top: 1px solid var(--mk-border); font-size: 11px; color: var(--mk-muted); text-align:center;">
+    SpotPay MikroTik Manager &mdash; {% now "Y" %}
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+function openSidebar() {
+  document.getElementById('mk-sidebar').classList.add('open');
+  document.getElementById('mkOverlay').classList.add('open');
+}
+function closeSidebar() {
+  document.getElementById('mk-sidebar').classList.remove('open');
+  document.getElementById('mkOverlay').classList.remove('open');
+}
+if (window.innerWidth <= 768) {
+  document.getElementById('mkHamburger').style.display = 'inline-block';
+}
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

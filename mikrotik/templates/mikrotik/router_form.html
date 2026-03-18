@@ -1,61 +1,60 @@
-{% extends 'accounts/base.html' %}
-{% block title %}Add Router - SpotPay{% endblock %}
+{% extends 'mikrotik/base.html' %}
+{% block title %}Add Router — MikroTik Manager{% endblock %}
 {% block page_title %}Add Router{% endblock %}
-{% block page_subtitle %}Connect a MikroTik router{% endblock %}
+{% block page_subtitle %}Connect a new MikroTik router{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-<div class="col-md-7">
-<div class="chart-container p-4">
-    <a href="{% url 'mikrotik:router_list' %}" class="btn btn-outline-secondary btn-sm mb-4">
-        <i class="bi bi-arrow-left me-1"></i>Back
-    </a>
-    <form method="POST">
+<div style="max-width:520px;">
+  <div class="mk-card">
+    <div class="mk-card-header"><i class="bi bi-router me-2" style="color:var(--mk-accent);"></i>Router Details</div>
+    <div class="mk-card-body">
+      <form method="POST">
         {% csrf_token %}
-        <div class="mb-3">
-            <label class="form-label fw-semibold">Friendly Name <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" name="name" required placeholder="e.g. Main Router">
+        <div class="mk-form-group">
+          <label class="mk-label">Friendly Name *</label>
+          <input type="text" class="mk-input" name="name" required placeholder="e.g. Main Router">
         </div>
-        <div class="row g-2 mb-3">
-            <div class="col-8">
-                <label class="form-label fw-semibold">Router IP / Host <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" name="host" required placeholder="e.g. 192.168.88.1">
-            </div>
-            <div class="col-4">
-                <label class="form-label fw-semibold">Port</label>
-                <input type="number" class="form-control" name="port" value="80">
-            </div>
+        <div style="display:grid; grid-template-columns:1fr 100px; gap:10px;">
+          <div class="mk-form-group">
+            <label class="mk-label">Router IP / Host *</label>
+            <input type="text" class="mk-input" name="host" required placeholder="e.g. 192.168.88.1">
+          </div>
+          <div class="mk-form-group">
+            <label class="mk-label">Port</label>
+            <input type="number" class="mk-input" name="port" value="80">
+          </div>
         </div>
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-semibold">API Username</label>
-                <input type="text" class="form-control" name="api_username" value="admin">
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-semibold">API Password</label>
-                <input type="password" class="form-control" name="api_password" placeholder="Leave blank if none">
-            </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="mk-form-group">
+            <label class="mk-label">API Username</label>
+            <input type="text" class="mk-input" name="api_username" value="admin">
+          </div>
+          <div class="mk-form-group">
+            <label class="mk-label">API Password</label>
+            <input type="password" class="mk-input" name="api_password" placeholder="Leave blank if none">
+          </div>
         </div>
         {% if locations %}
-        <div class="mb-3">
-            <label class="form-label fw-semibold">Link to Location (optional)</label>
-            <select class="form-select" name="location_id">
-                <option value="">— None —</option>
-                {% for loc in locations %}
-                <option value="{{ loc.id }}">{{ loc.site_name }}</option>
-                {% endfor %}
-            </select>
+        <div class="mk-form-group">
+          <label class="mk-label">Link to Location (optional)</label>
+          <select class="mk-select" name="location_id">
+            <option value="">— None —</option>
+            {% for loc in locations %}
+            <option value="{{ loc.id }}">{{ loc.site_name }}</option>
+            {% endfor %}
+          </select>
         </div>
         {% endif %}
-        <div class="alert alert-info py-2 px-3 small">
-            <i class="bi bi-info-circle me-1"></i>
-            Make sure the REST API is enabled on your MikroTik: <strong>IP → Hotspot → API</strong> or via Winbox.
+        <div class="mk-alert info">
+          <i class="bi bi-info-circle"></i>
+          Enable REST API on MikroTik: <strong>IP → Services → www</strong> or via Winbox.
         </div>
-        <button type="submit" class="btn btn-primary w-100 mt-2">
-            <i class="bi bi-plus-circle me-2"></i>Add Router
-        </button>
-    </form>
-</div>
-</div>
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <a href="{% url 'mikrotik:router_list' %}" class="mk-btn">Cancel</a>
+          <button type="submit" class="mk-btn primary"><i class="bi bi-plus-lg"></i> Add Router</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 {% endblock %}

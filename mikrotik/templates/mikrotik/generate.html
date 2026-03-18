@@ -1,47 +1,80 @@
-{% extends 'accounts/base.html' %}
-{% block title %}Generate Vouchers - SpotPay{% endblock %}
+{% extends 'mikrotik/base.html' %}
+{% block title %}Generate Vouchers — MikroTik Manager{% endblock %}
 {% block page_title %}Generate Vouchers{% endblock %}
 {% block page_subtitle %}Create vouchers and push directly to your router{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-<div class="col-md-7">
-<div class="chart-container p-4">
-    <a href="{% url 'mikrotik:dashboard' %}" class="btn btn-outline-secondary btn-sm mb-4">
-        <i class="bi bi-arrow-left me-1"></i>Back
-    </a>
-    {% if not profiles %}
-    <div class="alert alert-warning">
-        You need to <a href="{% url 'mikrotik:router_add' %}">add a router</a> and
-        <a href="{% url 'mikrotik:profile_add' %}">create a profile</a> first.
-    </div>
-    {% else %}
-    <form method="POST">
+<div style="max-width:520px;">
+  <div class="mk-card">
+    <div class="mk-card-header"><i class="bi bi-ticket-perforated me-2" style="color:var(--mk-green);"></i>New Voucher Batch</div>
+    <div class="mk-card-body">
+      {% if not profiles %}
+      <div class="mk-alert warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        You need to <a href="{% url 'mikrotik:router_add' %}" style="color:var(--mk-accent);">add a router</a> and
+        <a href="{% url 'mikrotik:profile_add' %}" style="color:var(--mk-accent);">create a profile</a> first.
+      </div>
+      {% else %}
+      <form method="POST">
         {% csrf_token %}
-        <div class="mb-3">
-            <label class="form-label fw-semibold">Voucher Profile <span class="text-danger">*</span></label>
-            <select class="form-select" name="profile_id" required>
-                <option value="">Select profile...</option>
-                {% for p in profiles %}
-                <option value="{{ p.pk }}">{{ p.name }} — UGX {{ p.price }} / {{ p.validity_hours }}h ({{ p.router.name }})</option>
-                {% endfor %}
-            </select>
+        <div class="mk-form-group">
+          <label class="mk-label">Voucher Profile *</label>
+          <select class="mk-select" name="profile_id" required id="profileSelect">
+            <option value="">Select profile...</option>
+            {% for p in profiles %}
+            <option value="{{ p.pk }}" data-price="{{ p.price }}" data-hours="{{ p.validity_hours }}" data-router="{{ p.router.name }}">
+              {{ p.name }} — UGX {{ p.price }} / {{ p.validity_hours }}h ({{ p.router.name }})
+            </option>
+            {% endfor %}
+          </select>
         </div>
-        <div class="mb-3">
-            <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
-            <input type="number" class="form-control" name="quantity" value="10" min="1" max="500" required>
-            <div class="form-text">Maximum 500 per batch.</div>
+
+        <!-- Profile preview -->
+        <div id="profilePreview" style="display:none; background:rgba(88,166,255,.06); border:1px solid rgba(88,166,255,.2); border-radius:6px; padding:10px 12px; margin-bottom:14px; font-size:12px;">
+          <div style="display:flex; gap:20px; flex-wrap:wrap;">
+            <div><span style="color:var(--mk-muted);">Router:</span> <span id="pvRouter" style="color:#e6edf3;"></span></div>
+            <div><span style="color:var(--mk-muted);">Price:</span> <span id="pvPrice" style="color:var(--mk-green); font-weight:600;"></span></div>
+            <div><span style="color:var(--mk-muted);">Validity:</span> <span id="pvHours" style="color:#e6edf3;"></span></div>
+          </div>
         </div>
-        <div class="alert alert-info py-2 px-3 small mb-3">
-            <i class="bi bi-info-circle me-1"></i>
-            Vouchers are pushed to the router immediately. If the router is unreachable, vouchers are saved in SpotPay and you can retry later.
+
+        <div class="mk-form-group">
+          <label class="mk-label">Quantity *</label>
+          <input type="number" class="mk-input" name="quantity" value="10" min="1" max="500" required>
+          <div class="mk-hint">Maximum 500 per batch.</div>
         </div>
-        <button type="submit" class="btn btn-primary w-100">
-            <i class="bi bi-ticket-perforated me-2"></i>Generate Vouchers
+
+        <div class="mk-alert info">
+          <i class="bi bi-info-circle"></i>
+          Vouchers are pushed to the router immediately. If unreachable, they are saved and can be retried later.
+        </div>
+
+        <button type="submit" class="mk-btn primary" style="width:100%; justify-content:center;">
+          <i class="bi bi-ticket-perforated"></i> Generate Vouchers
         </button>
-    </form>
-    {% endif %}
+      </form>
+      {% endif %}
+    </div>
+  </div>
 </div>
-</div>
-</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const sel = document.getElementById('profileSelect');
+const preview = document.getElementById('profilePreview');
+if (sel) {
+  sel.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    if (opt.value) {
+      document.getElementById('pvRouter').textContent = opt.dataset.router;
+      document.getElementById('pvPrice').textContent = 'UGX ' + opt.dataset.price;
+      document.getElementById('pvHours').textContent = opt.dataset.hours + 'h';
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+  });
+}
+</script>
 {% endblock %}

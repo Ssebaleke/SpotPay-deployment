@@ -1,47 +1,53 @@
-{% extends 'accounts/base.html' %}
-{% block title %}Voucher Profiles - SpotPay{% endblock %}
+{% extends 'mikrotik/base.html' %}
+{% block title %}Voucher Profiles — MikroTik Manager{% endblock %}
 {% block page_title %}Voucher Profiles{% endblock %}
 {% block page_subtitle %}Define time, data and price per voucher type{% endblock %}
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <a href="{% url 'mikrotik:dashboard' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Back
-    </a>
-    <a href="{% url 'mikrotik:profile_add' %}" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus-circle me-1"></i>Add Profile
-    </a>
-</div>
+{% block topbar_actions %}
+<a href="{% url 'mikrotik:profile_add' %}"><i class="bi bi-plus-lg"></i> Add Profile</a>
+{% endblock %}
 
+{% block content %}
 {% if profiles %}
-<div class="row g-3">
-    {% for p in profiles %}
-    <div class="col-md-6 col-lg-4">
-        <div class="chart-container p-4">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-                <div class="fw-semibold">{{ p.name }}</div>
-                <span class="badge bg-success">UGX {{ p.price }}</span>
-            </div>
-            <div class="small text-muted mb-1"><i class="bi bi-clock me-1"></i>{{ p.validity_hours }}h uptime</div>
-            <div class="small text-muted mb-1">
-                <i class="bi bi-database me-1"></i>
-                {% if p.data_limit_mb %}{{ p.data_limit_mb }} MB{% else %}Unlimited data{% endif %}
-            </div>
-            <div class="small text-muted mb-3"><i class="bi bi-router me-1"></i>{{ p.router.name }}</div>
-            <form method="POST" action="{% url 'mikrotik:profile_delete' p.pk %}" onsubmit="return confirm('Delete this profile?')">
-                {% csrf_token %}
-                <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash me-1"></i>Delete</button>
-            </form>
-        </div>
-    </div>
-    {% endfor %}
+<div class="mk-card">
+  <table class="mk-table">
+    <thead>
+      <tr>
+        <th>Profile Name</th>
+        <th>Router</th>
+        <th>Price</th>
+        <th>Validity</th>
+        <th>Data</th>
+        <th>Shared</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in profiles %}
+      <tr>
+        <td style="font-weight:600; color:#e6edf3;">{{ p.name }}</td>
+        <td><span class="mk-badge blue">{{ p.router.name }}</span></td>
+        <td style="color:var(--mk-green);">UGX {{ p.price }}</td>
+        <td><i class="bi bi-clock" style="color:var(--mk-muted); margin-right:4px;"></i>{{ p.validity_hours }}h</td>
+        <td>{% if p.data_limit_mb %}<i class="bi bi-database" style="color:var(--mk-muted); margin-right:4px;"></i>{{ p.data_limit_mb }} MB{% else %}<span style="color:var(--mk-muted);">Unlimited</span>{% endif %}</td>
+        <td>{{ p.shared_users }}</td>
+        <td>
+          <form method="POST" action="{% url 'mikrotik:profile_delete' p.pk %}" onsubmit="return confirm('Delete profile?')" style="margin:0;">
+            {% csrf_token %}
+            <button class="mk-btn sm danger"><i class="bi bi-trash"></i></button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% else %}
-<div class="chart-container text-center py-5">
-    <div style="font-size:3rem;opacity:.2;" class="mb-2"><i class="bi bi-sliders"></i></div>
-    <h6>No profiles yet</h6>
-    <p class="text-muted small">Create a profile to define voucher settings.</p>
-    <a href="{% url 'mikrotik:profile_add' %}" class="btn btn-primary btn-sm">Add Profile</a>
+<div class="mk-empty">
+  <i class="bi bi-sliders"></i>
+  <h6>No profiles yet</h6>
+  <p style="font-size:12px; margin-bottom:16px;">Create a profile to define voucher settings.</p>
+  <a href="{% url 'mikrotik:profile_add' %}" class="mk-btn primary"><i class="bi bi-plus-lg"></i> Add Profile</a>
 </div>
 {% endif %}
 {% endblock %}

@@ -1,51 +1,49 @@
-{% extends 'accounts/base.html' %}
-{% block title %}Active Sessions - SpotPay{% endblock %}
+{% extends 'mikrotik/base.html' %}
+{% block title %}Active Sessions — MikroTik Manager{% endblock %}
 {% block page_title %}Active Sessions{% endblock %}
 {% block page_subtitle %}{{ router.name }} — live connected users{% endblock %}
 
 {% block content %}
-<div class="mb-4">
-    <a href="{% url 'mikrotik:router_list' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Back
-    </a>
-</div>
-
 {% if error %}
-<div class="alert alert-danger"><i class="bi bi-x-circle me-2"></i>{{ error }}</div>
+<div class="mk-alert danger"><i class="bi bi-x-circle"></i> {{ error }}</div>
 {% endif %}
 
 {% if sessions %}
-<div class="chart-container p-0">
-    <table class="table table-hover mb-0">
-        <thead>
-            <tr>
-                <th class="px-4 py-3">User</th>
-                <th>IP Address</th>
-                <th>MAC</th>
-                <th>Uptime</th>
-                <th>Bytes In</th>
-                <th>Bytes Out</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for s in sessions %}
-            <tr>
-                <td class="px-4 fw-semibold">{{ s.user }}</td>
-                <td>{{ s.address }}</td>
-                <td><small class="text-muted">{{ s.mac-address|default:"-" }}</small></td>
-                <td>{{ s.uptime }}</td>
-                <td>{{ s.bytes-in|default:"-" }}</td>
-                <td>{{ s.bytes-out|default:"-" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="mk-card">
+  <div class="mk-card-header">
+    <span><i class="bi bi-people me-2" style="color:var(--mk-accent);"></i>{{ sessions|length }} Active User{{ sessions|length|pluralize }}</span>
+    <span class="mk-badge green"><i class="bi bi-circle-fill" style="font-size:7px;"></i> Live</span>
+  </div>
+  <table class="mk-table">
+    <thead>
+      <tr>
+        <th>User</th>
+        <th>IP Address</th>
+        <th>MAC</th>
+        <th>Uptime</th>
+        <th>Bytes In</th>
+        <th>Bytes Out</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sessions %}
+      <tr>
+        <td style="font-weight:600; color:#e6edf3;">{{ s.user }}</td>
+        <td style="font-family:monospace;">{{ s.address }}</td>
+        <td style="font-family:monospace; color:var(--mk-muted);">{{ s.mac-address|default:"—" }}</td>
+        <td><span class="mk-badge green">{{ s.uptime }}</span></td>
+        <td style="color:var(--mk-muted);">{{ s.bytes-in|default:"—" }}</td>
+        <td style="color:var(--mk-muted);">{{ s.bytes-out|default:"—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% else %}
-<div class="chart-container text-center py-5">
-    <div style="font-size:3rem;opacity:.2;" class="mb-2"><i class="bi bi-people"></i></div>
-    <h6>No active sessions</h6>
-    <p class="text-muted small">No users currently connected on this router.</p>
+<div class="mk-empty">
+  <i class="bi bi-people"></i>
+  <h6>No active sessions</h6>
+  <p style="font-size:12px;">No users currently connected on {{ router.name }}.</p>
 </div>
 {% endif %}
 {% endblock %}

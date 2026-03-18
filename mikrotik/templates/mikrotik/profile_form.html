@@ -1,63 +1,60 @@
-{% extends 'accounts/base.html' %}
-{% block title %}Add Profile - SpotPay{% endblock %}
+{% extends 'mikrotik/base.html' %}
+{% block title %}Add Profile — MikroTik Manager{% endblock %}
 {% block page_title %}Add Voucher Profile{% endblock %}
 {% block page_subtitle %}Set time, data and price for this voucher type{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-<div class="col-md-7">
-<div class="chart-container p-4">
-    <a href="{% url 'mikrotik:profile_list' %}" class="btn btn-outline-secondary btn-sm mb-4">
-        <i class="bi bi-arrow-left me-1"></i>Back
-    </a>
-    {% if not routers %}
-    <div class="alert alert-warning">You need to add a router first before creating profiles.</div>
-    {% else %}
-    <form method="POST">
+<div style="max-width:520px;">
+  <div class="mk-card">
+    <div class="mk-card-header"><i class="bi bi-sliders me-2" style="color:var(--mk-yellow);"></i>Profile Settings</div>
+    <div class="mk-card-body">
+      {% if not routers %}
+      <div class="mk-alert warning"><i class="bi bi-exclamation-triangle"></i> You need to add a router first before creating profiles.</div>
+      <a href="{% url 'mikrotik:router_add' %}" class="mk-btn primary"><i class="bi bi-plus-lg"></i> Add Router</a>
+      {% else %}
+      <form method="POST">
         {% csrf_token %}
-        <div class="mb-3">
-            <label class="form-label fw-semibold">Router <span class="text-danger">*</span></label>
-            <select class="form-select" name="router_id" required>
-                <option value="">Select router...</option>
-                {% for r in routers %}
-                <option value="{{ r.pk }}">{{ r.name }} ({{ r.host }})</option>
-                {% endfor %}
-            </select>
+        <div class="mk-form-group">
+          <label class="mk-label">Router *</label>
+          <select class="mk-select" name="router_id" required>
+            <option value="">Select router...</option>
+            {% for r in routers %}
+            <option value="{{ r.pk }}">{{ r.name }} ({{ r.host }})</option>
+            {% endfor %}
+          </select>
         </div>
-        <div class="mb-3">
-            <label class="form-label fw-semibold">Profile Name <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" name="name" required placeholder="Must match MikroTik hotspot profile name exactly">
+        <div class="mk-form-group">
+          <label class="mk-label">Profile Name *</label>
+          <input type="text" class="mk-input" name="name" required placeholder="Must match MikroTik hotspot profile name exactly">
+          <div class="mk-hint">Go to IP → Hotspot → User Profiles on your router to get the exact name.</div>
         </div>
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-semibold">Price (UGX)</label>
-                <input type="number" class="form-control" name="price" value="0" min="0">
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-semibold">Validity (hours) <span class="text-danger">*</span></label>
-                <input type="number" class="form-control" name="validity_hours" value="24" min="1" required>
-            </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="mk-form-group">
+            <label class="mk-label">Price (UGX)</label>
+            <input type="number" class="mk-input" name="price" value="0" min="0">
+          </div>
+          <div class="mk-form-group">
+            <label class="mk-label">Validity (hours) *</label>
+            <input type="number" class="mk-input" name="validity_hours" value="24" min="1" required>
+          </div>
         </div>
-        <div class="row g-2 mb-3">
-            <div class="col-6">
-                <label class="form-label fw-semibold">Data Limit (MB)</label>
-                <input type="number" class="form-control" name="data_limit_mb" placeholder="Leave blank = unlimited">
-            </div>
-            <div class="col-6">
-                <label class="form-label fw-semibold">Shared Users</label>
-                <input type="number" class="form-control" name="shared_users" value="1" min="1">
-            </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="mk-form-group">
+            <label class="mk-label">Data Limit (MB)</label>
+            <input type="number" class="mk-input" name="data_limit_mb" placeholder="Blank = unlimited">
+          </div>
+          <div class="mk-form-group">
+            <label class="mk-label">Shared Users</label>
+            <input type="number" class="mk-input" name="shared_users" value="1" min="1">
+          </div>
         </div>
-        <div class="alert alert-info py-2 px-3 small">
-            <i class="bi bi-info-circle me-1"></i>
-            Profile name must exactly match a profile on your MikroTik under <strong>IP → Hotspot → User Profiles</strong>.
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <a href="{% url 'mikrotik:profile_list' %}" class="mk-btn">Cancel</a>
+          <button type="submit" class="mk-btn primary"><i class="bi bi-plus-lg"></i> Create Profile</button>
         </div>
-        <button type="submit" class="btn btn-primary w-100 mt-2">
-            <i class="bi bi-plus-circle me-2"></i>Create Profile
-        </button>
-    </form>
-    {% endif %}
-</div>
-</div>
+      </form>
+      {% endif %}
+    </div>
+  </div>
 </div>
 {% endblock %}

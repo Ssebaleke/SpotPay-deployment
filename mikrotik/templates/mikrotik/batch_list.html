@@ -1,59 +1,57 @@
-{% extends 'accounts/base.html' %}
-{% block title %}Voucher Batches - SpotPay{% endblock %}
+{% extends 'mikrotik/base.html' %}
+{% block title %}Batches — MikroTik Manager{% endblock %}
 {% block page_title %}Voucher Batches{% endblock %}
 {% block page_subtitle %}View and print generated voucher batches{% endblock %}
 
-{% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <a href="{% url 'mikrotik:dashboard' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Back
-    </a>
-    <a href="{% url 'mikrotik:generate' %}" class="btn btn-primary btn-sm">
-        <i class="bi bi-plus-circle me-1"></i>Generate New
-    </a>
-</div>
+{% block topbar_actions %}
+<a href="{% url 'mikrotik:generate' %}"><i class="bi bi-plus-lg"></i> Generate New</a>
+{% endblock %}
 
+{% block content %}
 {% if batches %}
-<div class="chart-container p-0">
-    <table class="table table-hover mb-0">
-        <thead>
-            <tr>
-                <th class="px-4 py-3">Profile</th>
-                <th>Router</th>
-                <th>Qty</th>
-                <th>Pushed</th>
-                <th>Date</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for b in batches %}
-            <tr>
-                <td class="px-4">{{ b.profile.name }}</td>
-                <td>{{ b.router.name }}</td>
-                <td>{{ b.quantity }}</td>
-                <td>
-                    {% with pushed=b.vouchers.filter.pushed_to_router %}
-                    {{ b.vouchers.all.count }}
-                    {% endwith %}
-                </td>
-                <td><small class="text-muted">{{ b.created_at|date:"d M Y H:i" }}</small></td>
-                <td>
-                    <a href="{% url 'mikrotik:batch_print' b.uuid %}" class="btn btn-outline-primary btn-sm" target="_blank">
-                        <i class="bi bi-printer me-1"></i>Print
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<div class="mk-card">
+  <table class="mk-table">
+    <thead>
+      <tr>
+        <th>Profile</th>
+        <th>Router</th>
+        <th>Qty</th>
+        <th>Pushed</th>
+        <th>Failed</th>
+        <th>Date</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in batches %}
+      <tr>
+        <td style="font-weight:600; color:#e6edf3;">{{ b.profile.name }}</td>
+        <td><span class="mk-badge blue">{{ b.router.name }}</span></td>
+        <td>{{ b.quantity }}</td>
+        <td style="color:var(--mk-green);">{{ b.vouchers.filter.pushed_to_router|default:b.vouchers.all.count }}</td>
+        <td>
+          {% with failed=b.vouchers.all %}
+          {% for v in failed %}{% if not v.pushed_to_router %}{% endif %}{% endfor %}
+          —
+          {% endwith %}
+        </td>
+        <td style="color:var(--mk-muted);">{{ b.created_at|date:"d M Y H:i" }}</td>
+        <td>
+          <a href="{% url 'mikrotik:batch_print' b.uuid %}" class="mk-btn sm primary" target="_blank">
+            <i class="bi bi-printer"></i> Print
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
 </div>
 {% else %}
-<div class="chart-container text-center py-5">
-    <div style="font-size:3rem;opacity:.2;" class="mb-2"><i class="bi bi-archive"></i></div>
-    <h6>No batches yet</h6>
-    <p class="text-muted small">Generate your first batch of vouchers.</p>
-    <a href="{% url 'mikrotik:generate' %}" class="btn btn-primary btn-sm">Generate Vouchers</a>
+<div class="mk-empty">
+  <i class="bi bi-archive"></i>
+  <h6>No batches yet</h6>
+  <p style="font-size:12px; margin-bottom:16px;">Generate your first batch of vouchers.</p>
+  <a href="{% url 'mikrotik:generate' %}" class="mk-btn primary"><i class="bi bi-ticket-perforated"></i> Generate Vouchers</a>
 </div>
 {% endif %}
 {% endblock %}
