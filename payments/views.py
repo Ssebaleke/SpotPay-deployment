@@ -12,7 +12,6 @@ from .models import Payment, PaymentSystemConfig, PaymentSplit
 from .utils import get_active_provider, load_provider_adapter
 from .services.payment_success import handle_payment_success
 
-from wallets.models import VendorWallet
 from sms.services.sms_topup import credit_sms_wallet
 from sms.services.notifications import notify_vendor_payment_received, notify_vendor_receipt
 
@@ -189,29 +188,8 @@ def payment_callback(request):
                 ])
 
             if payment.purpose == "TRANSACTION" and payment.vendor_id:
-                system_cfg = PaymentSystemConfig.objects.first()
-                base_pct = system_cfg.base_system_percentage if system_cfg else Decimal("0.00")
-                subscription_pct = getattr(payment.vendor, "subscription_percentage", Decimal("0.00"))
-
-                admin_pct = base_pct + subscription_pct
-                admin_amount = (payment.amount * admin_pct) / Decimal("100")
-                vendor_amount = payment.amount - admin_amount
-
-                PaymentSplit.objects.get_or_create(
-                    payment=payment,
-                    defaults=dict(
-                        base_system_percentage=base_pct,
-                        subscription_percentage=subscription_pct,
-                        admin_amount=admin_amount,
-                        vendor_amount=vendor_amount,
-                    )
-                )
-
-                VendorWallet.credit(
-                    vendor=payment.vendor,
-                    amount=vendor_amount,
-                    reference=payment.uuid
-                )
+                # Split is handled in handle_payment_success — skip here to avoid duplicate
+                pass
 
             if payment.purpose == "SMS_PURCHASE" and payment.vendor_id:
                 try:
