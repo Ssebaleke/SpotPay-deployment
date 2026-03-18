@@ -63,6 +63,7 @@ def handle_payment_success(payment):
             voucher_code=voucher.code,
             package_name=package.name,
             payment=payment,
+            location=location,
         )
 
     notify_vendor_receipt(payment)
