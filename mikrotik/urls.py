@@ -11,6 +11,7 @@ urlpatterns = [
     path("routers/<int:pk>/test/", views.router_test, name="router_test"),
     path("profiles/", views.profile_list, name="profile_list"),
     path("profiles/add/", views.profile_add, name="profile_add"),
+    path("profiles/<int:pk>/edit/", views.profile_edit, name="profile_edit"),
     path("profiles/<int:pk>/delete/", views.profile_delete, name="profile_delete"),
     path("generate/", views.generate, name="generate"),
     path("batches/", views.batch_list, name="batch_list"),

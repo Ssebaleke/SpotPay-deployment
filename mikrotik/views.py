@@ -152,6 +152,32 @@ def profile_add(request):
 
 @login_required
 @_vendor_required
+def profile_edit(request, pk):
+    vendor = _get_vendor(request)
+    profile = get_object_or_404(VoucherProfile, pk=pk, vendor=vendor)
+    routers = RouterConnection.objects.filter(vendor=vendor)
+
+    if request.method == "POST":
+        router_id = request.POST.get("router_id")
+        router = get_object_or_404(RouterConnection, pk=router_id, vendor=vendor)
+        data_limit = request.POST.get("data_limit_mb") or None
+        profile.router = router
+        profile.name = request.POST.get("name", "").strip()
+        profile.price = request.POST.get("price", 0)
+        profile.validity_hours = int(request.POST.get("validity_hours", 24))
+        profile.data_limit_mb = int(data_limit) if data_limit else None
+        profile.shared_users = int(request.POST.get("shared_users", 1))
+        profile.save()
+        messages.success(request, "Profile updated.")
+        return redirect("mikrotik:profile_list")
+
+    return render(request, "mikrotik/profile_form.html", {
+        "vendor": vendor, "routers": routers, "profile": profile
+    })
+
+
+@login_required
+@_vendor_required
 def profile_delete(request, pk):
     vendor = _get_vendor(request)
     profile = get_object_or_404(VoucherProfile, pk=pk, vendor=vendor)

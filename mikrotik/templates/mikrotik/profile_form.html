@@ -1,6 +1,6 @@
 {% extends 'mikrotik/base.html' %}
-{% block title %}Add Profile — MikroTik Manager{% endblock %}
-{% block page_title %}Add Voucher Profile{% endblock %}
+{% block title %}{% if profile %}Edit{% else %}Add{% endif %} Profile — MikroTik Manager{% endblock %}
+{% block page_title %}{% if profile %}Edit Profile{% else %}Add Voucher Profile{% endif %}{% endblock %}
 {% block page_subtitle %}Set time, data and price for this voucher type{% endblock %}
 
 {% block content %}
@@ -19,38 +19,41 @@
           <select class="mk-select" name="router_id" required>
             <option value="">Select router...</option>
             {% for r in routers %}
-            <option value="{{ r.pk }}">{{ r.name }} ({{ r.host }})</option>
+            <option value="{{ r.pk }}" {% if profile and profile.router_id == r.pk %}selected{% endif %}>{{ r.name }} ({{ r.host }})</option>
             {% endfor %}
           </select>
         </div>
         <div class="mk-form-group">
           <label class="mk-label">Profile Name *</label>
-          <input type="text" class="mk-input" name="name" required placeholder="Must match MikroTik hotspot profile name exactly">
+          <input type="text" class="mk-input" name="name" required placeholder="Must match MikroTik hotspot profile name exactly" value="{% if profile %}{{ profile.name }}{% endif %}">
           <div class="mk-hint">Go to IP → Hotspot → User Profiles on your router to get the exact name.</div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
           <div class="mk-form-group">
             <label class="mk-label">Price (UGX)</label>
-            <input type="number" class="mk-input" name="price" value="0" min="0">
+            <input type="number" class="mk-input" name="price" value="{% if profile %}{{ profile.price }}{% else %}0{% endif %}" min="0">
           </div>
           <div class="mk-form-group">
             <label class="mk-label">Validity (hours) *</label>
-            <input type="number" class="mk-input" name="validity_hours" value="24" min="1" required>
+            <input type="number" class="mk-input" name="validity_hours" value="{% if profile %}{{ profile.validity_hours }}{% else %}24{% endif %}" min="1" required>
           </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
           <div class="mk-form-group">
             <label class="mk-label">Data Limit (MB)</label>
-            <input type="number" class="mk-input" name="data_limit_mb" placeholder="Blank = unlimited">
+            <input type="number" class="mk-input" name="data_limit_mb" placeholder="Blank = unlimited" value="{% if profile and profile.data_limit_mb %}{{ profile.data_limit_mb }}{% endif %}">
           </div>
           <div class="mk-form-group">
             <label class="mk-label">Shared Users</label>
-            <input type="number" class="mk-input" name="shared_users" value="1" min="1">
+            <input type="number" class="mk-input" name="shared_users" value="{% if profile %}{{ profile.shared_users }}{% else %}1{% endif %}" min="1">
           </div>
         </div>
         <div style="display:flex; gap:8px; margin-top:4px;">
           <a href="{% url 'mikrotik:profile_list' %}" class="mk-btn">Cancel</a>
-          <button type="submit" class="mk-btn primary"><i class="bi bi-plus-lg"></i> Create Profile</button>
+          <button type="submit" class="mk-btn primary">
+            <i class="bi bi-{% if profile %}check-lg{% else %}plus-lg{% endif %}"></i>
+            {% if profile %}Save Changes{% else %}Create Profile{% endif %}
+          </button>
         </div>
       </form>
       {% endif %}

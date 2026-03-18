@@ -31,7 +31,8 @@
         <td><i class="bi bi-clock" style="color:var(--mk-muted); margin-right:4px;"></i>{{ p.validity_hours }}h</td>
         <td>{% if p.data_limit_mb %}<i class="bi bi-database" style="color:var(--mk-muted); margin-right:4px;"></i>{{ p.data_limit_mb }} MB{% else %}<span style="color:var(--mk-muted);">Unlimited</span>{% endif %}</td>
         <td>{{ p.shared_users }}</td>
-        <td>
+        <td style="display:flex; gap:6px;">
+          <a href="{% url 'mikrotik:profile_edit' p.pk %}" class="mk-btn sm"><i class="bi bi-pencil"></i> Edit</a>
           <form method="POST" action="{% url 'mikrotik:profile_delete' p.pk %}" onsubmit="return confirm('Delete profile?')" style="margin:0;">
             {% csrf_token %}
             <button class="mk-btn sm danger"><i class="bi bi-trash"></i></button>
