@@ -37,24 +37,29 @@ class Migration(migrations.Migration):
             ],
             database_operations=[],
         ),
-        migrations.AddField(
-            model_name='paymentsplit',
-            name='subscription_mode',
-            field=models.CharField(default='MONTHLY', max_length=20),
-        ),
-        migrations.AddField(
-            model_name='paymentsystemconfig',
-            name='percentage_mode_percentage',
-            field=models.DecimalField(decimal_places=2, default=15, help_text='SpotPay commission % for PERCENTAGE MODE locations (e.g. 15)', max_digits=5),
-        ),
-        migrations.AddField(
-            model_name='paymentsystemconfig',
-            name='subscription_mode_percentage',
-            field=models.DecimalField(decimal_places=2, default=5, help_text='SpotPay commission % for MONTHLY SUBSCRIPTION locations (e.g. 5)', max_digits=5),
-        ),
-        migrations.AddField(
-            model_name='paymentsystemconfig',
-            name='updated_at',
-            field=models.DateTimeField(auto_now=True),
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.AddField(
+                    model_name='paymentsplit',
+                    name='subscription_mode',
+                    field=models.CharField(default='MONTHLY', max_length=20),
+                ),
+                migrations.AddField(
+                    model_name='paymentsystemconfig',
+                    name='percentage_mode_percentage',
+                    field=models.DecimalField(decimal_places=2, default=15, help_text='SpotPay commission % for PERCENTAGE MODE locations (e.g. 15)', max_digits=5),
+                ),
+                migrations.AddField(
+                    model_name='paymentsystemconfig',
+                    name='subscription_mode_percentage',
+                    field=models.DecimalField(decimal_places=2, default=5, help_text='SpotPay commission % for MONTHLY SUBSCRIPTION locations (e.g. 5)', max_digits=5),
+                ),
+                migrations.AddField(
+                    model_name='paymentsystemconfig',
+                    name='updated_at',
+                    field=models.DateTimeField(auto_now=True),
+                ),
+            ],
+            database_operations=[],
         ),
     ]
