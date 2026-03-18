@@ -71,7 +71,7 @@ def notify_vendor_receipt(payment):
     )
 
 
-
+def notify_vendor_approval(vendor):
     subject = "Your SpotPay Vendor Account is Approved"
     text = (
         f"Hello {vendor.company_name},\n\n"
@@ -85,15 +85,12 @@ def notify_vendor_receipt(payment):
         "<p>You can now log in and start using SpotPay.</p>"
         "<p>SpotPay</p>"
     )
-
     send_email(
         to_email=vendor.business_email or vendor.user.email,
         subject=subject,
         html=html,
         text=text,
     )
-
-
 
 
 def notify_withdrawal_status(withdrawal, status_text):
