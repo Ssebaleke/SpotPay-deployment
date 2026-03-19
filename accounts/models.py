@@ -2,6 +2,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
+from django.db.models import Sum
+from decimal import Decimal
 
 class Vendor(models.Model):
     STATUS_CHOICES = (
@@ -46,3 +48,21 @@ class Vendor(models.Model):
     
     def is_approved(self):
         return self.status == 'ACTIVE'
+    
+    @property
+    def total_received(self):
+        """Total amount received from successful payments (before commission)"""
+        from payments.models import Payment
+        return Payment.objects.filter(
+            vendor=self,
+            purpose="TRANSACTION",
+            status="SUCCESS"
+        ).aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
+    
+    @property
+    def wallet_balance(self):
+        """Current wallet balance"""
+        try:
+            return self.wallet.balance
+        except:
+            return Decimal("0.00")

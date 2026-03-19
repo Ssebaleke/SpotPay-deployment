@@ -5,6 +5,7 @@ from vouchers.services.issue_voucher import issue_voucher
 from sms.services.voucher_pay import send_voucher_sms
 from sms.services.notifications import notify_vendor_receipt
 from payments.models import PaymentVoucher, PaymentSplit, PaymentSystemConfig
+from wallets.models import VendorWallet
 
 
 def handle_payment_success(payment):
@@ -54,6 +55,13 @@ def handle_payment_success(payment):
                 spotpay_percentage=pct,
                 spotpay_amount=spotpay_amount,
                 vendor_amount=vendor_amount,
+            )
+
+            # Credit vendor wallet with their share
+            VendorWallet.credit(
+                vendor=vendor,
+                amount=vendor_amount,
+                reference=str(payment.uuid)
             )
 
     if phone:
