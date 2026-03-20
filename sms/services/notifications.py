@@ -1,5 +1,16 @@
+import logging
 from sms.services.email_gateway import send_email
 from sms.services.sms_gateway import send_sms
+
+logger = logging.getLogger(__name__)
+
+
+def _send(*, to_email, subject, html=None, text=None, context=""):
+    """Wrapper — logs failures so nothing is silently swallowed."""
+    ok, resp = send_email(to_email=to_email, subject=subject, html=html, text=text)
+    if not ok:
+        logger.error(f"Email failed [{context}] to={to_email} subject='{subject}' reason={resp}")
+    return ok, resp
 
 
 def notify_vendor_payment_received(payment):
@@ -23,11 +34,12 @@ def notify_vendor_payment_received(payment):
         "<p>SpotPay</p>"
     )
 
-    send_email(
+    _send(
         to_email=vendor.business_email or vendor.user.email,
         subject=subject,
         html=html,
         text=text,
+        context="notify_vendor_payment_received",
     )
 
     if vendor.business_phone:
@@ -64,10 +76,11 @@ def notify_vendor_receipt(payment):
         f"<p>Thank you for using SpotPay.</p>"
     )
 
-    send_email(
+    _send(
         to_email=vendor.business_email or vendor.user.email,
         subject=subject,
         html=html,
+        context="notify_vendor_receipt",
     )
 
 
@@ -85,11 +98,12 @@ def notify_vendor_approval(vendor):
         "<p>You can now log in and start using SpotPay.</p>"
         "<p>SpotPay</p>"
     )
-    send_email(
+    _send(
         to_email=vendor.business_email or vendor.user.email,
         subject=subject,
         html=html,
         text=text,
+        context="notify_vendor_approval",
     )
 
 
@@ -106,10 +120,11 @@ def notify_withdrawal_status(withdrawal, status_text):
         "SpotPay"
     )
 
-    send_email(
+    _send(
         to_email=vendor.business_email or vendor.user.email,
         subject=subject,
         text=text,
+        context="notify_withdrawal_status",
     )
 
     if vendor.business_phone:
@@ -119,3 +134,80 @@ def notify_withdrawal_status(withdrawal, status_text):
             message=f"Withdrawal {status_text}: UGX {withdrawal.amount}. Ref {withdrawal.reference}",
             purpose="WITHDRAWAL_STATUS",
         )
+
+
+def notify_vendor_registration(vendor):
+    """Welcome email to vendor after they register — before approval."""
+    subject = "Welcome to SpotPay — Registration Received"
+    html = (
+        f"<p>Hello {vendor.company_name},</p>"
+        f"<p>Thank you for registering on <strong>SpotPay</strong>.</p>"
+        f"<p>Your account is currently <strong>pending review</strong>. "
+        f"Our team will review your details and notify you once approved.</p>"
+        f"<p>If you have any questions, reply to this email or contact support@spotpay.it.com</p>"
+        f"<p>SpotPay Team</p>"
+    )
+    _send(
+        to_email=vendor.business_email or vendor.user.email,
+        subject=subject,
+        html=html,
+        context="notify_vendor_registration",
+    )
+
+
+def notify_admin_new_vendor(vendor):
+    """Alert admin when a new vendor registers — requires ADMIN_EMAIL env var."""
+    import os
+    admin_email = os.getenv("ADMIN_EMAIL", "").strip()
+    if not admin_email:
+        logger.warning("notify_admin_new_vendor: ADMIN_EMAIL not set, skipping admin alert")
+        return
+
+    subject = f"New Vendor Registration — {vendor.company_name}"
+    html = (
+        f"<p>A new vendor has registered on SpotPay and is awaiting approval.</p>"
+        f"<table style='border-collapse:collapse; font-size:14px;'>"
+        f"<tr><td style='padding:6px 12px; border:1px solid #ddd;'><strong>Company</strong></td><td style='padding:6px 12px; border:1px solid #ddd;'>{vendor.company_name}</td></tr>"
+        f"<tr><td style='padding:6px 12px; border:1px solid #ddd;'><strong>Contact</strong></td><td style='padding:6px 12px; border:1px solid #ddd;'>{vendor.contact_person}</td></tr>"
+        f"<tr><td style='padding:6px 12px; border:1px solid #ddd;'><strong>Email</strong></td><td style='padding:6px 12px; border:1px solid #ddd;'>{vendor.business_email}</td></tr>"
+        f"<tr><td style='padding:6px 12px; border:1px solid #ddd;'><strong>Phone</strong></td><td style='padding:6px 12px; border:1px solid #ddd;'>{vendor.business_phone}</td></tr>"
+        f"<tr><td style='padding:6px 12px; border:1px solid #ddd;'><strong>Registered</strong></td><td style='padding:6px 12px; border:1px solid #ddd;'>{vendor.created_at}</td></tr>"
+        f"</table>"
+        f"<p>Log in to the admin dashboard to approve or reject this vendor.</p>"
+    )
+    _send(
+        to_email=admin_email,
+        subject=subject,
+        html=html,
+        context="notify_admin_new_vendor",
+    )
+
+
+def notify_subscription_expiry(location, days_left):
+    """Warn vendor their location subscription is expiring soon or has expired."""
+    vendor = location.vendor
+    if days_left < 0:
+        subject = f"Subscription Expired — {location.site_name}"
+        html = (
+            f"<p>Hello {vendor.company_name},</p>"
+            f"<p>Your subscription for <strong>{location.site_name}</strong> has <strong style='color:#dc2626;'>expired</strong>.</p>"
+            f"<p>Your hotspot is now <strong>inactive</strong>. Clients can no longer purchase vouchers at this location.</p>"
+            f"<p>Please renew your subscription immediately to restore service.</p>"
+            f"<p><a href='https://spotpay.it.com/payments/subscription/' style='background:#4361ee;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;'>Renew Now</a></p>"
+            f"<p>SpotPay Team</p>"
+        )
+    else:
+        subject = f"Subscription Expiring in {days_left} Day(s) — {location.site_name}"
+        html = (
+            f"<p>Hello {vendor.company_name},</p>"
+            f"<p>Your subscription for <strong>{location.site_name}</strong> expires in <strong>{days_left} day(s)</strong>.</p>"
+            f"<p>Renew now to avoid service interruption.</p>"
+            f"<p><a href='https://spotpay.it.com/payments/subscription/' style='background:#4361ee;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;'>Renew Subscription</a></p>"
+            f"<p>SpotPay Team</p>"
+        )
+    _send(
+        to_email=vendor.business_email or vendor.user.email,
+        subject=subject,
+        html=html,
+        context="notify_subscription_expiry",
+    )

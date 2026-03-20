@@ -15,7 +15,7 @@ from datetime import timedelta
 from payments.models import Payment, PaymentProvider
 from sms.models import VendorSMSWallet
 from wallets.models import VendorWallet, WithdrawalRequest, WalletTransaction
-from sms.services.notifications import notify_withdrawal_status, notify_vendor_approval
+from sms.services.notifications import notify_withdrawal_status, notify_vendor_approval, notify_vendor_registration, notify_admin_new_vendor
 
 from .forms import VendorRegistrationForm, VendorProfileForm
 from .models import Vendor
@@ -38,7 +38,12 @@ def vendor_register(request):
     if request.method == 'POST':
         form = VendorRegistrationForm(request.POST)
         if form.is_valid():
-            form.save()
+            vendor = form.save()
+            try:
+                notify_vendor_registration(vendor)
+                notify_admin_new_vendor(vendor)
+            except Exception:
+                pass  # never block registration if email fails
             messages.success(
                 request,
                 'Registration successful! Please wait for admin approval.'

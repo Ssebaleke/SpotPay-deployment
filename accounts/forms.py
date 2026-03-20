@@ -70,29 +70,6 @@ class VendorRegistrationForm(forms.Form):
                     status='PENDING'
                 )
 
-                # Send email notification to vendor
-                try:
-                    from sms.services.email_gateway import send_email
-                    send_email(
-                        to_email=self.cleaned_data['email'],
-                        subject="SpotPay - Account Received, Awaiting Approval",
-                        html=(
-                            f"<p>Hello {self.cleaned_data['contact_person']},</p>"
-                            f"<p>Thank you for registering <strong>{self.cleaned_data['company_name']}</strong> on SpotPay.</p>"
-                            f"<p>Your account has been received and is <strong>awaiting admin approval</strong>. "
-                            f"You will be notified once your account is approved and you can sign in.</p>"
-                            f"<p>SpotPay</p>"
-                        ),
-                        text=(
-                            f"Hello {self.cleaned_data['contact_person']},\n\n"
-                            f"Thank you for registering {self.cleaned_data['company_name']} on SpotPay.\n"
-                            f"Your account is awaiting admin approval. You will be notified once approved.\n\n"
-                            f"SpotPay"
-                        ),
-                    )
-                except Exception:
-                    pass
-
                 return vendor
 
         except IntegrityError:
