@@ -1,171 +1,158 @@
 {% extends 'accounts/base.html' %}
-
-{% block title %}Analytics - SpotPay{% endblock %}
+{% block title %}Analytics — SpotPay{% endblock %}
 {% block page_title %}Analytics{% endblock %}
-{% block page_subtitle %}Overall performance and per-location breakdown{% endblock %}
+{% block page_subtitle %}Deep dive into your business performance{% endblock %}
 
 {% block extra_css %}
 <style>
-    .ana-tabs { display: flex; gap: 8px; margin-bottom: 1.25rem; }
-    .ana-tab {
-        padding: 8px 20px; border-radius: 8px; font-size: .85rem; font-weight: 600;
-        cursor: pointer; border: 1.5px solid var(--border-color);
-        color: var(--text-secondary); background: var(--bg-secondary); transition: all .2s;
+    .an-stat {
+        background: var(--bg-secondary);
+        border-radius: 14px;
+        padding: 20px 22px;
+        box-shadow: 0 4px 20px var(--shadow);
+        display: flex; align-items: center; gap: 16px;
     }
-    .ana-tab.active { background: #4361ee; border-color: #4361ee; color: #fff; }
-    .ana-pane { display: none; }
-    .ana-pane.active { display: block; }
-
-    .loc-card {
-        border-radius: 14px; padding: 16px 18px; color: #fff;
-        box-shadow: 0 4px 14px rgba(0,0,0,.15);
-        display: flex; flex-direction: column; gap: 5px; transition: transform .2s;
+    .an-stat-icon {
+        width: 50px; height: 50px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem; flex-shrink: 0;
     }
-    .loc-card:hover { transform: translateY(-3px); }
-    .loc-icon { width: 36px; height: 36px; background: rgba(255,255,255,.2); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 1rem; margin-bottom: 4px; }
-    .loc-name { font-size: .82rem; font-weight: 700; }
-    .loc-val  { font-size: 1.1rem; font-weight: 800; }
-    .loc-sub  { font-size: .7rem; color: rgba(255,255,255,.75); }
-    .lc1 { background: linear-gradient(135deg,#4361ee,#3a0ca3); }
-    .lc2 { background: linear-gradient(135deg,#2dc653,#1a7a32); }
-    .lc3 { background: linear-gradient(135deg,#f77f00,#a04800); }
-    .lc4 { background: linear-gradient(135deg,#7b2ff7,#4a0e8f); }
-    .lc5 { background: linear-gradient(135deg,#e63946,#9b1b25); }
-    .lc6 { background: linear-gradient(135deg,#2ec4b6,#0d6e67); }
-    .lc7 { background: linear-gradient(135deg,#e07a2f,#8c4010); }
-    .lc8 { background: linear-gradient(135deg,#0369a1,#1d4ed8); }
+    .an-stat-val  { font-size: 1.25rem; font-weight: 800; line-height: 1.2; }
+    .an-stat-lbl  { font-size: .75rem; color: var(--text-secondary); margin-top: 2px; }
+    .an-stat-sub  { font-size: .72rem; color: var(--text-secondary); margin-top: 4px; }
 
-    .sum-box { background: var(--bg-secondary); border-radius: 12px; padding: 16px 18px; box-shadow: 0 2px 10px var(--shadow); display: flex; align-items: center; gap: 14px; }
-    .sum-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
-    .period-bar { background: var(--bg-secondary); border-radius: 12px; padding: 12px 16px; box-shadow: 0 2px 10px var(--shadow); margin-bottom: 1.25rem; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .period-bar label { font-size: .82rem; color: var(--text-secondary); margin: 0; }
+    .an-card {
+        background: var(--bg-secondary);
+        border-radius: 14px;
+        padding: 22px 24px;
+        box-shadow: 0 4px 20px var(--shadow);
+        height: 100%;
+    }
+    .an-card-title {
+        font-size: .85rem; font-weight: 700;
+        display: flex; align-items: center; justify-content: space-between;
+        margin-bottom: 18px;
+    }
 
-    .loc-section { background: var(--bg-secondary); border-radius: 14px; padding: 20px; box-shadow: 0 4px 18px var(--shadow); margin-bottom: 1.25rem; }
-    .loc-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-    .loc-section-title { font-size: .9rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-    .loc-badge { font-size: .7rem; padding: 3px 10px; border-radius: 20px; }
+    .period-group .btn { font-size: .75rem; padding: 4px 12px; }
+
+    .an-filter-bar {
+        background: var(--bg-secondary);
+        border-radius: 12px;
+        padding: 12px 18px;
+        box-shadow: 0 2px 10px var(--shadow);
+        margin-bottom: 1.5rem;
+        display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }
+    .an-filter-bar label { font-size: .82rem; color: var(--text-secondary); margin: 0; white-space: nowrap; }
+    .an-filter-bar select { font-size: .82rem; max-width: 220px; }
+
+    .pkg-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .pkg-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .pkg-name { font-size: .8rem; flex: 1; }
+    .pkg-bar-wrap { flex: 2; background: var(--bg-primary); border-radius: 4px; height: 6px; overflow: hidden; }
+    .pkg-bar-fill { height: 100%; border-radius: 4px; }
+    .pkg-count { font-size: .78rem; font-weight: 700; color: var(--text-secondary); min-width: 28px; text-align: right; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- Tabs -->
-<div class="ana-tabs">
-    <div class="ana-tab active" onclick="switchTab('overall', this)"><i class="bi bi-bar-chart me-1"></i>Overall</div>
-    <div class="ana-tab" onclick="switchTab('locations', this)"><i class="bi bi-geo-alt me-1"></i>By Location</div>
-</div>
-
-<!-- ═══ OVERALL TAB ═══ -->
-<div class="ana-pane active" id="pane-overall">
-
-    <!-- Period filter -->
-    <div class="period-bar">
-        <label><i class="bi bi-clock me-1"></i>Period:</label>
-        <div class="btn-group">
-            <button class="btn btn-sm btn-outline-primary period-btn active" data-period="daily">Daily</button>
-            <button class="btn btn-sm btn-outline-primary period-btn" data-period="weekly">Weekly</button>
-            <button class="btn btn-sm btn-outline-primary period-btn" data-period="monthly">Monthly</button>
-            <button class="btn btn-sm btn-outline-primary period-btn" data-period="annual">Annual</button>
-        </div>
-    </div>
-
-    <!-- Summary -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="sum-box">
-                <div class="sum-icon" style="background:rgba(67,97,238,.12);color:#4361ee;"><i class="bi bi-calendar-day"></i></div>
-                <div><div class="fw-bold" id="ov-today">—</div><small class="text-muted">Today</small></div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="sum-box">
-                <div class="sum-icon" style="background:rgba(45,198,83,.12);color:#2dc653;"><i class="bi bi-calendar-month"></i></div>
-                <div><div class="fw-bold" id="ov-month">—</div><small class="text-muted">This Month</small></div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="sum-box">
-                <div class="sum-icon" style="background:rgba(123,47,247,.12);color:#7b2ff7;"><i class="bi bi-graph-up-arrow"></i></div>
-                <div><div class="fw-bold" id="ov-all">—</div><small class="text-muted">All Time</small></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Chart -->
-    <div class="chart-container">
-        <h6 class="fw-semibold mb-3" id="ov-chart-title">Revenue — All Locations</h6>
-        <div style="height:350px;"><canvas id="ovChart"></canvas></div>
-    </div>
-</div>
-
-<!-- ═══ BY LOCATION TAB ═══ -->
-<div class="ana-pane" id="pane-locations">
-
-    {% if location_stats %}
-
-    <!-- Location cards summary -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:1.5rem;">
-        {% for stat in location_stats %}
-        <div class="loc-card lc{{ forloop.counter }}" style="cursor:pointer;" onclick="selectLocation('{{ stat.location.id }}', '{{ stat.location.site_name }}')">
-            <div class="loc-icon"><i class="bi bi-geo-alt"></i></div>
-            <div class="loc-name">{{ stat.location.site_name }}</div>
-            <div class="loc-val">UGX {{ stat.total }}</div>
-            <div class="loc-sub">{{ stat.count }} transactions</div>
-            <div class="loc-sub">Today: UGX {{ stat.today }}</div>
-            <div class="loc-sub">This month: UGX {{ stat.month }}</div>
-        </div>
+<!-- Filter bar -->
+<div class="an-filter-bar">
+    <label><i class="bi bi-funnel me-1"></i>Location:</label>
+    <select class="form-select form-select-sm" id="locationFilter">
+        <option value="">All Locations</option>
+        {% for loc in location_rows %}
+        <option value="{{ loc.id }}">{{ loc.name }}</option>
         {% endfor %}
+    </select>
+    <div class="ms-auto btn-group period-group" id="periodGroup">
+        <button class="btn btn-sm btn-outline-primary active" data-period="daily">Daily</button>
+        <button class="btn btn-sm btn-outline-primary" data-period="weekly">Weekly</button>
+        <button class="btn btn-sm btn-outline-primary" data-period="monthly">Monthly</button>
+        <button class="btn btn-sm btn-outline-primary" data-period="annual">Annual</button>
     </div>
+</div>
 
-    <!-- Location chart section -->
-    <div class="loc-section">
-        <div class="loc-section-header">
-            <div class="loc-section-title">
-                <i class="bi bi-bar-chart" style="color:#4361ee;"></i>
-                <span id="loc-chart-title">Select a location above to view its chart</span>
-            </div>
-            <div class="btn-group" id="loc-period-group">
-                <button class="btn btn-sm btn-outline-primary loc-period-btn active" data-period="daily">Daily</button>
-                <button class="btn btn-sm btn-outline-primary loc-period-btn" data-period="weekly">Weekly</button>
-                <button class="btn btn-sm btn-outline-primary loc-period-btn" data-period="monthly">Monthly</button>
-                <button class="btn btn-sm btn-outline-primary loc-period-btn" data-period="annual">Annual</button>
+<!-- Stat cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="an-stat">
+            <div class="an-stat-icon" style="background:rgba(67,97,238,.12);color:#4361ee;"><i class="bi bi-cash-stack"></i></div>
+            <div>
+                <div class="an-stat-val" id="s-today-rev">UGX {{ today_revenue|floatformat:0 }}</div>
+                <div class="an-stat-lbl">Today's Revenue</div>
+                <div class="an-stat-sub" id="s-today-cust">{{ today_customers }} customers</div>
             </div>
         </div>
-
-        <!-- Location summary -->
-        <div class="row g-3 mb-3" id="loc-summary" style="display:none!important;">
-            <div class="col-md-4">
-                <div class="sum-box">
-                    <div class="sum-icon" style="background:rgba(67,97,238,.12);color:#4361ee;"><i class="bi bi-calendar-day"></i></div>
-                    <div><div class="fw-bold" id="loc-today">—</div><small class="text-muted">Today</small></div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="sum-box">
-                    <div class="sum-icon" style="background:rgba(45,198,83,.12);color:#2dc653;"><i class="bi bi-calendar-month"></i></div>
-                    <div><div class="fw-bold" id="loc-month">—</div><small class="text-muted">This Month</small></div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="sum-box">
-                    <div class="sum-icon" style="background:rgba(123,47,247,.12);color:#7b2ff7;"><i class="bi bi-graph-up-arrow"></i></div>
-                    <div><div class="fw-bold" id="loc-all">—</div><small class="text-muted">All Time</small></div>
-                </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="an-stat">
+            <div class="an-stat-icon" style="background:rgba(45,198,83,.12);color:#2dc653;"><i class="bi bi-calendar-month"></i></div>
+            <div>
+                <div class="an-stat-val" id="s-month-rev">UGX {{ month_revenue|floatformat:0 }}</div>
+                <div class="an-stat-lbl">This Month</div>
+                <div class="an-stat-sub" id="s-month-cust">{{ month_customers }} customers</div>
             </div>
         </div>
-
-        <div style="height:320px;"><canvas id="locChart"></canvas></div>
     </div>
-
-    {% else %}
-    <div class="chart-container text-center py-5">
-        <div style="font-size:3rem;opacity:.2;"><i class="bi bi-geo-alt"></i></div>
-        <h6 class="mt-3">No locations found</h6>
-        <p class="text-muted mb-3">Add a location to see per-location analytics.</p>
-        <a href="{% url 'locations_list' %}" class="btn btn-primary btn-sm">Add Location</a>
+    <div class="col-6 col-md-3">
+        <div class="an-stat">
+            <div class="an-stat-icon" style="background:rgba(123,47,247,.12);color:#7b2ff7;"><i class="bi bi-graph-up-arrow"></i></div>
+            <div>
+                <div class="an-stat-val" id="s-all-rev">UGX {{ total_revenue|floatformat:0 }}</div>
+                <div class="an-stat-lbl">All Time Revenue</div>
+                <div class="an-stat-sub" id="s-all-cust">{{ total_customers }} customers</div>
+            </div>
+        </div>
     </div>
-    {% endif %}
+    <div class="col-6 col-md-3">
+        <div class="an-stat">
+            <div class="an-stat-icon" style="background:rgba(247,127,0,.12);color:#f77f00;"><i class="bi bi-people"></i></div>
+            <div>
+                <div class="an-stat-val" id="s-loc-count">{{ location_rows|length }}</div>
+                <div class="an-stat-lbl">Active Locations</div>
+                <div class="an-stat-sub">hotspot sites</div>
+            </div>
+        </div>
+    </div>
+</div>
 
+<!-- Revenue bar + Customers bar -->
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="an-card">
+            <div class="an-card-title">
+                <span><i class="bi bi-bar-chart-fill me-2" style="color:#4361ee;"></i>Revenue</span>
+                <small class="text-muted" id="rev-period-label">Last 7 days</small>
+            </div>
+            <div style="height:280px;"><canvas id="revenueChart"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="an-card">
+            <div class="an-card-title">
+                <span><i class="bi bi-pie-chart-fill me-2" style="color:#7b2ff7;"></i>Top Packages</span>
+                <small class="text-muted">by sales</small>
+            </div>
+            <div style="height:200px;"><canvas id="donutChart"></canvas></div>
+            <div id="pkg-legend" class="mt-3"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Customers bar -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="an-card">
+            <div class="an-card-title">
+                <span><i class="bi bi-people-fill me-2" style="color:#2dc653;"></i>Customers (Transactions)</span>
+                <small class="text-muted" id="cust-period-label">Last 7 days</small>
+            </div>
+            <div style="height:220px;"><canvas id="customersChart"></canvas></div>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
@@ -173,20 +160,25 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-function fmt(n) { return 'UGX ' + parseFloat(n).toLocaleString(undefined, {minimumFractionDigits:0}); }
+const DONUT_COLORS = ['#4361ee','#7b2ff7','#2dc653','#f77f00','#e63946','#2ec4b6'];
 
-// ── Tab switch ──
-function switchTab(name, el) {
-    document.querySelectorAll('.ana-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.ana-pane').forEach(p => p.classList.remove('active'));
-    el.classList.add('active');
-    document.getElementById('pane-' + name).classList.add('active');
+function fmt(n) {
+    return 'UGX ' + parseFloat(n).toLocaleString(undefined, {minimumFractionDigits: 0});
 }
 
-// ── Overall chart ──
-const ovChart = new Chart(document.getElementById('ovChart'), {
+const periodLabels = {
+    daily: 'Last 24 hours', weekly: 'Last 7 days',
+    monthly: 'Last 30 days', annual: 'Last 12 months'
+};
+
+// ── Revenue bar chart ──
+const revenueChart = new Chart(document.getElementById('revenueChart'), {
     type: 'bar',
-    data: { labels: [], datasets: [{ label: 'UGX', data: [], backgroundColor: 'rgba(67,97,238,0.75)', borderRadius: 6, borderSkipped: false }] },
+    data: { labels: [], datasets: [{
+        label: 'Revenue (UGX)', data: [],
+        backgroundColor: 'rgba(67,97,238,0.75)',
+        borderRadius: 5, borderSkipped: false,
+    }]},
     options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
@@ -194,69 +186,94 @@ const ovChart = new Chart(document.getElementById('ovChart'), {
     }
 });
 
-function loadOverall() {
-    const period = document.querySelector('.period-btn.active').dataset.period;
-    fetch(`/analytics/data/?period=${period}`)
-        .then(r => r.json()).then(data => {
-            ovChart.data.labels = data.labels;
-            ovChart.data.datasets[0].data = data.values;
-            ovChart.update();
-            document.getElementById('ov-today').textContent = fmt(data.summary.total_today);
-            document.getElementById('ov-month').textContent = fmt(data.summary.total_month);
-            document.getElementById('ov-all').textContent = fmt(data.summary.total_all);
-        });
-}
-
-document.querySelectorAll('.period-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-        this.classList.add('active');
-        loadOverall();
-    });
-});
-
-loadOverall();
-
-// ── Location chart ──
-const locChart = new Chart(document.getElementById('locChart'), {
+// ── Customers bar chart ──
+const customersChart = new Chart(document.getElementById('customersChart'), {
     type: 'bar',
-    data: { labels: [], datasets: [{ label: 'UGX', data: [], backgroundColor: 'rgba(46,196,182,0.75)', borderRadius: 6, borderSkipped: false }] },
+    data: { labels: [], datasets: [{
+        label: 'Customers', data: [],
+        backgroundColor: 'rgba(45,198,83,0.75)',
+        borderRadius: 5, borderSkipped: false,
+    }]},
     options: {
         responsive: true, maintainAspectRatio: false,
         plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + v.toLocaleString() } } }
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
     }
 });
 
-let activeLocId = '';
+// ── Donut chart ──
+const donutChart = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: { labels: [], datasets: [{ data: [], backgroundColor: DONUT_COLORS, borderWidth: 2 }]},
+    options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '65%',
+        plugins: { legend: { display: false } }
+    }
+});
 
-function selectLocation(id, name) {
-    activeLocId = id;
-    document.getElementById('loc-chart-title').textContent = name + ' — Revenue';
-    document.getElementById('loc-summary').style.setProperty('display', 'flex', 'important');
-    loadLocation();
+function renderPkgLegend(packages) {
+    const el = document.getElementById('pkg-legend');
+    if (!packages.length) { el.innerHTML = '<small class="text-muted">No data yet</small>'; return; }
+    const max = Math.max(...packages.map(p => p.sales));
+    el.innerHTML = packages.map((p, i) => `
+        <div class="pkg-row">
+            <div class="pkg-dot" style="background:${DONUT_COLORS[i % DONUT_COLORS.length]};"></div>
+            <div class="pkg-name">${p.name}</div>
+            <div class="pkg-bar-wrap"><div class="pkg-bar-fill" style="width:${max ? (p.sales/max*100) : 0}%;background:${DONUT_COLORS[i % DONUT_COLORS.length]};"></div></div>
+            <div class="pkg-count">${p.sales}</div>
+        </div>`).join('');
 }
 
-function loadLocation() {
-    if (!activeLocId) return;
-    const period = document.querySelector('.loc-period-btn.active').dataset.period;
-    fetch(`/analytics/data/?period=${period}&location=${activeLocId}`)
-        .then(r => r.json()).then(data => {
-            locChart.data.labels = data.labels;
-            locChart.data.datasets[0].data = data.values;
-            locChart.update();
-            document.getElementById('loc-today').textContent = fmt(data.summary.total_today);
-            document.getElementById('loc-month').textContent = fmt(data.summary.total_month);
-            document.getElementById('loc-all').textContent = fmt(data.summary.total_all);
-        });
+function load() {
+    const period   = document.querySelector('#periodGroup .active').dataset.period;
+    const location = document.getElementById('locationFilter').value;
+    const url      = `/analytics/data/?period=${period}${location ? '&location=' + location : ''}`;
+
+    document.getElementById('rev-period-label').textContent  = periodLabels[period];
+    document.getElementById('cust-period-label').textContent = periodLabels[period];
+
+    fetch(url).then(r => r.json()).then(data => {
+        // Revenue chart
+        revenueChart.data.labels = data.labels;
+        revenueChart.data.datasets[0].data = data.revenue;
+        revenueChart.update();
+
+        // Customers chart
+        customersChart.data.labels = data.labels;
+        customersChart.data.datasets[0].data = data.customers;
+        customersChart.update();
+
+        // Stat cards
+        const s = data.summary;
+        document.getElementById('s-today-rev').textContent  = fmt(s.today_revenue);
+        document.getElementById('s-today-cust').textContent = s.today_customers + ' customers';
+        document.getElementById('s-month-rev').textContent  = fmt(s.month_revenue);
+        document.getElementById('s-month-cust').textContent = s.month_customers + ' customers';
+        document.getElementById('s-all-rev').textContent    = fmt(s.total_revenue);
+        document.getElementById('s-all-cust').textContent   = s.total_customers + ' customers';
+
+        // Donut
+        const pkgs = data.top_packages;
+        donutChart.data.labels = pkgs.map(p => p.name);
+        donutChart.data.datasets[0].data = pkgs.map(p => p.sales);
+        donutChart.update();
+        renderPkgLegend(pkgs);
+    });
 }
 
-document.querySelectorAll('.loc-period-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.loc-period-btn').forEach(b => b.classList.remove('active'));
+// Period buttons
+document.querySelectorAll('#periodGroup .btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+        document.querySelectorAll('#periodGroup .btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
-        loadLocation();
+        load();
     });
 });
+
+// Location filter
+document.getElementById('locationFilter').addEventListener('change', load);
+
+load();
 </script>
 {% endblock %}
