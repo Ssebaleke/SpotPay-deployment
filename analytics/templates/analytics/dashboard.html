@@ -6,20 +6,28 @@
 {% block extra_css %}
 <style>
     .an-stat {
-        background: var(--bg-secondary);
         border-radius: 14px;
         padding: 20px 22px;
-        box-shadow: 0 4px 20px var(--shadow);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
         display: flex; align-items: center; gap: 16px;
+        color: #fff;
+        transition: transform 0.2s;
     }
+    .an-stat:hover { transform: translateY(-3px); }
     .an-stat-icon {
         width: 50px; height: 50px; border-radius: 12px;
         display: flex; align-items: center; justify-content: center;
         font-size: 1.3rem; flex-shrink: 0;
+        background: rgba(255,255,255,0.2);
     }
     .an-stat-val  { font-size: 1.25rem; font-weight: 800; line-height: 1.2; }
-    .an-stat-lbl  { font-size: .75rem; color: var(--text-secondary); margin-top: 2px; }
-    .an-stat-sub  { font-size: .72rem; color: var(--text-secondary); margin-top: 4px; }
+    .an-stat-lbl  { font-size: .75rem; color: rgba(255,255,255,0.85); margin-top: 2px; }
+    .an-stat-sub  { font-size: .72rem; color: rgba(255,255,255,0.75); margin-top: 4px; }
+
+    .an-stat-1 { background: linear-gradient(135deg, #4361ee, #3a0ca3); }
+    .an-stat-2 { background: linear-gradient(135deg, #2dc653, #1a7a32); }
+    .an-stat-3 { background: linear-gradient(135deg, #7b2ff7, #4a0e8f); }
+    .an-stat-4 { background: linear-gradient(135deg, #f77f00, #a04800); }
 
     .an-card {
         background: var(--bg-secondary);
@@ -78,8 +86,8 @@
 <!-- Stat cards -->
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
-        <div class="an-stat">
-            <div class="an-stat-icon" style="background:rgba(67,97,238,.12);color:#4361ee;"><i class="bi bi-cash-stack"></i></div>
+        <div class="an-stat an-stat-1">
+            <div class="an-stat-icon"><i class="bi bi-calendar-day"></i></div>
             <div>
                 <div class="an-stat-val" id="s-today-rev">UGX {{ today_revenue|floatformat:0 }}</div>
                 <div class="an-stat-lbl">Today's Revenue</div>
@@ -88,8 +96,18 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="an-stat">
-            <div class="an-stat-icon" style="background:rgba(45,198,83,.12);color:#2dc653;"><i class="bi bi-calendar-month"></i></div>
+        <div class="an-stat an-stat-2">
+            <div class="an-stat-icon"><i class="bi bi-calendar-week"></i></div>
+            <div>
+                <div class="an-stat-val" id="s-week-rev">—</div>
+                <div class="an-stat-lbl">This Week</div>
+                <div class="an-stat-sub" id="s-week-cust">— customers</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="an-stat an-stat-3">
+            <div class="an-stat-icon"><i class="bi bi-calendar-month"></i></div>
             <div>
                 <div class="an-stat-val" id="s-month-rev">UGX {{ month_revenue|floatformat:0 }}</div>
                 <div class="an-stat-lbl">This Month</div>
@@ -98,18 +116,8 @@
         </div>
     </div>
     <div class="col-6 col-md-3">
-        <div class="an-stat">
-            <div class="an-stat-icon" style="background:rgba(123,47,247,.12);color:#7b2ff7;"><i class="bi bi-graph-up-arrow"></i></div>
-            <div>
-                <div class="an-stat-val" id="s-all-rev">UGX {{ total_revenue|floatformat:0 }}</div>
-                <div class="an-stat-lbl">All Time Revenue</div>
-                <div class="an-stat-sub" id="s-all-cust">{{ total_customers }} customers</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="an-stat">
-            <div class="an-stat-icon" style="background:rgba(247,127,0,.12);color:#f77f00;"><i class="bi bi-people"></i></div>
+        <div class="an-stat an-stat-4">
+            <div class="an-stat-icon"><i class="bi bi-geo-alt"></i></div>
             <div>
                 <div class="an-stat-val" id="s-loc-count">{{ location_rows|length }}</div>
                 <div class="an-stat-lbl">Active Locations</div>
@@ -248,10 +256,10 @@ function load() {
         const s = data.summary;
         document.getElementById('s-today-rev').textContent  = fmt(s.today_revenue);
         document.getElementById('s-today-cust').textContent = s.today_customers + ' customers';
+        document.getElementById('s-week-rev').textContent   = fmt(s.week_revenue);
+        document.getElementById('s-week-cust').textContent  = s.week_customers + ' customers';
         document.getElementById('s-month-rev').textContent  = fmt(s.month_revenue);
         document.getElementById('s-month-cust').textContent = s.month_customers + ' customers';
-        document.getElementById('s-all-rev').textContent    = fmt(s.total_revenue);
-        document.getElementById('s-all-cust').textContent   = s.total_customers + ' customers';
 
         // Donut
         const pkgs = data.top_packages;

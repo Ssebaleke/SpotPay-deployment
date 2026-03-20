@@ -25,14 +25,18 @@ def analytics_dashboard(request):
         return redirect('vendor_login')
 
     now = timezone.now()
+    today = now.date()
+    week_start = today - timedelta(days=today.weekday())  # Monday of current week
     locations = HotspotLocation.objects.filter(vendor=vendor)
     base_qs = Payment.objects.filter(vendor=vendor, purpose='TRANSACTION', status='SUCCESS')
 
     # Summary totals
     total_revenue   = base_qs.aggregate(t=Sum('amount'))['t'] or Decimal('0')
     total_customers = base_qs.count()
-    today_revenue   = base_qs.filter(completed_at__date=now.date()).aggregate(t=Sum('amount'))['t'] or Decimal('0')
-    today_customers = base_qs.filter(completed_at__date=now.date()).count()
+    today_revenue   = base_qs.filter(completed_at__date=today).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+    today_customers = base_qs.filter(completed_at__date=today).count()
+    week_revenue    = base_qs.filter(completed_at__date__gte=week_start).aggregate(t=Sum('amount'))['t'] or Decimal('0')
+    week_customers  = base_qs.filter(completed_at__date__gte=week_start).count()
     month_revenue   = base_qs.filter(completed_at__year=now.year, completed_at__month=now.month).aggregate(t=Sum('amount'))['t'] or Decimal('0')
     month_customers = base_qs.filter(completed_at__year=now.year, completed_at__month=now.month).count()
 
@@ -62,6 +66,8 @@ def analytics_dashboard(request):
         'total_customers': total_customers,
         'today_revenue': today_revenue,
         'today_customers': today_customers,
+        'week_revenue': week_revenue,
+        'week_customers': week_customers,
         'month_revenue': month_revenue,
         'month_customers': month_customers,
         'top_packages': list(top_packages),
@@ -134,9 +140,12 @@ def analytics_data(request):
     total_all      = base_qs.aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
     total_month    = base_qs.filter(completed_at__year=now.year, completed_at__month=now.month).aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
     total_today    = base_qs.filter(completed_at__date=today).aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
+    week_start     = today - timedelta(days=today.weekday())
+    total_week     = base_qs.filter(completed_at__date__gte=week_start).aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
     count_all      = base_qs.count()
     count_month    = base_qs.filter(completed_at__year=now.year, completed_at__month=now.month).count()
     count_today    = base_qs.filter(completed_at__date=today).count()
+    count_week     = base_qs.filter(completed_at__date__gte=week_start).count()
 
     # Top packages for donut
     top_pkgs = list(
@@ -153,9 +162,11 @@ def analytics_data(request):
             'total_revenue': float(total_all),
             'month_revenue': float(total_month),
             'today_revenue': float(total_today),
+            'week_revenue': float(total_week),
             'total_customers': count_all,
             'month_customers': count_month,
             'today_customers': count_today,
+            'week_customers': count_week,
         },
         'top_packages': [
             {'name': p['package__name'] or 'Unknown', 'sales': p['sales'], 'revenue': float(p['revenue'] or 0)}
