@@ -26,8 +26,8 @@ class PaymentProvider(models.Model):
     base_url = models.URLField()
 
     # for MakyPay: api_key = public_key, api_secret = secret_key
-    api_key = models.CharField(max_length=255)
-    api_secret = models.CharField(max_length=255, blank=True)
+    api_key = models.CharField(max_length=500)
+    api_secret = models.CharField(max_length=500, blank=True)
 
     environment = models.CharField(
         max_length=10,
@@ -168,22 +168,20 @@ class Payment(models.Model):
     # The "reference" returned by MakyPay request-to-pay
     # and later sent back in webhook
     provider_reference = models.CharField(
-        max_length=255,
+        max_length=500,
         unique=True,
         null=True,
         blank=True
     )
 
-    # Provider transaction id / external_reference (optional)
     external_reference = models.CharField(
-        max_length=255,
+        max_length=500,
         null=True,
         blank=True
     )
 
-    # Human-readable processor message (optional)
     processor_message = models.CharField(
-        max_length=255,
+        max_length=500,
         null=True,
         blank=True
     )
