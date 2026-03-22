@@ -46,10 +46,14 @@ class YooAdapter:
 
         amount_int = int(Decimal(str(data.get("amount") or payment.amount)))
 
+        # Yo! rejects hyphens in InternalReference (error -7)
+        # Strip hyphens from UUID to get a clean 32-char alphanumeric reference
+        yo_reference = str(payment.uuid).replace("-", "")
+
         result = self.client.deposit_funds(
             amount=amount_int,
             account=phone,
-            reference=str(payment.uuid),
+            reference=yo_reference,
             narrative="Payment for internet voucher",
             notification_url=f"{settings.SITE_URL}/payments/webhook/yoo/ipn/",
             failure_url=f"{settings.SITE_URL}/payments/webhook/yoo/failure/",

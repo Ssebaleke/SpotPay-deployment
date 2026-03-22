@@ -79,15 +79,26 @@ def _extract_reference(data: dict, raw: str) -> str | None:
 
 
 def _find_payment(reference: str):
-    """Look up Payment by UUID first, then by provider_reference."""
-    return (
-        Payment.objects.select_for_update()
-        .filter(uuid=reference)
-        .first()
-        or Payment.objects.select_for_update()
-        .filter(provider_reference=reference)
-        .first()
+    """Look up Payment by UUID first, then by provider_reference.
+    Also tries stripping hyphens since we send UUID without hyphens to Yo!.
+    """
+    # Try exact UUID match (with hyphens, Django standard)
+    payment = (
+        Payment.objects.select_for_update().filter(uuid=reference).first()
+        or Payment.objects.select_for_update().filter(provider_reference=reference).first()
     )
+    if payment:
+        return payment
+
+    # Try matching hyphen-stripped UUID (32 hex chars) back to a UUID
+    if len(reference) == 32 and reference.isalnum():
+        formatted = f"{reference[:8]}-{reference[8:12]}-{reference[12:16]}-{reference[16:20]}-{reference[20:]}"
+        return (
+            Payment.objects.select_for_update().filter(uuid=formatted).first()
+            or Payment.objects.select_for_update().filter(provider_reference=reference).first()
+        )
+
+    return None
 
 
 def _handle_subscription_renewal(payment):
