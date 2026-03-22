@@ -418,6 +418,7 @@ class YoPaymentsClient:
 
         for endpoint in self._endpoints:
             try:
+                logger.warning("YOO RAW XML SENT: %s", xml_payload)
                 logger.info("YOO → %s", endpoint)
                 resp = requests.post(
                     endpoint,

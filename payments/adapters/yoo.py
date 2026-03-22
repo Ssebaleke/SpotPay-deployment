@@ -60,6 +60,7 @@ class YooAdapter:
             non_blocking="TRUE",
         )
 
+        logger.warning("YOO ADAPTER XML SENT: amount=%s account=%s reference=%s", amount_int, self.client._normalize_phone(phone), yo_reference)
         logger.warning("YOO ADAPTER RESULT: %s", {
             k: v for k, v in result.items() if k != "raw"
         })
