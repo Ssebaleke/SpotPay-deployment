@@ -155,7 +155,6 @@ class YoPaymentsClient:
             "Amount":            str(int(amount)),
             "Account":           self._normalize_phone(account),
             "Narrative":         self._truncate(narrative, _NARRATIVE_MAX),
-            "InternalReference": str(reference),
             "ExternalReference": str(reference),
         }
         if provider_code:
@@ -262,7 +261,7 @@ class YoPaymentsClient:
         Returns:
             Normalized response dict. On success, 'balance' key contains the amount.
         """
-        return self._post_xml(self._build_xml_request({"Method": "accheckbalance"}))
+        return self._post_xml(self._build_xml_request({"Method": "acacctbalance"}))
 
     # -----------------------------------------------------------------------
     # D. check_transaction_status
