@@ -215,16 +215,26 @@ def yoo_payment_callback(request):
     raw_body = request.body.decode("utf-8", errors="replace")
     logger.warning(f"YOO WEBHOOK RAW BODY: {raw_body}")
 
-    # YooPay sends XML callback
-    def extract_xml(tag, body):
-        match = re.search(rf"<{tag}>(.*?)</{tag}>", body)
-        return match.group(1).strip() if match else None
+    # Parse XML response from YooPay
+    from payments.yoo_client import YoPaymentsClient
+    data = YoPaymentsClient._parse_xml(None, raw_body) if raw_body.strip().startswith("<") else _parse_body(request)
 
-    reference = extract_xml("InternalReference", raw_body) or extract_xml("TransactionReference", raw_body)
-    status_raw = (extract_xml("TransactionStatus", raw_body) or extract_xml("Status", raw_body) or "").upper()
+    reference = data.get("transaction_reference") or data.get("mno_reference")
+    # Also try to get InternalReference from raw XML
+    if not reference:
+        import re
+        match = re.search(r"<InternalReference>(.*?)</InternalReference>", raw_body)
+        if match:
+            reference = match.group(1).strip()
 
-    data = {"raw": raw_body}
-    logger.warning(f"YOO WEBHOOK reference={reference} status={status_raw}")
+    transaction_status = (data.get("transaction_status") or "").upper()
+    status = (data.get("status") or "").upper()
+    status_code = str(data.get("status_code") or "")
+
+    is_success = (status == "OK" and status_code == "0") or transaction_status in ("SUCCEEDED", "SUCCESS", "COMPLETED")
+    is_failed = status == "ERROR" or transaction_status in ("FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED")
+
+    logger.warning(f"YOO WEBHOOK: reference={reference} status={status} txn_status={transaction_status}")
 
     is_success = status_raw in ("SUCCEEDED", "SUCCESS", "SUCCESSFUL", "COMPLETED", "APPROVED")
     is_failed = status_raw in ("FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED")

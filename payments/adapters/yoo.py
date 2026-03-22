@@ -1,28 +1,25 @@
 import logging
-import requests
-from decimal import Decimal
 from django.conf import settings
+from payments.yoo_client import YoPaymentsClient, YoPaymentsError
 
 logger = logging.getLogger(__name__)
 
 
 class YooAdapter:
     """
-    Yo! Payments Uganda API
-    Endpoint: https://paymentsapi1.yo.co.ug/ybs/task.php
-    Auth: APIUsername + APIPassword in POST body
+    SpotPay adapter for Yo! Payments using YoPaymentsClient.
+    Credentials come from PaymentProvider.api_key (username) and api_secret (password).
     """
 
-    API_URL = "https://paymentsapi1.yo.co.ug/ybs/task.php"
-
     def __init__(self, provider):
-        self.username = (provider.api_key or "").strip()
-        self.password = (provider.api_secret or "").strip()
-
-        if not self.username or not self.password:
-            raise ValueError("YooPay requires APIUsername (api_key) and APIPassword (api_secret).")
+        import os
+        os.environ["YO_API_USERNAME"] = (provider.api_key or "").strip()
+        os.environ["YO_API_PASSWORD"] = (provider.api_secret or "").strip()
+        self.client = YoPaymentsClient()
 
     def charge(self, payment, data: dict):
+        from decimal import Decimal
+
         phone = (data.get("phone") or data.get("phone_number") or "").strip()
         if not phone:
             raise ValueError("Phone number is required")
@@ -30,64 +27,21 @@ class YooAdapter:
         amt = data.get("amount") or payment.amount
         amount_int = int(Decimal(str(amt)))
 
-        # Normalize to 256XXXXXXXXX
-        if phone.startswith("+"):
-            phone = phone[1:]
-        if phone.startswith("0"):
-            phone = "256" + phone[1:]
-        if not phone.startswith("256"):
-            phone = "256" + phone
+        notification_url = f"{settings.SITE_URL}/payments/webhook/yoo/"
 
-        # Detect provider from phone number
-        provider = "MTN"
-        if phone.startswith("2567") or phone.startswith("25639"):
-            provider = "AIRTEL"
-
-        webhook_url = f"{settings.SITE_URL}/payments/webhook/yoo/"
-
-        payload = {
-            "APIUsername": self.username,
-            "APIPassword": self.password,
-            "method": "acdepositfunds",
-            "Amount": str(amount_int),
-            "Account": phone,
-            "Narrative": "Payment for internet voucher",
-            "ExternalReference": str(payment.uuid),
-            "Provider": provider,
-            "CallbackURL": webhook_url,
-        }
-
-        logger.warning(f"YOO CHARGE REQUEST: phone={phone} amount={amount_int} provider={provider}")
-
-        resp = requests.post(
-            self.API_URL,
-            data=payload,
-            timeout=60,
+        result = self.client.deposit_funds(
+            amount=amount_int,
+            account=phone,
+            reference=str(payment.uuid),
+            narrative="Payment for internet voucher",
+            notification_url=notification_url,
+            failure_url=notification_url,
+            non_blocking="TRUE",
         )
 
-        logger.warning(f"YOO CHARGE RESPONSE: status={resp.status_code} body={resp.text[:500]}")
+        logger.warning(f"YOO ADAPTER RESULT: {result}")
 
-        if resp.status_code >= 400:
-            raise ValueError(f"YooPay {resp.status_code}: {resp.text}")
+        if self.client.is_error(result):
+            raise ValueError(f"YooPay error: {result.get('error_message') or result.get('status_message')}")
 
-        # Parse response - YooPay returns key=value pairs or JSON
-        provider_reference = None
-        try:
-            res = resp.json()
-            provider_reference = (
-                res.get("TransactionReference")
-                or res.get("transaction_reference")
-                or res.get("reference")
-            )
-        except Exception:
-            # Try key=value format
-            for line in resp.text.splitlines():
-                if "TransactionReference" in line or "transaction_reference" in line:
-                    parts = line.split("=", 1)
-                    if len(parts) == 2:
-                        provider_reference = parts[1].strip()
-                        break
-
-        logger.warning(f"YOO provider_reference={provider_reference or '(fallback to uuid)'}")
-
-        return str(provider_reference or payment.uuid)
+        return result.get("transaction_reference") or str(payment.uuid)
