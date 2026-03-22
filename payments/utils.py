@@ -21,6 +21,10 @@ def load_provider_adapter(provider):
         from payments.adapters.momo import MomoAdapter
         return MomoAdapter(provider)
 
+    if provider_type == "YOO":
+        from payments.adapters.yoo import YooAdapter
+        return YooAdapter(provider)
+
     if provider_type == "CARD":
         from payments.adapters.card import CardAdapter
         return CardAdapter(provider)

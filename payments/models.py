@@ -9,8 +9,9 @@ import uuid
 
 class PaymentProvider(models.Model):
     PROVIDER_TYPES = (
-        ("MOMO", "Mobile Money"),
+        ("MOMO", "Mobile Money (MakyPay)"),
         ("CARD", "Card / Gateway"),
+        ("YOO", "Mobile Money (YooPay)"),
     )
 
     ENVIRONMENTS = (

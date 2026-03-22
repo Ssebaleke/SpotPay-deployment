@@ -120,44 +120,37 @@ def payment_status(request, reference):
 
 
 @csrf_exempt
-def payment_callback(request):
+def yoo_payment_callback(request):
     import logging
     logger = logging.getLogger(__name__)
 
-    # Log raw body BEFORE parsing so we never miss anything
     raw_body = request.body.decode("utf-8", errors="replace")
-    logger.warning(f"MAKYPAY WEBHOOK RAW BODY: {raw_body}")
-    logger.warning(f"MAKYPAY WEBHOOK HEADERS: {dict(request.headers)}")
+    logger.warning(f"YOO WEBHOOK RAW BODY: {raw_body}")
 
     data = _parse_body(request)
-    logger.warning(f"MAKYPAY WEBHOOK PARSED: {data}")
+    logger.warning(f"YOO WEBHOOK PARSED: {data}")
 
-    # MakyPay webhook structure: data["transaction"]["reference"] and data["event_type"]
-    txn = data.get("transaction") or {}
-    reference = txn.get("reference") or txn.get("uuid")
+    # YooPay sends TransactionReference and TransactionStatus
+    reference = data.get("InternalReference") or data.get("TransactionReference") or data.get("reference")
+    status_raw = (data.get("TransactionStatus") or data.get("status") or "").upper()
 
-    event_type = data.get("event_type", "")  # e.g. "collection.completed" / "collection.failed"
-    status_raw = txn.get("status", "").lower()  # e.g. "failed", "successful"
-
-    is_success = event_type == "collection.completed" or status_raw in ("successful", "success", "completed", "paid")
-    is_failed = event_type == "collection.failed" or status_raw in ("failed", "cancelled", "canceled", "rejected", "expired")
+    is_success = status_raw in ("SUCCEEDED", "SUCCESS", "SUCCESSFUL", "COMPLETED", "APPROVED")
+    is_failed = status_raw in ("FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED")
 
     if not reference:
-        logger.warning(f"MAKYPAY WEBHOOK: no reference field found in data: {data}")
+        logger.warning(f"YOO WEBHOOK: no reference found in data: {data}")
         return HttpResponse("OK")
-
 
     payment_id = None
     run_success_handler = False
 
     with transaction.atomic():
-        # Try provider_reference first, then uuid (covers fallback case)
         payment = (
-            Payment.objects.select_for_update().filter(provider_reference=reference).first()
-            or Payment.objects.select_for_update().filter(uuid=reference).first()
+            Payment.objects.select_for_update().filter(uuid=reference).first()
+            or Payment.objects.select_for_update().filter(provider_reference=reference).first()
         )
         if not payment:
-            logger.warning(f"MAKYPAY WEBHOOK: no payment found for reference={reference}")
+            logger.warning(f"YOO WEBHOOK: no payment found for reference={reference}")
             return HttpResponse("OK")
 
         if payment.status == "SUCCESS":
@@ -166,37 +159,22 @@ def payment_callback(request):
         payment.raw_callback_data = data
 
         if is_success:
-            payment.external_reference = data.get("external_reference") or payment.external_reference
-            payment.processor_message = data.get("processor_message") or payment.processor_message
             payment.mark_success(data)
 
             if payment.purpose == "SUBSCRIPTION" and payment.location_id:
                 location = payment.location
                 duration_days = 30
-
                 if location.subscription_expires_at and location.subscription_expires_at > timezone.now():
                     location.subscription_expires_at += timedelta(days=duration_days)
                 else:
                     location.subscription_expires_at = timezone.now() + timedelta(days=duration_days)
-
                 location.subscription_active = True
                 location.is_active = True
-                location.save(update_fields=[
-                    "subscription_expires_at",
-                    "subscription_active",
-                    "is_active"
-                ])
-
-            if payment.purpose == "TRANSACTION" and payment.vendor_id:
-                # Split is handled in handle_payment_success — skip here to avoid duplicate
-                pass
+                location.save(update_fields=["subscription_expires_at", "subscription_active", "is_active"])
 
             if payment.purpose == "SMS_PURCHASE" and payment.vendor_id:
                 try:
-                    credit_sms_wallet(
-                        vendor=payment.vendor,
-                        amount_paid=int(payment.amount)
-                    )
+                    credit_sms_wallet(vendor=payment.vendor, amount_paid=int(payment.amount))
                 except Exception as exc:
                     payment.processor_message = f"SMS credit warning: {exc}"
                     payment.save(update_fields=["processor_message"])
@@ -211,14 +189,10 @@ def payment_callback(request):
             run_success_handler = True
 
         elif is_failed:
-            payment.external_reference = data.get("external_reference") or payment.external_reference
-            payment.processor_message = data.get("processor_message") or payment.processor_message
             payment.mark_failed(data)
-
         else:
             payment.save(update_fields=["raw_callback_data"])
 
-    # after commit
     if run_success_handler and payment_id:
         payment = Payment.objects.get(id=payment_id)
         handle_payment_success(payment)
