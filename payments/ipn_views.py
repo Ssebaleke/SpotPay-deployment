@@ -18,64 +18,46 @@ Security note:
 """
 
 import logging
-import re
 
 from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from datetime import timedelta
+from urllib.parse import parse_qs
 
 from payments.models import Payment
-from payments.yoo_client import YoPaymentsClient
 from payments.services.payment_success import handle_payment_success
 from sms.services.sms_topup import credit_sms_wallet
 from sms.services.notifications import notify_vendor_payment_received, notify_vendor_receipt
 
 logger = logging.getLogger(__name__)
 
-_client = YoPaymentsClient.__new__(YoPaymentsClient)  # parse-only, no credentials needed
 
-
-def _parse_yoo_ipn(request) -> tuple[dict, str]:
+def _parse_yoo_ipn(request) -> tuple:
     """
     Parse the raw IPN body from Yo!.
+    Yo! sends IPN as URL-encoded form data (not XML).
     Returns (parsed_dict, raw_body_string).
-    Yo! sends XML; fall back to form-encoded if not XML.
     """
     raw = request.body.decode("utf-8", errors="replace")
     logger.warning("YOO IPN RAW: %.800s", raw)
 
-    if raw.strip().startswith("<"):
-        data = YoPaymentsClient._parse_xml_response(_client, raw)
-    else:
-        import json
-        try:
-            data = json.loads(raw or "{}")
-        except Exception:
-            data = dict(request.POST)
+    # Yo! IPN is URL-encoded form data
+    parsed = parse_qs(raw, keep_blank_values=True)
+    data = {k: v[0] for k, v in parsed.items()}
 
     return data, raw
 
 
-def _extract_reference(data: dict, raw: str) -> str | None:
+def _extract_reference(data: dict, raw: str) -> str:
     """
-    Extract the payment reference from the IPN data.
-
-    Yo! may send:
-      - TransactionReference  (their reference)
-      - InternalReference     (our UUID, embedded in the XML)
-    We prefer InternalReference because that maps directly to Payment.uuid.
+    Extract our payment reference from the IPN data.
+    Yo! sends our ExternalReference back as 'external_ref'.
     """
-    # Try InternalReference first (our UUID)
-    match = re.search(r"<InternalReference>(.*?)</InternalReference>", raw)
-    if match:
-        return match.group(1).strip()
-
-    return (
-        data.get("transaction_reference")
-        or data.get("mno_reference")
-    )
+    # external_ref is our ExternalReference (UUID without hyphens)
+    ref = data.get("external_ref") or data.get("network_ref")
+    return ref if ref else None
 
 
 def _find_payment(reference: str):
@@ -131,20 +113,14 @@ def yoo_ipn(request):
 
     data, raw = _parse_yoo_ipn(request)
 
-    status        = str(data.get("status") or "").upper()
-    status_code   = str(data.get("status_code") or "")
-    txn_status    = str(data.get("transaction_status") or "").upper()
-
-    is_success = (
-        (status == "OK" and status_code == "0")
-        or txn_status in {"SUCCEEDED", "SUCCESS", "SUCCESSFUL", "COMPLETED", "APPROVED"}
-    )
-
+    # Yo! IPN form fields: amount, date_time, external_ref, msisdn, narrative, network_ref, signature
+    # Presence of network_ref and msisdn means the transaction succeeded
     reference = _extract_reference(data, raw)
+    is_success = bool(data.get("network_ref") and data.get("msisdn"))
 
     logger.warning(
-        "YOO IPN: ref=%s status=%s txn_status=%s is_success=%s",
-        reference, status, txn_status, is_success,
+        "YOO IPN: ref=%s network_ref=%s msisdn=%s is_success=%s",
+        reference, data.get("network_ref"), data.get("msisdn"), is_success,
     )
 
     if not reference:
@@ -214,12 +190,12 @@ def yoo_failure_notification(request):
 
     data, raw = _parse_yoo_ipn(request)
 
-    txn_status = str(data.get("transaction_status") or "").upper()
-    reference  = _extract_reference(data, raw)
+    # Yo! failure notification fields: failed_transaction_reference, transaction_init_date, verification
+    reference = data.get("failed_transaction_reference") or _extract_reference(data, raw)
 
     logger.warning(
-        "YOO FAILURE IPN: ref=%s txn_status=%s",
-        reference, txn_status,
+        "YOO FAILURE IPN: ref=%s data=%s",
+        reference, data,
     )
 
     if not reference:
