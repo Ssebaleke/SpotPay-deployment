@@ -141,7 +141,7 @@ def portal_buy_api(request, uuid):
         )
 
     if result.get("status_url") and not result["status_url"].startswith("http"):
-        result["status_url"] = request.build_absolute_uri(result["status_url"])
+        result["status_url"] = settings.SITE_URL.rstrip("/") + result["status_url"]
 
     return JsonResponse(result)
 
