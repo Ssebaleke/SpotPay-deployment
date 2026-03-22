@@ -1,47 +1,69 @@
+"""
+payments/adapters/yoo.py
+SpotPay adapter for Yo! Payments.
+Credentials are stored in the PaymentProvider DB record (api_key / api_secret).
+"""
+
 import logging
+from decimal import Decimal
+
 from django.conf import settings
-from payments.yoo_client import YoPaymentsClient, YoPaymentsError
+
+from payments.yoo_client import YoPaymentsClient
+from payments.exceptions import YoPaymentsError
 
 logger = logging.getLogger(__name__)
 
 
 class YooAdapter:
     """
-    SpotPay adapter for Yo! Payments using YoPaymentsClient.
-    Credentials come from PaymentProvider.api_key (username) and api_secret (password).
+    Bridges SpotPay's generic payment engine to YoPaymentsClient.
+
+    Credentials come from the active PaymentProvider record:
+        api_key    → YO_API_USERNAME
+        api_secret → YO_API_PASSWORD
     """
 
     def __init__(self, provider):
-        import os
-        os.environ["YO_API_USERNAME"] = (provider.api_key or "").strip()
-        os.environ["YO_API_PASSWORD"] = (provider.api_secret or "").strip()
-        self.client = YoPaymentsClient()
+        self.client = YoPaymentsClient(
+            username=(provider.api_key or "").strip(),
+            password=(provider.api_secret or "").strip(),
+        )
 
-    def charge(self, payment, data: dict):
-        from decimal import Decimal
+    def charge(self, payment, data: dict) -> str:
+        """
+        Initiate a USSD push (deposit) for the given payment.
 
+        Returns:
+            transaction_reference from Yo! (or payment.uuid as fallback).
+
+        Raises:
+            ValueError: if Yo! returns an error response.
+        """
         phone = (data.get("phone") or data.get("phone_number") or "").strip()
         if not phone:
             raise ValueError("Phone number is required")
 
-        amt = data.get("amount") or payment.amount
-        amount_int = int(Decimal(str(amt)))
-
-        notification_url = f"{settings.SITE_URL}/payments/webhook/yoo/"
+        amount_int = int(Decimal(str(data.get("amount") or payment.amount)))
 
         result = self.client.deposit_funds(
             amount=amount_int,
             account=phone,
             reference=str(payment.uuid),
             narrative="Payment for internet voucher",
-            notification_url=notification_url,
-            failure_url=notification_url,
+            notification_url=f"{settings.SITE_URL}/payments/webhook/yoo/ipn/",
+            failure_url=f"{settings.SITE_URL}/payments/webhook/yoo/failure/",
             non_blocking="TRUE",
         )
 
-        logger.warning(f"YOO ADAPTER RESULT: {result}")
+        logger.warning("YOO ADAPTER RESULT: %s", {
+            k: v for k, v in result.items() if k != "raw"
+        })
 
         if self.client.is_error(result):
-            raise ValueError(f"YooPay error: {result.get('error_message') or result.get('status_message')}")
+            raise ValueError(
+                f"YooPay error: {result.get('error_message') or result.get('status_message')}"
+            )
 
+        # Return Yo! transaction_reference if available, else fall back to our UUID
         return result.get("transaction_reference") or str(payment.uuid)
