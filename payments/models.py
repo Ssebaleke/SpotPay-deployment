@@ -22,8 +22,8 @@ class PaymentProvider(models.Model):
     name = models.CharField(max_length=50)
     provider_type = models.CharField(max_length=10, choices=PROVIDER_TYPES)
 
-    # e.g. https://wire-api.makylegacy.com
-    base_url = models.URLField()
+    # e.g. https://wire-api.makylegacy.com (not required for YooPay)
+    base_url = models.URLField(blank=True)
 
     # for MakyPay: api_key = public_key, api_secret = secret_key
     api_key = models.CharField(max_length=500)
