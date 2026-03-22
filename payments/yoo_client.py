@@ -275,15 +275,16 @@ class YoPaymentsClient:
         Use this to confirm PENDING transactions when IPN is not received.
 
         Args:
-            reference : The InternalReference used when initiating the transaction.
+            reference : The ExternalReference / InternalReference used when
+                        initiating the transaction.
 
         Returns:
             Normalized response dict with 'transaction_status' and
             'transaction_reference' keys.
         """
         return self._post_xml(self._build_xml_request({
-            "Method":            "accheckbalance",
-            "InternalReference": str(reference),
+            "Method":                    "actransactioncheckstatus",
+            "PrivateTransactionReference": str(reference),
         }))
 
     # -----------------------------------------------------------------------
