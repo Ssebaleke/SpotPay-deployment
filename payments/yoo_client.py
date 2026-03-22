@@ -1,8 +1,25 @@
 """
-Yo! Payments Uganda - Production API Client
-Supports: deposit_funds, withdraw_funds, check_balance,
-          check_transaction_status, verify_account_validity
-Endpoint fallback: paymentsapi1 → paymentsapi2
+payments/yoo_client.py
+======================
+Production-ready client for the Yo! Payments Business API (Uganda).
+
+Protocol  : HTTP POST, Content-Type: text/xml
+Auth      : APIUsername + APIPassword embedded in every XML request
+Endpoints : paymentsapi1.yo.co.ug  (primary)
+            paymentsapi2.yo.co.ug  (fallback)
+
+Credentials are read from environment variables:
+    YO_API_USERNAME
+    YO_API_PASSWORD
+
+Never call this client from the frontend. All requests must originate
+from this Django backend.
+
+IPN (Instant Payment Notification)
+-----------------------------------
+Pass `notification_url` to deposit_funds / withdraw_funds.
+Yo! will POST the result XML to that URL when the transaction completes.
+Handle it in payments/views.py → yoo_payment_callback().
 """
 
 import logging
@@ -10,76 +27,114 @@ import os
 import xml.etree.ElementTree as ET
 
 import requests
-from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-API_ENDPOINTS = [
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+_ENDPOINTS = [
     "https://paymentsapi1.yo.co.ug/ybs/task.php",
     "https://paymentsapi2.yo.co.ug/ybs/task.php",
 ]
 
-TIMEOUT = 60
+_TIMEOUT = 60  # seconds per endpoint attempt
 
+# TransactionStatus values Yo! considers terminal-success
+_SUCCESS_STATUSES = {"SUCCEEDED", "SUCCESS", "SUCCESSFUL", "COMPLETED", "APPROVED"}
+
+# TransactionStatus values Yo! considers terminal-failure
+_FAILED_STATUSES = {"FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED"}
+
+
+# ---------------------------------------------------------------------------
+# Custom exception
+# ---------------------------------------------------------------------------
 
 class YoPaymentsError(Exception):
+    """Raised when the Yo! API returns an ERROR status or all endpoints fail."""
+
     def __init__(self, message, code=None, raw=None):
         super().__init__(message)
-        self.code = code
-        self.raw = raw
+        self.code = code    # ErrorMessageCode from Yo response
+        self.raw = raw      # raw XML string for debugging
 
+
+# ---------------------------------------------------------------------------
+# Main client
+# ---------------------------------------------------------------------------
 
 class YoPaymentsClient:
     """
-    Django-friendly client for Yo! Payments Business API.
+    Django-friendly client for the Yo! Payments Business API.
 
-    Credentials are read from environment variables:
-        YO_API_USERNAME
-        YO_API_PASSWORD
+    Credentials are resolved in this order:
+      1. Constructor arguments (username, password)
+      2. Environment variables YO_API_USERNAME / YO_API_PASSWORD
 
-    Usage:
+    Example::
+
         client = YoPaymentsClient()
         result = client.deposit_funds(
             amount=5000,
             account="256771234567",
             reference="ORDER-001",
-            narrative="Internet voucher payment",
+            narrative="Internet voucher",
             notification_url="https://yoursite.com/payments/webhook/yoo/",
         )
+        if YoPaymentsClient.is_success(result):
+            print("USSD push sent, transaction reference:", result["transaction_reference"])
     """
 
-    def __init__(self):
-        self.username = os.environ.get("YO_API_USERNAME") or getattr(settings, "YO_API_USERNAME", "")
-        self.password = os.environ.get("YO_API_PASSWORD") or getattr(settings, "YO_API_PASSWORD", "")
+    def __init__(self, username: str = None, password: str = None):
+        self.username = username or os.environ.get("YO_API_USERNAME", "").strip()
+        self.password = password or os.environ.get("YO_API_PASSWORD", "").strip()
 
         if not self.username or not self.password:
-            raise YoPaymentsError("YO_API_USERNAME and YO_API_PASSWORD must be set in environment.")
+            raise YoPaymentsError(
+                "YO_API_USERNAME and YO_API_PASSWORD must be set in environment variables."
+            )
 
-    # ─────────────────────────────────────────────
-    # PUBLIC METHODS
-    # ─────────────────────────────────────────────
+    # -----------------------------------------------------------------------
+    # Public API methods
+    # -----------------------------------------------------------------------
 
-    def deposit_funds(self, amount, account, reference, narrative="Payment",
-                      notification_url=None, failure_url=None,
-                      provider_code=None, non_blocking="FALSE",
-                      provider_reference_text=None):
+    def deposit_funds(
+        self,
+        amount: int,
+        account: str,
+        reference: str,
+        narrative: str = "Payment",
+        notification_url: str = None,
+        failure_url: str = None,
+        provider_code: str = None,
+        non_blocking: str = "TRUE",
+        provider_reference_text: str = None,
+        narrative_filename: str = None,
+        narrative_file_base64: str = None,
+        auth_signature_base64: str = None,
+    ) -> dict:
         """
         Pull money from a mobile money account (USSD push to customer).
 
         Args:
-            amount (int): Amount in UGX
-            account (str): Customer phone e.g. 256771234567
-            reference (str): Your internal reference (unique per transaction)
-            narrative (str): Description shown to customer
-            notification_url (str): IPN URL called on success
-            failure_url (str): IPN URL called on failure
-            provider_code (str): e.g. "MTN" or "AIRTEL" (optional, auto-detected)
-            non_blocking (str): "TRUE" returns immediately, "FALSE" waits
-            provider_reference_text (str): Text shown on customer's statement
+            amount              : Amount in UGX (integer).
+            account             : Customer phone, e.g. "256771234567".
+            reference           : Your unique internal reference (UUID recommended).
+            narrative           : Description shown to the customer on their phone.
+            notification_url    : IPN URL Yo! POSTs to on success.
+                                  → handled by yoo_payment_callback() in views.py
+            failure_url         : IPN URL Yo! POSTs to on failure.
+            provider_code       : "MTN" or "AIRTEL" (optional, auto-detected by Yo!).
+            non_blocking        : "TRUE" returns immediately; "FALSE" waits for completion.
+            provider_reference_text : Text shown on customer's MNO statement.
+            narrative_filename  : Filename for narrative attachment (optional).
+            narrative_file_base64: Base64-encoded narrative file content (optional).
+            auth_signature_base64: AuthenticationSignatureBase64 (optional).
 
         Returns:
-            dict: Parsed response with keys: status, status_code, transaction_status,
-                  transaction_reference, mno_reference, error_message
+            Parsed response dict. Check with is_success() / is_pending() / is_error().
         """
         params = {
             "Method": "acdepositfunds",
@@ -95,29 +150,53 @@ class YoPaymentsClient:
         if provider_reference_text:
             params["ProviderReferenceText"] = provider_reference_text
         if notification_url:
-            # IPN: Yo! will POST to this URL on transaction completion
+            # IPN: Yo! will POST result XML to this URL on transaction completion
             params["InstantNotificationUrl"] = notification_url
         if failure_url:
             params["FailureNotificationUrl"] = failure_url
+        if narrative_filename:
+            params["NarrativeFileName"] = narrative_filename
+        if narrative_file_base64:
+            params["NarrativeFileBase64"] = narrative_file_base64
+        if auth_signature_base64:
+            params["AuthenticationSignatureBase64"] = auth_signature_base64
 
         return self._request(params)
 
-    def withdraw_funds(self, amount, account, reference, narrative="Withdrawal",
-                       provider_code=None, non_blocking="FALSE",
-                       provider_reference_text=None):
+    def withdraw_funds(
+        self,
+        amount: int,
+        account: str,
+        reference: str,
+        narrative: str = "Withdrawal",
+        provider_code: str = None,
+        non_blocking: str = "TRUE",
+        provider_reference_text: str = None,
+        transaction_limit_account_identifier: str = None,
+        narrative_filename: str = None,
+        narrative_file_base64: str = None,
+        public_key_nonce: str = None,
+        public_key_signature_base64: str = None,
+    ) -> dict:
         """
-        Push money to a mobile money account (disbursement).
+        Push money to a mobile money account (disbursement / payout).
 
         Args:
-            amount (int): Amount in UGX
-            account (str): Recipient phone e.g. 256771234567
-            reference (str): Your internal reference
-            narrative (str): Description
-            provider_code (str): e.g. "MTN" or "AIRTEL"
-            non_blocking (str): "TRUE" or "FALSE"
+            amount              : Amount in UGX (integer).
+            account             : Recipient phone, e.g. "256771234567".
+            reference           : Your unique internal reference.
+            narrative           : Description.
+            provider_code       : "MTN" or "AIRTEL" (optional).
+            non_blocking        : "TRUE" or "FALSE".
+            provider_reference_text : Text on recipient's MNO statement.
+            transaction_limit_account_identifier : TransactionLimitAccountIdentifier (optional).
+            narrative_filename  : Filename for narrative attachment (optional).
+            narrative_file_base64: Base64-encoded narrative file content (optional).
+            public_key_nonce    : PublicKeyAuthenticationNonce (optional).
+            public_key_signature_base64: PublicKeyAuthenticationSignatureBase64 (optional).
 
         Returns:
-            dict: Parsed response
+            Parsed response dict.
         """
         params = {
             "Method": "acwithdrawfunds",
@@ -132,43 +211,53 @@ class YoPaymentsClient:
             params["AccountProviderCode"] = provider_code
         if provider_reference_text:
             params["ProviderReferenceText"] = provider_reference_text
+        if transaction_limit_account_identifier:
+            params["TransactionLimitAccountIdentifier"] = transaction_limit_account_identifier
+        if narrative_filename:
+            params["NarrativeFileName"] = narrative_filename
+        if narrative_file_base64:
+            params["NarrativeFileBase64"] = narrative_file_base64
+        if public_key_nonce:
+            params["PublicKeyAuthenticationNonce"] = public_key_nonce
+        if public_key_signature_base64:
+            params["PublicKeyAuthenticationSignatureBase64"] = public_key_signature_base64
 
         return self._request(params)
 
-    def check_balance(self):
+    def check_balance(self) -> dict:
         """
         Check the Yo! business account balance.
 
         Returns:
-            dict: Parsed response including Balance field
+            Parsed response dict containing 'balance' key on success.
         """
         return self._request({"Method": "accheckbalance"})
 
-    def check_transaction_status(self, reference):
+    def check_transaction_status(self, reference: str) -> dict:
         """
-        Check the status of a previously initiated transaction.
+        Poll the status of a previously initiated transaction.
 
         Args:
-            reference (str): The InternalReference used when initiating
+            reference : The InternalReference used when initiating the transaction.
 
         Returns:
-            dict: Parsed response with transaction_status and transaction_reference
+            Parsed response dict with 'transaction_status' and 'transaction_reference'.
         """
         return self._request({
-            "Method": "acgetbalance",  # Yo uses acgetbalance for status checks
+            "Method": "accheckbalance",
             "InternalReference": str(reference),
         })
 
-    def verify_account_validity(self, account, provider_code=None):
+    def verify_account_validity(self, account: str, provider_code: str = None) -> dict:
         """
         Verify that a mobile money account exists and is active.
 
         Args:
-            account (str): Phone number e.g. 256771234567
-            provider_code (str): e.g. "MTN" or "AIRTEL"
+            account       : Phone number, e.g. "256771234567".
+            provider_code : "MTN" or "AIRTEL" (optional).
 
         Returns:
-            dict: Parsed response
+            Parsed response dict.
         """
         params = {
             "Method": "acverifyaccountvalidity",
@@ -179,28 +268,45 @@ class YoPaymentsClient:
 
         return self._request(params)
 
-    # ─────────────────────────────────────────────
-    # RESPONSE HELPERS
-    # ─────────────────────────────────────────────
+    # -----------------------------------------------------------------------
+    # Response classification helpers (static — usable without an instance)
+    # -----------------------------------------------------------------------
 
     @staticmethod
-    def is_success(response):
-        return response.get("status") == "OK" and str(response.get("status_code")) == "0"
+    def is_success(response: dict) -> bool:
+        """Status=OK and StatusCode=0, or TransactionStatus is a known success value."""
+        base = (
+            str(response.get("status", "")).upper() == "OK"
+            and str(response.get("status_code", "")) == "0"
+        )
+        txn = str(response.get("transaction_status", "")).upper()
+        return base or txn in _SUCCESS_STATUSES
 
     @staticmethod
-    def is_pending(response):
-        return response.get("status") == "OK" and str(response.get("status_code")) == "1"
+    def is_pending(response: dict) -> bool:
+        """Status=OK and StatusCode=1, or TransactionStatus=PENDING."""
+        base = (
+            str(response.get("status", "")).upper() == "OK"
+            and str(response.get("status_code", "")) == "1"
+        )
+        txn = str(response.get("transaction_status", "")).upper()
+        return base or txn == "PENDING"
 
     @staticmethod
-    def is_error(response):
-        return response.get("status") == "ERROR"
+    def is_error(response: dict) -> bool:
+        """Status=ERROR or TransactionStatus is a known failure value."""
+        if str(response.get("status", "")).upper() == "ERROR":
+            return True
+        txn = str(response.get("transaction_status", "")).upper()
+        return txn in _FAILED_STATUSES
 
-    # ─────────────────────────────────────────────
-    # INTERNAL HELPERS
-    # ─────────────────────────────────────────────
+    # -----------------------------------------------------------------------
+    # Internal helpers
+    # -----------------------------------------------------------------------
 
-    def _normalize_phone(self, phone):
-        phone = str(phone).strip()
+    def _normalize_phone(self, phone: str) -> str:
+        """Normalize phone to 256XXXXXXXXX format required by Yo!."""
+        phone = str(phone).strip().replace(" ", "").replace("-", "")
         if phone.startswith("+"):
             phone = phone[1:]
         if phone.startswith("0"):
@@ -210,6 +316,10 @@ class YoPaymentsClient:
         return phone
 
     def _build_xml(self, params: dict) -> str:
+        """
+        Build the Yo! API XML request body safely using ElementTree.
+        Never uses string concatenation for user-supplied values.
+        """
         root = ET.Element("AutoCreate")
         req = ET.SubElement(root, "Request")
 
@@ -222,58 +332,82 @@ class YoPaymentsClient:
         return '<?xml version="1.0" encoding="UTF-8"?>' + ET.tostring(root, encoding="unicode")
 
     def _parse_xml(self, xml_text: str) -> dict:
+        """
+        Parse Yo! XML response into a normalized Python dict.
+
+        Normalized keys:
+            status, status_code, status_message,
+            transaction_status, transaction_reference,
+            mno_reference, error_message, error_code, balance, raw
+        """
         try:
             root = ET.fromstring(xml_text)
-        except ET.ParseError as e:
-            logger.error(f"YOO XML parse error: {e} | raw: {xml_text[:300]}")
-            return {"status": "ERROR", "error_message": f"Invalid XML response: {e}", "raw": xml_text}
+        except ET.ParseError as exc:
+            logger.error("YOO XML parse error: %s | raw: %.300s", exc, xml_text)
+            return {
+                "status": "ERROR",
+                "error_message": f"Invalid XML response: {exc}",
+                "raw": xml_text,
+            }
 
-        def get(tag):
+        def _get(tag: str):
             el = root.find(f".//{tag}")
             return el.text.strip() if el is not None and el.text else None
 
         return {
-            "status": get("Status"),
-            "status_code": get("StatusCode"),
-            "status_message": get("StatusMessage"),
-            "transaction_status": get("TransactionStatus"),
-            "transaction_reference": get("TransactionReference"),
-            "mno_reference": get("MNOTransactionReferenceId"),
-            "error_message": get("ErrorMessage"),
-            "error_code": get("ErrorMessageCode"),
-            "balance": get("Balance"),
-            "raw": xml_text,
+            "status":                _get("Status"),
+            "status_code":           _get("StatusCode"),
+            "status_message":        _get("StatusMessage"),
+            "transaction_status":    _get("TransactionStatus"),
+            "transaction_reference": _get("TransactionReference"),
+            "mno_reference":         _get("MNOTransactionReferenceId"),
+            "error_message":         _get("ErrorMessage"),
+            "error_code":            _get("ErrorMessageCode"),
+            "balance":               _get("Balance"),
+            "raw":                   xml_text,
         }
 
     def _request(self, params: dict) -> dict:
+        """
+        POST the XML request to Yo! endpoints with automatic fallback.
+        Tries paymentsapi1 first, then paymentsapi2.
+
+        Raises:
+            YoPaymentsError: if all endpoints fail (network/timeout).
+        """
         xml_body = self._build_xml(params)
         headers = {"Content-Type": "text/xml; charset=utf-8"}
         last_error = None
 
-        for endpoint in API_ENDPOINTS:
+        for endpoint in _ENDPOINTS:
             try:
-                logger.warning(f"YOO REQUEST: endpoint={endpoint} method={params.get('Method')}")
-                resp = requests.post(endpoint, data=xml_body.encode("utf-8"), headers=headers, timeout=TIMEOUT)
-                logger.warning(f"YOO RESPONSE: status={resp.status_code} body={resp.text[:500]}")
+                logger.info("YOO REQUEST: endpoint=%s method=%s", endpoint, params.get("Method"))
+                response = requests.post(
+                    endpoint,
+                    data=xml_body.encode("utf-8"),
+                    headers=headers,
+                    timeout=_TIMEOUT,
+                )
+                logger.info(
+                    "YOO RESPONSE: endpoint=%s http_status=%s body=%.500s",
+                    endpoint, response.status_code, response.text,
+                )
 
-                if resp.status_code == 200:
-                    return self._parse_xml(resp.text)
+                if response.status_code == 200:
+                    return self._parse_xml(response.text)
 
-                last_error = f"HTTP {resp.status_code}: {resp.text[:200]}"
+                last_error = f"HTTP {response.status_code} from {endpoint}"
 
             except requests.Timeout:
-                logger.warning(f"YOO TIMEOUT: endpoint={endpoint}")
                 last_error = f"Timeout on {endpoint}"
-                continue
+                logger.warning("YOO TIMEOUT: %s", endpoint)
 
             except requests.ConnectionError:
-                logger.warning(f"YOO CONNECTION ERROR: endpoint={endpoint}")
                 last_error = f"Connection error on {endpoint}"
-                continue
+                logger.warning("YOO CONNECTION ERROR: %s", endpoint)
 
-            except Exception as e:
-                logger.error(f"YOO UNEXPECTED ERROR: {e}")
-                last_error = str(e)
-                continue
+            except Exception as exc:
+                last_error = str(exc)
+                logger.exception("YOO UNEXPECTED ERROR: %s", exc)
 
-        raise YoPaymentsError(f"All YooPay endpoints failed. Last error: {last_error}")
+        raise YoPaymentsError(f"All Yo! endpoints failed. Last error: {last_error}")

@@ -231,13 +231,10 @@ def yoo_payment_callback(request):
     status = (data.get("status") or "").upper()
     status_code = str(data.get("status_code") or "")
 
-    is_success = (status == "OK" and status_code == "0") or transaction_status in ("SUCCEEDED", "SUCCESS", "COMPLETED")
+    is_success = (status == "OK" and status_code == "0") or transaction_status in ("SUCCEEDED", "SUCCESS", "SUCCESSFUL", "COMPLETED", "APPROVED")
     is_failed = status == "ERROR" or transaction_status in ("FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED")
 
-    logger.warning(f"YOO WEBHOOK: reference={reference} status={status} txn_status={transaction_status}")
-
-    is_success = status_raw in ("SUCCEEDED", "SUCCESS", "SUCCESSFUL", "COMPLETED", "APPROVED")
-    is_failed = status_raw in ("FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED")
+    logger.warning(f"YOO WEBHOOK: reference={reference} status={status} txn_status={transaction_status} is_success={is_success} is_failed={is_failed}")
 
     if not reference:
         logger.warning(f"YOO WEBHOOK: no reference found in data: {data}")
