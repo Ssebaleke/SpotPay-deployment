@@ -120,6 +120,93 @@ def payment_status(request, reference):
 
 
 @csrf_exempt
+def payment_callback(request):
+    import logging
+    logger = logging.getLogger(__name__)
+
+    raw_body = request.body.decode("utf-8", errors="replace")
+    logger.warning(f"MAKYPAY WEBHOOK RAW BODY: {raw_body}")
+    logger.warning(f"MAKYPAY WEBHOOK HEADERS: {dict(request.headers)}")
+
+    data = _parse_body(request)
+    logger.warning(f"MAKYPAY WEBHOOK PARSED: {data}")
+
+    txn = data.get("transaction") or {}
+    reference = txn.get("reference") or txn.get("uuid")
+    event_type = data.get("event_type", "")
+    status_raw = txn.get("status", "").lower()
+
+    is_success = event_type == "collection.completed" or status_raw in ("successful", "success", "completed", "paid")
+    is_failed = event_type == "collection.failed" or status_raw in ("failed", "cancelled", "canceled", "rejected", "expired")
+
+    if not reference:
+        logger.warning(f"MAKYPAY WEBHOOK: no reference field found in data: {data}")
+        return HttpResponse("OK")
+
+    payment_id = None
+    run_success_handler = False
+
+    with transaction.atomic():
+        payment = (
+            Payment.objects.select_for_update().filter(provider_reference=reference).first()
+            or Payment.objects.select_for_update().filter(uuid=reference).first()
+        )
+        if not payment:
+            logger.warning(f"MAKYPAY WEBHOOK: no payment found for reference={reference}")
+            return HttpResponse("OK")
+
+        if payment.status == "SUCCESS":
+            return HttpResponse("OK")
+
+        payment.raw_callback_data = data
+
+        if is_success:
+            payment.external_reference = data.get("external_reference") or payment.external_reference
+            payment.processor_message = data.get("processor_message") or payment.processor_message
+            payment.mark_success(data)
+
+            if payment.purpose == "SUBSCRIPTION" and payment.location_id:
+                location = payment.location
+                duration_days = 30
+                if location.subscription_expires_at and location.subscription_expires_at > timezone.now():
+                    location.subscription_expires_at += timedelta(days=duration_days)
+                else:
+                    location.subscription_expires_at = timezone.now() + timedelta(days=duration_days)
+                location.subscription_active = True
+                location.is_active = True
+                location.save(update_fields=["subscription_expires_at", "subscription_active", "is_active"])
+
+            if payment.purpose == "SMS_PURCHASE" and payment.vendor_id:
+                try:
+                    credit_sms_wallet(vendor=payment.vendor, amount_paid=int(payment.amount))
+                except Exception as exc:
+                    payment.processor_message = f"SMS credit warning: {exc}"
+                    payment.save(update_fields=["processor_message"])
+
+            if payment.vendor_id:
+                if payment.purpose in ("SMS_PURCHASE", "SUBSCRIPTION"):
+                    notify_vendor_receipt(payment)
+                else:
+                    notify_vendor_payment_received(payment)
+
+            payment_id = payment.id
+            run_success_handler = True
+
+        elif is_failed:
+            payment.external_reference = data.get("external_reference") or payment.external_reference
+            payment.processor_message = data.get("processor_message") or payment.processor_message
+            payment.mark_failed(data)
+        else:
+            payment.save(update_fields=["raw_callback_data"])
+
+    if run_success_handler and payment_id:
+        payment = Payment.objects.get(id=payment_id)
+        handle_payment_success(payment)
+
+    return HttpResponse("OK")
+
+
+@csrf_exempt
 def yoo_payment_callback(request):
     import logging
     logger = logging.getLogger(__name__)
