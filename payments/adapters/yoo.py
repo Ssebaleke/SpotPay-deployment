@@ -9,8 +9,7 @@ logger = logging.getLogger(__name__)
 class YooAdapter:
     """
     Yo! Payments (YooPay) - Collections
-    Endpoint: POST /YoPayments/transaction/SendPaymentRequest
-    Auth: Username/Password in request body
+    API uses XML over HTTPS POST
     """
 
     def __init__(self, provider):
@@ -43,51 +42,52 @@ class YooAdapter:
             phone = "256" + phone
 
         webhook_url = f"{settings.SITE_URL}/payments/webhook/yoo/"
+        reference = str(payment.uuid)
 
-        payload = {
-            "Origin": "API",
-            "MessageType": "SENDPAYMENTREQUEST",
-            "APIUsername": self.username,
-            "APIPassword": self.password,
-            "Account": phone,
-            "Amount": str(amount_int),
-            "Reference": str(payment.uuid),
-            "InternalReference": str(payment.uuid),
-            "NonBlocking": "FALSE",
-            "CallbackURL": webhook_url,
-        }
+        xml_payload = f"""<?xml version="1.0" encoding="UTF-8"?>
+<AutoCreate>
+  <Request>
+    <APIUsername>{self.username}</APIUsername>
+    <APIPassword>{self.password}</APIPassword>
+    <Method>acdepositfunds</Method>
+    <Account>{phone}</Account>
+    <Amount>{amount_int}</Amount>
+    <Currency>UGX</Currency>
+    <Narrative>Payment for internet voucher</Narrative>
+    <InternalReference>{reference}</InternalReference>
+    <CallbackURL>{webhook_url}</CallbackURL>
+    <NonBlocking>FALSE</NonBlocking>
+  </Request>
+</AutoCreate>"""
 
-        url = f"{self.base_url}/YoPayments/transaction/SendPaymentRequest"
+        url = f"{self.base_url}/services/yoPaymentService"
 
         logger.warning(f"YOO CHARGE REQUEST: url={url} phone={phone} amount={amount_int}")
 
         resp = requests.post(
             url,
-            data=payload,
-            headers={"Accept": "application/json"},
-            timeout=30,
+            data=xml_payload,
+            headers={"Content-Type": "text/xml; charset=utf-8"},
+            timeout=60,
         )
 
-        logger.warning(f"YOO CHARGE RESPONSE: status={resp.status_code} body={resp.text}")
+        logger.warning(f"YOO CHARGE RESPONSE: status={resp.status_code} body={resp.text[:500]}")
 
         if resp.status_code >= 400:
             raise ValueError(f"YooPay {resp.status_code}: {resp.text}")
 
-        res = {}
-        try:
-            res = resp.json()
-        except Exception:
-            res = {"raw": resp.text}
+        # YooPay responds with XML - extract TransactionReference
+        import re
+        provider_reference = None
 
-        # Extract reference from response
-        provider_reference = (
-            res.get("TransactionReference")
-            or res.get("transaction_reference")
-            or res.get("reference")
-            or res.get("id")
-        )
-        if not provider_reference and isinstance(res.get("data"), dict):
-            provider_reference = res["data"].get("TransactionReference") or res["data"].get("reference")
+        match = re.search(r"<TransactionReference>(.*?)</TransactionReference>", resp.text)
+        if match:
+            provider_reference = match.group(1).strip()
+
+        if not provider_reference:
+            match = re.search(r"<InternalReference>(.*?)</InternalReference>", resp.text)
+            if match:
+                provider_reference = match.group(1).strip()
 
         logger.warning(f"YOO provider_reference={provider_reference or '(fallback to uuid)'}")
 

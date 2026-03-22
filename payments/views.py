@@ -211,15 +211,20 @@ def yoo_payment_callback(request):
     import logging
     logger = logging.getLogger(__name__)
 
+    import re
     raw_body = request.body.decode("utf-8", errors="replace")
     logger.warning(f"YOO WEBHOOK RAW BODY: {raw_body}")
 
-    data = _parse_body(request)
-    logger.warning(f"YOO WEBHOOK PARSED: {data}")
+    # YooPay sends XML callback
+    def extract_xml(tag, body):
+        match = re.search(rf"<{tag}>(.*?)</{tag}>", body)
+        return match.group(1).strip() if match else None
 
-    # YooPay sends TransactionReference and TransactionStatus
-    reference = data.get("InternalReference") or data.get("TransactionReference") or data.get("reference")
-    status_raw = (data.get("TransactionStatus") or data.get("status") or "").upper()
+    reference = extract_xml("InternalReference", raw_body) or extract_xml("TransactionReference", raw_body)
+    status_raw = (extract_xml("TransactionStatus", raw_body) or extract_xml("Status", raw_body) or "").upper()
+
+    data = {"raw": raw_body}
+    logger.warning(f"YOO WEBHOOK reference={reference} status={status_raw}")
 
     is_success = status_raw in ("SUCCEEDED", "SUCCESS", "SUCCESSFUL", "COMPLETED", "APPROVED")
     is_failed = status_raw in ("FAILED", "CANCELLED", "CANCELED", "REJECTED", "EXPIRED")
