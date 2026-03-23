@@ -13,10 +13,11 @@ from django.contrib.auth.models import User
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
-from django.core.mail import send_mail
 from django.conf import settings
 from decimal import Decimal
 from datetime import timedelta
+
+from sms.services.email_gateway import send_email
 
 from payments.models import Payment, PaymentProvider
 from sms.models import VendorSMSWallet
@@ -625,12 +626,20 @@ def password_reset_request(request):
             token = default_token_generator.make_token(user)
             site_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000')
             reset_link = f"{site_url}/accounts/reset-password/{uid}/{token}/"
-            send_mail(
-                "Reset your SpotPay password",
-                f"Hello {user.username},\n\nClick the link below to reset your password:\n{reset_link}\n\nThis link expires in 24 hours. If you did not request this, ignore this email.",
-                settings.DEFAULT_FROM_EMAIL,
-                [email],
-                fail_silently=False,
+            send_email(
+                to_email=email,
+                subject="Reset your SpotPay password",
+                html=(
+                    f"<p>Hello {user.username},</p>"
+                    f"<p>Click the link below to reset your password:</p>"
+                    f"<p><a href='{reset_link}'>{reset_link}</a></p>"
+                    f"<p>This link expires in 24 hours. If you did not request this, ignore this email.</p>"
+                    f"<p>SpotPay Team</p>"
+                ),
+                text=(
+                    f"Hello {user.username},\n\nReset your password:\n{reset_link}\n\n"
+                    "This link expires in 24 hours.\n\nSpotPay Team"
+                ),
             )
         # always show success to avoid email enumeration
         messages.success(request, "If that email exists, a reset link has been sent.")
