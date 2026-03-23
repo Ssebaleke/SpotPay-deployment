@@ -325,9 +325,12 @@ def wallet_withdraw(request):
 
         # Attempt automatic disbursement via YooPay
         disbursement_success = False
+        disbursement_error = None
         try:
             from payments.models import PaymentProvider
             from payments.yoo_client import YoPaymentsClient
+            import logging
+            logger = logging.getLogger(__name__)
 
             yoo_provider = PaymentProvider.objects.filter(
                 provider_type='YOO', is_active=True
@@ -345,6 +348,7 @@ def wallet_withdraw(request):
                     narrative=f"SpotPay withdrawal - {vendor.company_name}",
                     provider_code='MTN' if payout_method == 'MTN' else 'AIRTEL' if payout_method == 'AIRTEL' else None,
                 )
+                logger.warning(f"YOO WITHDRAWAL RESULT: {result}")
                 if not YoPaymentsClient.is_error(result):
                     withdrawal.status = WithdrawalRequest.STATUS_PAID
                     withdrawal.save(update_fields=['status', 'updated_at'])
@@ -353,8 +357,14 @@ def wallet_withdraw(request):
                         notify_withdrawal_receipt(withdrawal)
                     except Exception:
                         pass
-        except Exception:
-            pass
+                else:
+                    disbursement_error = result.get('error_message') or result.get('status_message') or 'Unknown error'
+                    logger.warning(f"YOO WITHDRAWAL FAILED: {disbursement_error}")
+            else:
+                logger.warning("YOO WITHDRAWAL: No active YOO provider found")
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"YOO WITHDRAWAL EXCEPTION: {e}")
 
         request.session.pop('wallet_otp_verified', None)
         if disbursement_success:
