@@ -625,7 +625,7 @@ def password_reset_request(request):
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             token = default_token_generator.make_token(user)
             site_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000')
-            reset_link = f"{site_url}/accounts/reset-password/{uid}/{token}/"
+            reset_link = f"{site_url}/reset-password/{uid}/{token}/"
             send_email(
                 to_email=email,
                 subject="Reset your SpotPay password",
