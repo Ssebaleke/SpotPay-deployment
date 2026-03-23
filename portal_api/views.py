@@ -122,10 +122,15 @@ def portal_buy_api(request, uuid):
 
     # Check schedule
     if not package.is_available_now():
-        return JsonResponse(
-            {"success": False, "message": "This package is not available right now"},
-            status=400
-        )
+        if package.schedule_type == 'DATE':
+            msg = f"This package is only available on {package.scheduled_date.strftime('%d %b %Y')}"
+        elif package.schedule_type == 'WEEKDAYS':
+            day_names = dict(package.DAY_CHOICES)
+            days = [day_names[d.strip()] for d in package.scheduled_days.split(',') if d.strip() in day_names]
+            msg = f"This package is only available on {', '.join(days)}"
+        else:
+            msg = "This package is not available right now"
+        return JsonResponse({"success": False, "message": msg}, status=400)
 
     # Ensure vouchers exist
     if not package.vouchers.filter(status="UNUSED").exists():
@@ -412,15 +417,15 @@ def portal_buy(request, uuid):
         )
 
         if not package.is_available_now():
-            return render(
-                request,
-                "portal_api/buy.html",
-                {
-                    "location": location,
-                    "packages": packages,
-                    "error": "This package is not available right now",
-                }
-            )
+            if package.schedule_type == 'DATE':
+                error = f"This package is only available on {package.scheduled_date.strftime('%d %b %Y')}"
+            elif package.schedule_type == 'WEEKDAYS':
+                day_names = dict(Package.DAY_CHOICES)
+                days = [day_names[d.strip()] for d in package.scheduled_days.split(',') if d.strip() in day_names]
+                error = f"This package is only available on {', '.join(days)}"
+            else:
+                error = "This package is not available right now"
+            return render(request, "portal_api/buy.html", {"location": location, "packages": packages, "error": error})
 
         result = initiate_payment(
             location=location,
