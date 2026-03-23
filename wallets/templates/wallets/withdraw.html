@@ -41,7 +41,13 @@
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-cash-stack"></i></span>
                             <input type="number" class="form-control" name="amount" id="amount"
-                                   placeholder="Enter amount" min="1" step="1" required>
+                                   placeholder="Enter amount" min="1" step="1"
+                                   max="{{ wallet.balance }}" required>
+                        </div>
+                        <div class="form-text">Maximum: UGX {{ wallet.balance|intcomma }}</div>
+                        <div id="amount_error" class="text-danger d-none mt-1" style="font-size:0.82rem;">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            Amount exceeds your available balance of UGX {{ wallet.balance|intcomma }}
                         </div>
                     </div>
 
@@ -82,7 +88,7 @@
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-success flex-grow-1 fw-semibold">
+                        <button type="submit" id="submitBtn" class="btn btn-success flex-grow-1 fw-semibold">
                             <i class="bi bi-send me-2"></i>Withdraw
                         </button>
                         <a href="{% url 'wallet_dashboard' %}" class="btn btn-outline-secondary px-4">Cancel</a>
@@ -96,4 +102,22 @@
 </div>
 {% endblock %}
 
+{% block extra_js %}
+<script>
+const maxBalance = {{ wallet.balance }};
+const amountInput = document.getElementById('amount');
+const amountError = document.getElementById('amount_error');
+const submitBtn = document.getElementById('submitBtn');
+
+amountInput.addEventListener('input', function () {
+    const val = parseFloat(this.value);
+    if (val > maxBalance) {
+        amountError.classList.remove('d-none');
+        submitBtn.disabled = true;
+    } else {
+        amountError.classList.add('d-none');
+        submitBtn.disabled = false;
+    }
+});
+</script>
 {% endblock %}
