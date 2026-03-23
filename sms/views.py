@@ -309,6 +309,36 @@ def sell_voucher_sms(request):
 
 
 @login_required
+@user_passes_test(lambda user: user.is_staff)
+def test_email(request):
+    from .services.email_gateway import send_email
+    from .models import EmailProvider
+
+    provider = EmailProvider.objects.filter(is_active=True).first()
+
+    if not provider:
+        return JsonResponse({"success": False, "error": "No active email provider found in database"})
+
+    to_email = request.GET.get("to", request.user.email)
+
+    ok, resp = send_email(
+        to_email=to_email,
+        subject="SpotPay Test Email",
+        html="<p>This is a test email from SpotPay. If you received this, Resend is working correctly.</p>",
+        text="This is a test email from SpotPay. If you received this, Resend is working correctly.",
+    )
+
+    return JsonResponse({
+        "success": ok,
+        "response": resp,
+        "provider": provider.name,
+        "from_email": provider.from_email,
+        "to_email": to_email,
+        "api_key_prefix": provider.api_key[:8] + "...",
+    })
+
+
+@login_required
 def sms_logs(request):
     try:
         vendor = request.user.vendor
