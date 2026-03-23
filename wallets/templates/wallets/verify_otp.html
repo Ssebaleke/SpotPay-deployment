@@ -1,47 +1,47 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verify OTP | SpotPay</title>
-    <style>
-        body { font-family: system-ui, -apple-system, BlinkMacSystemFont; background:#f4f6f8; margin:0; padding:20px; }
-        .card { max-width:480px; margin:0 auto; background:#fff; border-radius:12px; padding:22px; box-shadow:0 6px 16px rgba(0,0,0,.08); }
-        .muted { color:#6c757d; }
-        input { width:100%; padding:10px; border:1px solid #ced4da; border-radius:8px; }
-        .actions { display:flex; gap:10px; margin-top:18px; }
-        .btn { border:none; border-radius:8px; padding:10px 14px; text-decoration:none; cursor:pointer; font-weight:600; }
-        .btn-primary { background:#0d6efd; color:#fff; }
-        .btn-secondary { background:#e9ecef; color:#212529; }
-        .alert { padding:10px 12px; border-radius:8px; margin-bottom:12px; }
-        .alert-danger { background:#f8d7da; color:#842029; }
-        .alert-success { background:#d1e7dd; color:#0f5132; }
-        .alert-info { background:#cff4fc; color:#055160; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h2>Verify OTP</h2>
-        <p class="muted">Enter the OTP sent to your email to continue withdrawal.</p>
+{% extends 'wallets/wallet_base.html' %}
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% else %}alert-info{% endif %}">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
+{% block title %}Verify OTP | SpotPay{% endblock %}
 
-        <form method="post">
-            {% csrf_token %}
-            <label for="otp">OTP Code</label>
-            <input id="otp" name="otp" type="text" maxlength="6" required>
-
-            <div class="actions">
-                <button type="submit" class="btn btn-primary">Verify</button>
-                <a href="{% url 'wallet_send_otp' %}" class="btn btn-secondary">Resend OTP</a>
-            </div>
-        </form>
+{% block wallet_content %}
+<div class="text-center mb-4">
+    <div style="width:56px;height:56px;background:linear-gradient(135deg,#22c55e,#15803d);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#fff;margin:0 auto 16px;">
+        <i class="bi bi-envelope-check"></i>
     </div>
-</body>
-</html>
+    <h5 style="color:#f1f5f9;font-weight:700;margin-bottom:4px;">Verify OTP</h5>
+    <p style="color:#64748b;font-size:0.84rem;">Enter the 6-digit code sent to your email to authorise this withdrawal</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% else %}alert-info{% endif %} alert-dismissible fade show mb-3">
+        {{ message }}
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-4">
+        <label class="form-label">OTP Code</label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-key"></i></span>
+            <input type="text" name="otp" id="otp" class="form-control"
+                   placeholder="Enter 6-digit OTP" maxlength="6"
+                   inputmode="numeric" pattern="[0-9]{6}" required autofocus
+                   style="letter-spacing:6px;font-size:1.2rem;font-weight:700;text-align:center;">
+        </div>
+        <div class="form-text mt-1">OTP expires in 5 minutes. Do not share it with anyone.</div>
+    </div>
+    <button type="submit" class="btn-wallet-success mb-3">
+        <i class="bi bi-check-circle me-2"></i>Verify & Continue
+    </button>
+</form>
+
+<hr class="wallet-divider">
+<div class="text-center">
+    <a href="{% url 'wallet_send_otp' %}" style="color:#4361ee;font-size:0.82rem;text-decoration:none;">
+        <i class="bi bi-arrow-clockwise me-1"></i>Resend OTP
+    </a>
+</div>
+{% endblock %}

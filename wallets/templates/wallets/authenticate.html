@@ -1,48 +1,57 @@
-{% extends "accounts/base.html" %}
+{% extends 'wallets/wallet_base.html' %}
 
-{% block content %}
-<div class="container">
-  <div class="row justify-content-center">
-    <div class="col-md-4">
+{% block title %}Wallet Login | SpotPay{% endblock %}
 
-      <div class="card shadow-sm mt-5">
-        {% if messages %}
-  {% for message in messages %}
-    <div class="alert alert-success">
-        {{ message }}
+{% block wallet_content %}
+<div class="text-center mb-4">
+    <div style="width:56px;height:56px;background:linear-gradient(135deg,#4361ee,#3a0ca3);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#fff;margin:0 auto 16px;">
+        <i class="bi bi-shield-lock"></i>
     </div>
-  {% endfor %}
+    <h5 style="color:#f1f5f9;font-weight:700;margin-bottom:4px;">Wallet Authentication</h5>
+    <p style="color:#64748b;font-size:0.84rem;">Enter your wallet password to continue</p>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% else %}alert-info{% endif %} alert-dismissible fade show mb-3">
+        {{ message }}
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
 {% endif %}
 
-        <div class="card-body p-4 text-center">
-
-          <h5 class="fw-bold mb-2">Wallet Authentication</h5>
-          <p class="text-muted">
-            Enter your wallet password to continue
-          </p>
-
-          <form method="post">
-            {% csrf_token %}
-            <input type="password"
-                   name="password"
-                   class="form-control mb-3"
-                   placeholder="Wallet password"
-                   required>
-
-            <button class="btn btn-primary w-100">
-              Unlock Wallet
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-4">
+        <label class="form-label">Wallet Password</label>
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+            <input type="password" name="password" id="walletPw" class="form-control" placeholder="Enter wallet password" required autofocus>
+            <button type="button" class="input-group-text" style="cursor:pointer;border-left:none;" onclick="togglePw()">
+                <i class="bi bi-eye" id="pwIcon" style="color:#475569;"></i>
             </button>
-          </form>
-          <div class="mt-3">
-            <a href="{% url 'wallet_password_reset_request' %}">
-                Forgot wallet password?
-            </a>
-        </div>        
-
         </div>
-      </div>
-
     </div>
-  </div>
+    <button type="submit" class="btn-wallet-primary">
+        <i class="bi bi-unlock me-2"></i>Unlock Wallet
+    </button>
+</form>
+
+<hr class="wallet-divider">
+<div class="text-center">
+    <a href="{% url 'wallet_password_reset_from_auth' %}" style="color:#4361ee;font-size:0.82rem;text-decoration:none;">
+        <i class="bi bi-question-circle me-1"></i>Forgot wallet password?
+    </a>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePw() {
+    const f = document.getElementById('walletPw');
+    const i = document.getElementById('pwIcon');
+    if (f.type === 'password') { f.type = 'text'; i.className = 'bi bi-eye-slash'; }
+    else { f.type = 'password'; i.className = 'bi bi-eye'; }
+}
+</script>
 {% endblock %}
