@@ -295,6 +295,53 @@ def wallet_withdraw(request):
             messages.error(request, "Amount must be greater than zero.")
             return redirect('wallet_withdraw')
 
+        # ── Step 1: Attempt disbursement FIRST before touching wallet ──
+        import logging
+        logger = logging.getLogger(__name__)
+        disbursement_success = False
+        disbursement_error = None
+
+        try:
+            from payments.models import PaymentProvider
+            from payments.yoo_client import YoPaymentsClient
+            import uuid as _uuid
+
+            yoo_provider = PaymentProvider.objects.filter(
+                provider_type='YOO', is_active=True
+            ).first()
+
+            if not yoo_provider:
+                disbursement_error = "Payment service not configured. Contact support."
+            else:
+                client = YoPaymentsClient(
+                    username=yoo_provider.api_key,
+                    password=yoo_provider.api_secret,
+                )
+                withdrawal_ref = str(_uuid.uuid4())
+                result = client.withdraw_funds(
+                    amount=int(amount),
+                    account=payout_phone,
+                    reference=withdrawal_ref,
+                    narrative=f"SpotPay withdrawal - {vendor.company_name}",
+                    provider_code='MTN' if payout_method == 'MTN' else 'AIRTEL' if payout_method == 'AIRTEL' else None,
+                )
+                logger.warning(f"YOO WITHDRAWAL RESULT: {result}")
+
+                if YoPaymentsClient.is_error(result):
+                    disbursement_error = result.get('error_message') or result.get('status_message') or 'Disbursement failed'
+                    logger.warning(f"YOO WITHDRAWAL FAILED: {disbursement_error}")
+                else:
+                    disbursement_success = True
+
+        except Exception as e:
+            logger.warning(f"YOO WITHDRAWAL EXCEPTION: {e}")
+            disbursement_error = str(e)
+
+        if not disbursement_success:
+            messages.error(request, f"Withdrawal failed: {disbursement_error or 'Could not process payment. Try again or contact support.'}")
+            return redirect('wallet_withdraw')
+
+        # ── Step 2: Disbursement succeeded — now deduct wallet and record ──
         with transaction.atomic():
             locked_wallet = VendorWallet.objects.select_for_update().get(pk=wallet.pk)
 
@@ -311,8 +358,8 @@ def wallet_withdraw(request):
                 payout_method=payout_method,
                 payout_phone=payout_phone,
                 payout_name=payout_name,
-                status=WithdrawalRequest.STATUS_PENDING,
-                reference=str(uuid.uuid4()),
+                status=WithdrawalRequest.STATUS_PAID,
+                reference=withdrawal_ref,
             )
 
             WalletTransaction.objects.create(
@@ -323,54 +370,12 @@ def wallet_withdraw(request):
                 reference=f"WD-{withdrawal.reference}",
             )
 
-        # Attempt automatic disbursement via YooPay
-        disbursement_success = False
-        disbursement_error = None
-        try:
-            from payments.models import PaymentProvider
-            from payments.yoo_client import YoPaymentsClient
-            import logging
-            logger = logging.getLogger(__name__)
-
-            yoo_provider = PaymentProvider.objects.filter(
-                provider_type='YOO', is_active=True
-            ).first()
-
-            if yoo_provider:
-                client = YoPaymentsClient(
-                    username=yoo_provider.api_key,
-                    password=yoo_provider.api_secret,
-                )
-                result = client.withdraw_funds(
-                    amount=int(amount),
-                    account=payout_phone,
-                    reference=withdrawal.reference,
-                    narrative=f"SpotPay withdrawal - {vendor.company_name}",
-                    provider_code='MTN' if payout_method == 'MTN' else 'AIRTEL' if payout_method == 'AIRTEL' else None,
-                )
-                logger.warning(f"YOO WITHDRAWAL RESULT: {result}")
-                if not YoPaymentsClient.is_error(result):
-                    withdrawal.status = WithdrawalRequest.STATUS_PAID
-                    withdrawal.save(update_fields=['status', 'updated_at'])
-                    disbursement_success = True
-                    try:
-                        notify_withdrawal_receipt(withdrawal)
-                    except Exception:
-                        pass
-                else:
-                    disbursement_error = result.get('error_message') or result.get('status_message') or 'Unknown error'
-                    logger.warning(f"YOO WITHDRAWAL FAILED: {disbursement_error}")
-            else:
-                logger.warning("YOO WITHDRAWAL: No active YOO provider found")
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).warning(f"YOO WITHDRAWAL EXCEPTION: {e}")
-
         request.session.pop('wallet_otp_verified', None)
-        if disbursement_success:
-            messages.success(request, "Withdrawal processed successfully. A receipt has been sent to your email.")
-        else:
-            messages.success(request, "Withdrawal request submitted. Payment will be sent to your account shortly.")
+        try:
+            notify_withdrawal_receipt(withdrawal)
+        except Exception:
+            pass
+        messages.success(request, "Withdrawal processed successfully. A receipt has been sent to your email.")
         return redirect('wallet_dashboard')
 
     return render(request, 'wallets/withdraw.html', {
