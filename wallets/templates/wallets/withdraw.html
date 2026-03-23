@@ -1,156 +1,165 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Withdraw | SpotPay</title>
-    <style>
-        :root {
-            --bg-primary: #f4f6f8;
-            --bg-secondary: #ffffff;
-            --text-primary: #000000;
-            --text-secondary: #6c757d;
-            --border-color: #ced4da;
-            --border-light: #dee2e6;
-        }
-        
-        [data-theme="dark"] {
-            --bg-primary: #0f1419;
-            --bg-secondary: #1a1f2e;
-            --text-primary: #e8eaed;
-            --text-secondary: #9ca3af;
-            --border-color: #2d3748;
-            --border-light: #374151;
-        }
-        
-        body { 
-            font-family: system-ui, -apple-system, BlinkMacSystemFont; 
-            background: var(--bg-primary); 
-            color: var(--text-primary);
-            margin: 0; 
-            padding: 20px;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        
-        .card { 
-            max-width: 620px; 
-            margin: 0 auto; 
-            background: var(--bg-secondary); 
-            border-radius: 12px; 
-            padding: 22px; 
-            box-shadow: 0 6px 16px rgba(0,0,0,.08); 
-        }
-        
-        .muted { color: var(--text-secondary); }
-        .row { margin-bottom: 14px; }
-        
-        label {
-            color: var(--text-primary);
-            font-weight: 500;
-        }
-        
-        input[type="number"] { 
-            width: 100%; 
-            padding: 10px; 
-            border: 1px solid var(--border-color); 
-            border-radius: 8px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-        }
-        
-        input[type="number"]:focus {
-            outline: none;
-            border-color: #198754;
-        }
-        
-        .actions { display: flex; gap: 10px; margin-top: 18px; }
-        
-        .btn { 
-            border: none; 
-            border-radius: 8px; 
-            padding: 10px 14px; 
-            text-decoration: none; 
-            cursor: pointer; 
-            font-weight: 600;
-            transition: opacity 0.2s;
-        }
-        
-        .btn:hover {
-            opacity: 0.9;
-        }
-        
-        .btn-primary { background: #198754; color: #fff; }
-        .btn-secondary { 
-            background: var(--border-light); 
-            color: var(--text-primary); 
-        }
-        
-        .alert { 
-            padding: 10px 12px; 
-            border-radius: 8px; 
-            margin-bottom: 12px; 
-        }
-        
-        .alert-danger { background: #f8d7da; color: #842029; }
-        .alert-success { background: #d1e7dd; color: #0f5132; }
-        .alert-info { background: #cff4fc; color: #055160; }
-        
-        [data-theme="dark"] .alert-danger { background: rgba(220, 53, 69, 0.15); color: #f87171; }
-        [data-theme="dark"] .alert-success { background: rgba(25, 135, 84, 0.15); color: #4ade80; }
-        [data-theme="dark"] .alert-info { background: rgba(13, 202, 240, 0.15); color: #38bdf8; }
-    </style>
-</head>
-<body>
+{% extends 'accounts/base.html' %}
+{% load humanize %}
 
-<script>
-// Theme sync with main app
-const savedTheme = localStorage.getItem('theme') || 'light';
-document.documentElement.setAttribute('data-theme', savedTheme);
-</script>
-    <div class="card">
-        <h2>Withdraw Funds</h2>
-        <p class="muted">Available balance: <strong>UGX {{ wallet.balance }}</strong></p>
+{% block title %}Withdraw Funds | SpotPay{% endblock %}
+{% block page_title %}Withdraw Funds{% endblock %}
+{% block page_subtitle %}Transfer money from your wallet{% endblock %}
 
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% else %}alert-info{% endif %}">
-                    {{ message }}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6 col-md-8">
+
+        <div class="card border-0 shadow-sm" style="border-radius:16px;">
+            <div class="card-body p-4">
+
+                <!-- Balance Banner -->
+                <div class="d-flex align-items-center gap-3 mb-4 p-3" style="background:linear-gradient(135deg,#198754,#0f5132);border-radius:12px;">
+                    <div style="width:44px;height:44px;background:rgba(255,255,255,0.2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;color:#fff;">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div>
+                        <div style="color:rgba(255,255,255,0.75);font-size:0.78rem;">Available Balance</div>
+                        <div style="color:#fff;font-size:1.4rem;font-weight:700;">UGX {{ wallet.balance|intcomma }}</div>
+                    </div>
                 </div>
-            {% endfor %}
-        {% endif %}
 
-        <form method="post">
-            {% csrf_token %}
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% else %}alert-info{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
 
-            <div class="row">
-                <label for="amount">Amount (UGX)</label>
-                <input id="amount" name="amount" type="number" min="1" step="0.01" required>
+                <form method="post" id="withdrawForm">
+                    {% csrf_token %}
+
+                    <!-- Amount -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Amount (UGX) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-cash-stack"></i></span>
+                            <input type="number" class="form-control" name="amount" id="amount"
+                                   placeholder="Enter amount" min="1" step="1" required>
+                        </div>
+                    </div>
+
+                    <!-- Payout Method -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payout Method <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-phone"></i></span>
+                            <select class="form-select" name="payout_method" id="payout_method" required>
+                                <option value="MTN">MTN Mobile Money</option>
+                                <option value="AIRTEL">Airtel Money</option>
+                                <option value="BANK">Bank Transfer</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Phone Number with live lookup -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            Mobile Money Number / Account No. <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-telephone"></i></span>
+                            <input type="text" class="form-control" name="payout_phone" id="payout_phone"
+                                   placeholder="e.g. 0771234567" required autocomplete="off">
+                            <span class="input-group-text" id="lookup_spinner" style="display:none;">
+                                <span class="spinner-border spinner-border-sm text-secondary"></span>
+                            </span>
+                        </div>
+                        <!-- Name preview box -->
+                        <div id="name_preview" class="mt-2 p-2 rounded d-none"
+                             style="background:rgba(25,135,84,0.1);border:1px solid rgba(25,135,84,0.3);font-size:0.85rem;">
+                            <i class="bi bi-person-check-fill text-success me-1"></i>
+                            <span id="name_preview_text" class="fw-semibold"></span>
+                        </div>
+                        <div id="name_error" class="mt-2 text-danger d-none" style="font-size:0.82rem;">
+                            <i class="bi bi-exclamation-circle me-1"></i>
+                            <span id="name_error_text"></span>
+                        </div>
+                    </div>
+
+                    <!-- Account Holder Name -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Account Holder Name <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" class="form-control" name="payout_name" id="payout_name"
+                                   placeholder="Full name on account" required>
+                        </div>
+                        <div class="form-text">Confirm the name matches the account holder.</div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-success flex-grow-1 fw-semibold">
+                            <i class="bi bi-send me-2"></i>Withdraw
+                        </button>
+                        <a href="{% url 'wallet_dashboard' %}" class="btn btn-outline-secondary px-4">Cancel</a>
+                    </div>
+
+                </form>
             </div>
+        </div>
 
-            <div class="row">
-                <label for="payout_method">Payout Method</label>
-                <select id="payout_method" name="payout_method" required>
-                    <option value="MTN">MTN Mobile Money</option>
-                    <option value="AIRTEL">Airtel Money</option>
-                    <option value="BANK">Bank Transfer</option>
-                </select>
-            </div>
-
-            <div class="row">
-                <label for="payout_phone">Mobile Money Number / Account No.</label>
-                <input id="payout_phone" name="payout_phone" type="text" placeholder="e.g. 0771234567" required>
-            </div>
-
-            <div class="row">
-                <label for="payout_name">Account Holder Name</label>
-                <input id="payout_name" name="payout_name" type="text" placeholder="e.g. John Doe" required>
-            </div>
-
-            <div class="actions">
-                <button type="submit" class="btn btn-primary">Continue</button>
-                <a href="{% url 'wallet_dashboard' %}" class="btn btn-secondary">Back</a>
-            </div>
-        </form>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let lookupTimer = null;
+
+document.getElementById('payout_phone').addEventListener('input', function () {
+    const phone = this.value.trim();
+    const method = document.getElementById('payout_method').value;
+
+    clearTimeout(lookupTimer);
+    hideNameFeedback();
+
+    // Only lookup for mobile money, not bank
+    if (method === 'BANK') return;
+    if (phone.length < 10) return;
+
+    lookupTimer = setTimeout(() => lookupName(phone, method), 700);
+});
+
+document.getElementById('payout_method').addEventListener('change', function () {
+    hideNameFeedback();
+    const phone = document.getElementById('payout_phone').value.trim();
+    if (this.value !== 'BANK' && phone.length >= 10) {
+        lookupName(phone, this.value);
+    }
+});
+
+function lookupName(phone, method) {
+    document.getElementById('lookup_spinner').style.display = 'flex';
+    hideNameFeedback();
+
+    fetch(`/wallets/lookup-name/?phone=${encodeURIComponent(phone)}&method=${method}`)
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('lookup_spinner').style.display = 'none';
+            if (data.success && data.name) {
+                document.getElementById('name_preview_text').textContent = data.name;
+                document.getElementById('name_preview').classList.remove('d-none');
+                document.getElementById('payout_name').value = data.name;
+            } else if (data.error) {
+                document.getElementById('name_error_text').textContent = data.error;
+                document.getElementById('name_error').classList.remove('d-none');
+            }
+        })
+        .catch(() => {
+            document.getElementById('lookup_spinner').style.display = 'none';
+        });
+}
+
+function hideNameFeedback() {
+    document.getElementById('name_preview').classList.add('d-none');
+    document.getElementById('name_error').classList.add('d-none');
+}
+</script>
+{% endblock %}

@@ -11,10 +11,7 @@ urlpatterns = [
     path('otp/send/', views.wallet_send_otp, name='wallet_send_otp'),
     path('otp/verify/', views.wallet_verify_otp, name='wallet_verify_otp'),
     path('withdraw/', views.wallet_withdraw, name='wallet_withdraw'),
+    path('lookup-name/', views.lookup_name, name='wallet_lookup_name'),
     path('lock/', views.wallet_lock, name='wallet_lock'),
-    path(
-    'reset-password/auth/',
-    views.wallet_password_reset_from_auth,
-    name='wallet_password_reset_from_auth'
-),
+    path('reset-password/auth/', views.wallet_password_reset_from_auth, name='wallet_password_reset_from_auth'),
 ]

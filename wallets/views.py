@@ -337,6 +337,46 @@ def wallet_withdraw(request):
 
 
 # =====================================================
+# MOBILE MONEY NAME LOOKUP
+# =====================================================
+
+@login_required
+def lookup_name(request):
+    from django.http import JsonResponse
+    import requests as http_requests
+    from payments.models import PaymentProvider
+
+    phone = request.GET.get('phone', '').strip()
+    method = request.GET.get('method', '').upper()
+
+    if not phone:
+        return JsonResponse({'success': False, 'error': 'Phone number required'})
+
+    # Try MakyPay name lookup if provider is configured
+    provider = PaymentProvider.objects.filter(is_active=True).first()
+    if provider and provider.base_url:
+        try:
+            resp = http_requests.post(
+                f"{provider.base_url.rstrip('/')}/name-lookup",
+                json={'phone': phone},
+                headers={
+                    'Authorization': f'Bearer {provider.api_key}',
+                    'Content-Type': 'application/json',
+                },
+                timeout=8,
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                name = data.get('name') or data.get('account_name') or data.get('full_name')
+                if name:
+                    return JsonResponse({'success': True, 'name': name})
+        except Exception:
+            pass
+
+    return JsonResponse({'success': False, 'error': 'Could not verify number. Enter name manually.'})
+
+
+# =====================================================
 # LOCK WALLET (WITHOUT LOGOUT)
 # =====================================================
 
