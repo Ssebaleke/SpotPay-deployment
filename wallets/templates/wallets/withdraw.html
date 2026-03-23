@@ -10,7 +10,7 @@
         <i class="bi bi-wallet2"></i>
     </div>
     <div>
-        <div style="color:rgba(255,255,255,0.75);font-size:0.75rem;">Available Balance</div>
+        <div style="color:rgba(255,255,255,0.8);font-size:0.75rem;">Available Balance</div>
         <div style="color:#fff;font-size:1.5rem;font-weight:800;">UGX {{ wallet.balance|intcomma }}</div>
     </div>
 </div>
@@ -19,7 +19,7 @@
     {% for message in messages %}
     <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% else %}alert-info{% endif %} alert-dismissible fade show mb-3">
         {{ message }}
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     {% endfor %}
 {% endif %}
@@ -36,7 +36,7 @@
                    max="{{ wallet.balance }}" required>
         </div>
         <div class="form-text">Maximum: UGX {{ wallet.balance|intcomma }}</div>
-        <div id="amount_error" class="d-none mt-1" style="color:#f87171;font-size:0.8rem;">
+        <div id="amount_error" class="d-none mt-1" style="color:#dc2626;font-size:0.8rem;">
             <i class="bi bi-exclamation-circle me-1"></i>
             Amount exceeds your available balance of UGX {{ wallet.balance|intcomma }}
         </div>

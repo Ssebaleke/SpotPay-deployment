@@ -11,15 +11,14 @@
 
         body {
             min-height: 100vh;
-            background: #0a0e1a;
+            background: #f5f7fb;
             font-family: 'Segoe UI', system-ui, sans-serif;
-            color: #e2e8f0;
+            color: #212529;
         }
 
         /* Top bar */
         .wallet-topbar {
-            background: #0d1224;
-            border-bottom: 1px solid #1e2a3a;
+            background: #0c1218;
             padding: 14px 24px;
             display: flex;
             align-items: center;
@@ -44,15 +43,15 @@
         .wallet-topbar .secure-badge {
             display: flex; align-items: center; gap: 6px;
             font-size: 0.75rem; color: #22c55e;
-            background: rgba(34,197,94,0.1);
-            border: 1px solid rgba(34,197,94,0.2);
+            background: rgba(34,197,94,0.12);
+            border: 1px solid rgba(34,197,94,0.25);
             padding: 4px 10px; border-radius: 20px;
         }
         .back-link {
-            color: #64748b; font-size: 0.8rem; text-decoration: none;
+            color: #94a3b8; font-size: 0.8rem; text-decoration: none;
             display: flex; align-items: center; gap: 5px;
         }
-        .back-link:hover { color: #94a3b8; }
+        .back-link:hover { color: #f1f5f9; }
 
         /* Main content */
         .wallet-body {
@@ -64,42 +63,42 @@
         }
 
         .wallet-card {
-            background: #0d1224;
-            border: 1px solid #1e2a3a;
-            border-radius: 20px;
+            background: #ffffff;
+            border: 1px solid #e9ecef;
+            border-radius: 16px;
             padding: 36px 32px;
             width: 100%;
             max-width: 480px;
-            box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.07);
         }
 
         /* Form controls */
-        .form-label { color: #94a3b8; font-size: 0.8rem; margin-bottom: 6px; }
+        .form-label { color: #495057; font-size: 0.82rem; font-weight: 500; margin-bottom: 6px; }
         .form-control, .form-select {
-            background: #060a14;
-            border: 1px solid #1e2a3a;
-            color: #f1f5f9;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #212529;
             border-radius: 10px;
             padding: 11px 14px;
             font-size: 0.9rem;
         }
         .form-control:focus, .form-select:focus {
-            background: #060a14;
+            background: #fff;
             border-color: #4361ee;
-            color: #f1f5f9;
-            box-shadow: 0 0 0 3px rgba(67,97,238,0.2);
+            color: #212529;
+            box-shadow: 0 0 0 3px rgba(67,97,238,0.15);
         }
-        .form-control::placeholder { color: #334155; }
+        .form-control::placeholder { color: #adb5bd; }
         .input-group-text {
-            background: #060a14;
-            border: 1px solid #1e2a3a;
-            color: #475569;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            color: #6c757d;
             border-radius: 10px 0 0 10px;
         }
         .input-group .form-control,
         .input-group .form-select { border-radius: 0 10px 10px 0; border-left: none; }
         .input-group:focus-within .input-group-text { border-color: #4361ee; }
-        .form-text { color: #475569; font-size: 0.75rem; }
+        .form-text { color: #6c757d; font-size: 0.75rem; }
 
         /* Buttons */
         .btn-wallet-primary {
@@ -124,30 +123,30 @@
 
         .btn-wallet-outline {
             background: transparent;
-            border: 1px solid #1e2a3a;
-            color: #94a3b8;
+            border: 1px solid #dee2e6;
+            color: #6c757d;
             border-radius: 10px; padding: 11px;
             font-size: 0.88rem; font-weight: 500;
             transition: all .2s;
         }
-        .btn-wallet-outline:hover { border-color: #4361ee; color: #7b9eff; }
+        .btn-wallet-outline:hover { border-color: #4361ee; color: #4361ee; }
 
         /* Alerts */
-        .alert { border-radius: 10px; font-size: 0.84rem; border: none; }
-        .alert-danger { background: rgba(220,53,69,0.15); color: #f87171; }
-        .alert-success { background: rgba(34,197,94,0.12); color: #4ade80; }
-        .alert-info { background: rgba(67,97,238,0.12); color: #7b9eff; }
-        .alert-warning { background: rgba(234,179,8,0.12); color: #facc15; }
+        .alert { border-radius: 10px; font-size: 0.84rem; }
+        .alert-danger { background: #fff5f5; border-color: #fecaca; color: #dc2626; }
+        .alert-success { background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; }
+        .alert-info { background: #eff6ff; border-color: #bfdbfe; color: #2563eb; }
+        .alert-warning { background: #fffbeb; border-color: #fde68a; color: #d97706; }
 
         /* Divider */
-        .wallet-divider { border-color: #1e2a3a; margin: 20px 0; }
+        .wallet-divider { border-color: #e9ecef; margin: 20px 0; }
 
         /* Footer */
         .wallet-footer {
             text-align: center;
             margin-top: 20px;
             font-size: 0.75rem;
-            color: #334155;
+            color: #adb5bd;
         }
         .wallet-footer a { color: #4361ee; text-decoration: none; }
     </style>

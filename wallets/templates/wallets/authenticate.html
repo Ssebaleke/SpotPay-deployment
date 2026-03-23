@@ -7,15 +7,15 @@
     <div style="width:56px;height:56px;background:linear-gradient(135deg,#4361ee,#3a0ca3);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#fff;margin:0 auto 16px;">
         <i class="bi bi-shield-lock"></i>
     </div>
-    <h5 style="color:#f1f5f9;font-weight:700;margin-bottom:4px;">Wallet Authentication</h5>
-    <p style="color:#64748b;font-size:0.84rem;">Enter your wallet password to continue</p>
+    <h5 style="color:#212529;font-weight:700;margin-bottom:4px;">Wallet Authentication</h5>
+    <p style="color:#6c757d;font-size:0.84rem;">Enter your wallet password to continue</p>
 </div>
 
 {% if messages %}
     {% for message in messages %}
     <div class="alert {% if 'error' in message.tags %}alert-danger{% elif 'success' in message.tags %}alert-success{% else %}alert-info{% endif %} alert-dismissible fade show mb-3">
         {{ message }}
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     {% endfor %}
 {% endif %}
@@ -39,7 +39,7 @@
 
 <hr class="wallet-divider">
 <div class="text-center">
-    <a href="{% url 'wallet_password_reset_from_auth' %}" style="color:#4361ee;font-size:0.82rem;text-decoration:none;">
+    <a href="{% url 'wallet_password_reset_from_auth' %}" style="color:#4361ee;font-size:0.82rem;text-decoration:none;font-weight:500;">
         <i class="bi bi-question-circle me-1"></i>Forgot wallet password?
     </a>
 </div>
