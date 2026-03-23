@@ -295,29 +295,28 @@ def wallet_withdraw(request):
             messages.error(request, "Amount must be greater than zero.")
             return redirect('wallet_withdraw')
 
-        # ── Step 1: Attempt disbursement FIRST before touching wallet ──
         import logging
+        import uuid as _uuid
         logger = logging.getLogger(__name__)
+
+        withdrawal_ref = str(_uuid.uuid4())
         disbursement_success = False
         disbursement_error = None
 
+        # ── Step 1: Attempt YooPay disbursement ──
         try:
             from payments.models import PaymentProvider
             from payments.yoo_client import YoPaymentsClient
-            import uuid as _uuid
 
             yoo_provider = PaymentProvider.objects.filter(
                 provider_type='YOO', is_active=True
             ).first()
 
-            if not yoo_provider:
-                disbursement_error = "Payment service not configured. Contact support."
-            else:
+            if yoo_provider:
                 client = YoPaymentsClient(
                     username=yoo_provider.api_key,
                     password=yoo_provider.api_secret,
                 )
-                withdrawal_ref = str(_uuid.uuid4())
                 result = client.withdraw_funds(
                     amount=int(amount),
                     account=payout_phone,
@@ -332,16 +331,18 @@ def wallet_withdraw(request):
                     logger.warning(f"YOO WITHDRAWAL FAILED: {disbursement_error}")
                 else:
                     disbursement_success = True
+            else:
+                disbursement_error = "No YooPay provider configured"
 
         except Exception as e:
             logger.warning(f"YOO WITHDRAWAL EXCEPTION: {e}")
             disbursement_error = str(e)
 
-        if not disbursement_success:
-            messages.error(request, f"Withdrawal failed: {disbursement_error or 'Could not process payment. Try again or contact support.'}")
-            return redirect('wallet_withdraw')
+        # ── Step 2: Deduct wallet and record withdrawal ──
+        # If disbursement succeeded → STATUS_PAID
+        # If disbursement failed → STATUS_PENDING (admin pays manually)
+        withdrawal_status = WithdrawalRequest.STATUS_PAID if disbursement_success else WithdrawalRequest.STATUS_PENDING
 
-        # ── Step 2: Disbursement succeeded — now deduct wallet and record ──
         with transaction.atomic():
             locked_wallet = VendorWallet.objects.select_for_update().get(pk=wallet.pk)
 
@@ -358,7 +359,7 @@ def wallet_withdraw(request):
                 payout_method=payout_method,
                 payout_phone=payout_phone,
                 payout_name=payout_name,
-                status=WithdrawalRequest.STATUS_PAID,
+                status=withdrawal_status,
                 reference=withdrawal_ref,
             )
 
@@ -371,11 +372,17 @@ def wallet_withdraw(request):
             )
 
         request.session.pop('wallet_otp_verified', None)
-        try:
-            notify_withdrawal_receipt(withdrawal)
-        except Exception:
-            pass
-        messages.success(request, "Withdrawal processed successfully. A receipt has been sent to your email.")
+
+        if disbursement_success:
+            try:
+                notify_withdrawal_receipt(withdrawal)
+            except Exception:
+                pass
+            messages.success(request, "Withdrawal processed successfully. A receipt has been sent to your email.")
+        else:
+            logger.warning(f"Withdrawal {withdrawal_ref} queued as PENDING — disbursement error: {disbursement_error}")
+            messages.warning(request, "Your withdrawal request has been received and is being processed. You will be notified once payment is sent.")
+
         return redirect('wallet_dashboard')
 
     return render(request, 'wallets/withdraw.html', {
