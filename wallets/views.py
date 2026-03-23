@@ -22,6 +22,7 @@ from .models import (
 )
 
 from .decorators import wallet_required
+from sms.services.notifications import notify_withdrawal_receipt
 
 
 # =====================================================
@@ -280,6 +281,18 @@ def wallet_withdraw(request):
             messages.error(request, "Invalid amount.")
             return redirect('wallet_withdraw')
 
+        payout_method = request.POST.get('payout_method', 'MTN')
+        payout_phone = request.POST.get('payout_phone', '').strip()
+        payout_name = request.POST.get('payout_name', '').strip()
+
+        if not payout_phone:
+            messages.error(request, "Payout phone/account number is required.")
+            return redirect('wallet_withdraw')
+
+        if not payout_name:
+            messages.error(request, "Account holder name is required.")
+            return redirect('wallet_withdraw')
+
         if amount <= 0:
             messages.error(request, "Amount must be greater than zero.")
             return redirect('wallet_withdraw')
@@ -297,6 +310,9 @@ def wallet_withdraw(request):
             withdrawal = WithdrawalRequest.objects.create(
                 wallet=locked_wallet,
                 amount=amount,
+                payout_method=payout_method,
+                payout_phone=payout_phone,
+                payout_name=payout_name,
                 status=WithdrawalRequest.STATUS_PAID,
                 reference=str(uuid.uuid4()),
             )
@@ -310,7 +326,11 @@ def wallet_withdraw(request):
             )
 
         request.session.pop('wallet_otp_verified', None)
-        messages.success(request, "Withdrawal processed successfully.")
+        try:
+            notify_withdrawal_receipt(withdrawal)
+        except Exception:
+            pass
+        messages.success(request, "Withdrawal processed successfully. A receipt has been sent to your email.")
         return redirect('wallet_dashboard')
 
     return render(request, 'wallets/withdraw.html', {

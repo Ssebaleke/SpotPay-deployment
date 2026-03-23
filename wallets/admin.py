@@ -60,20 +60,38 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
     list_display = (
         'get_vendor',
         'amount',
+        'payout_method',
+        'payout_phone',
+        'payout_name',
         'status',
         'reference',
         'created_at',
     )
-    list_filter = ('status', 'created_at')
+    list_filter = ('status', 'payout_method', 'created_at')
     search_fields = (
         'wallet__vendor__company_name',
         'reference',
+        'payout_phone',
+        'payout_name',
     )
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'reference')
+    ordering = ('-created_at',)
+
+    fieldsets = (
+        ('Vendor & Amount', {
+            'fields': ('wallet', 'amount', 'status', 'reference')
+        }),
+        ('Payout Details', {
+            'fields': ('payout_method', 'payout_phone', 'payout_name'),
+            'description': 'Where to send the money'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+        }),
+    )
 
     def get_vendor(self, obj):
-        return obj.wallet.vendor
-
+        return obj.wallet.vendor if obj.wallet else '—'
     get_vendor.short_description = 'Vendor'
 
 

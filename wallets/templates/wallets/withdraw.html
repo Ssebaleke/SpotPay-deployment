@@ -127,6 +127,25 @@ document.documentElement.setAttribute('data-theme', savedTheme);
                 <input id="amount" name="amount" type="number" min="1" step="0.01" required>
             </div>
 
+            <div class="row">
+                <label for="payout_method">Payout Method</label>
+                <select id="payout_method" name="payout_method" required>
+                    <option value="MTN">MTN Mobile Money</option>
+                    <option value="AIRTEL">Airtel Money</option>
+                    <option value="BANK">Bank Transfer</option>
+                </select>
+            </div>
+
+            <div class="row">
+                <label for="payout_phone">Mobile Money Number / Account No.</label>
+                <input id="payout_phone" name="payout_phone" type="text" placeholder="e.g. 0771234567" required>
+            </div>
+
+            <div class="row">
+                <label for="payout_name">Account Holder Name</label>
+                <input id="payout_name" name="payout_name" type="text" placeholder="e.g. John Doe" required>
+            </div>
+
             <div class="actions">
                 <button type="submit" class="btn btn-primary">Continue</button>
                 <a href="{% url 'wallet_dashboard' %}" class="btn btn-secondary">Back</a>

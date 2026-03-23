@@ -42,6 +42,9 @@ def portal_data(request, uuid):
         vouchers__status='UNUSED'
     ).distinct()
 
+    # filter by schedule
+    packages = [p for p in packages if p.is_available_now()]
+
     ads = location.ads.filter(is_active=True)
 
     data = {
@@ -116,6 +119,13 @@ def portal_buy_api(request, uuid):
         location=location,
         is_active=True
     )
+
+    # Check schedule
+    if not package.is_available_now():
+        return JsonResponse(
+            {"success": False, "message": "This package is not available right now"},
+            status=400
+        )
 
     # Ensure vouchers exist
     if not package.vouchers.filter(status="UNUSED").exists():
@@ -364,6 +374,7 @@ def portal_buy(request, uuid):
             is_active=True,
             vouchers__status="UNUSED"
         ).distinct()
+        packages = [p for p in packages if p.is_available_now()]
 
         return render(
             request,
@@ -380,6 +391,7 @@ def portal_buy(request, uuid):
             is_active=True,
             vouchers__status="UNUSED"
         ).distinct()
+        packages = [p for p in packages if p.is_available_now()]
 
         if not package_id or not phone:
             return render(
@@ -399,14 +411,14 @@ def portal_buy(request, uuid):
             is_active=True
         )
 
-        if not package.vouchers.filter(status="UNUSED").exists():
+        if not package.is_available_now():
             return render(
                 request,
                 "portal_api/buy.html",
                 {
                     "location": location,
                     "packages": packages,
-                    "error": "This package is currently out of stock",
+                    "error": "This package is not available right now",
                 }
             )
 

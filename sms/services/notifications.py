@@ -136,6 +136,47 @@ def notify_withdrawal_status(withdrawal, status_text):
         )
 
 
+def notify_withdrawal_receipt(withdrawal):
+    """Send withdrawal receipt to vendor after successful withdrawal."""
+    if not withdrawal.wallet or not withdrawal.wallet.vendor:
+        return
+
+    vendor = withdrawal.wallet.vendor
+    subject = "Withdrawal Receipt - SpotPay"
+    html = (
+        f"<p>Hello {vendor.company_name},</p>"
+        f"<p>Your withdrawal has been processed successfully. Here are the details:</p>"
+        f"<table style='border-collapse:collapse; width:100%; font-size:14px;'>"
+        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Amount</strong></td><td style='padding:8px; border:1px solid #ddd;'>UGX {withdrawal.amount}</td></tr>"
+        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Payout Method</strong></td><td style='padding:8px; border:1px solid #ddd;'>{withdrawal.get_payout_method_display()}</td></tr>"
+        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Account Number</strong></td><td style='padding:8px; border:1px solid #ddd;'>{withdrawal.payout_phone}</td></tr>"
+        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Account Name</strong></td><td style='padding:8px; border:1px solid #ddd;'>{withdrawal.payout_name}</td></tr>"
+        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Reference</strong></td><td style='padding:8px; border:1px solid #ddd;'>{withdrawal.reference}</td></tr>"
+        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Date & Time</strong></td><td style='padding:8px; border:1px solid #ddd;'>{withdrawal.created_at.strftime('%d %b %Y, %H:%M:%S')} UTC</td></tr>"
+        f"</table>"
+        f"<p>If you did not make this withdrawal, contact support immediately.</p>"
+        f"<p>SpotPay Team</p>"
+    )
+    text = (
+        f"Hello {vendor.company_name},\n\n"
+        f"Withdrawal Receipt:\n"
+        f"Amount: UGX {withdrawal.amount}\n"
+        f"Method: {withdrawal.get_payout_method_display()}\n"
+        f"Account: {withdrawal.payout_phone}\n"
+        f"Name: {withdrawal.payout_name}\n"
+        f"Reference: {withdrawal.reference}\n"
+        f"Date: {withdrawal.created_at.strftime('%d %b %Y, %H:%M:%S')} UTC\n\n"
+        "SpotPay Team"
+    )
+    _send(
+        to_email=vendor.business_email or vendor.user.email,
+        subject=subject,
+        html=html,
+        text=text,
+        context="notify_withdrawal_receipt",
+    )
+
+
 def notify_vendor_registration(vendor):
     """Welcome email to vendor after they register — before approval."""
     subject = "Welcome to SpotPay — Registration Received"

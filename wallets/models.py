@@ -201,17 +201,41 @@ class WithdrawalRequest(models.Model):
         (STATUS_REJECTED, 'Rejected'),
     )
 
+    PAYOUT_METHODS = (
+        ('MTN', 'MTN Mobile Money'),
+        ('AIRTEL', 'Airtel Money'),
+        ('BANK', 'Bank Transfer'),
+    )
+
     wallet = models.ForeignKey(
         VendorWallet,
         on_delete=models.CASCADE,
         related_name='withdrawals',
-        null=True,     # 🔑 REQUIRED for migration safety
+        null=True,
         blank=True
     )
 
     amount = models.DecimalField(
         max_digits=12,
         decimal_places=2
+    )
+
+    payout_method = models.CharField(
+        max_length=10,
+        choices=PAYOUT_METHODS,
+        default='MTN'
+    )
+
+    payout_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text='Mobile money number or bank account to receive payment'
+    )
+
+    payout_name = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text='Account holder name'
     )
 
     status = models.CharField(
