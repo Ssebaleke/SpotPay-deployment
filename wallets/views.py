@@ -311,7 +311,7 @@ def wallet_withdraw(request):
                 payout_method=payout_method,
                 payout_phone=payout_phone,
                 payout_name=payout_name,
-                status=WithdrawalRequest.STATUS_PAID,
+                status=WithdrawalRequest.STATUS_PENDING,
                 reference=str(uuid.uuid4()),
             )
 
@@ -323,12 +323,44 @@ def wallet_withdraw(request):
                 reference=f"WD-{withdrawal.reference}",
             )
 
-        request.session.pop('wallet_otp_verified', None)
+        # Attempt automatic disbursement via YooPay
+        disbursement_success = False
         try:
-            notify_withdrawal_receipt(withdrawal)
+            from payments.models import PaymentProvider
+            from payments.yoo_client import YoPaymentsClient
+
+            yoo_provider = PaymentProvider.objects.filter(
+                provider_type='YOO', is_active=True
+            ).first()
+
+            if yoo_provider:
+                client = YoPaymentsClient(
+                    username=yoo_provider.api_key,
+                    password=yoo_provider.api_secret,
+                )
+                result = client.withdraw_funds(
+                    amount=int(amount),
+                    account=payout_phone,
+                    reference=withdrawal.reference,
+                    narrative=f"SpotPay withdrawal - {vendor.company_name}",
+                    provider_code='MTN' if payout_method == 'MTN' else 'AIRTEL' if payout_method == 'AIRTEL' else None,
+                )
+                if not YoPaymentsClient.is_error(result):
+                    withdrawal.status = WithdrawalRequest.STATUS_PAID
+                    withdrawal.save(update_fields=['status', 'updated_at'])
+                    disbursement_success = True
+                    try:
+                        notify_withdrawal_receipt(withdrawal)
+                    except Exception:
+                        pass
         except Exception:
             pass
-        messages.success(request, "Withdrawal processed successfully. A receipt has been sent to your email.")
+
+        request.session.pop('wallet_otp_verified', None)
+        if disbursement_success:
+            messages.success(request, "Withdrawal processed successfully. A receipt has been sent to your email.")
+        else:
+            messages.success(request, "Withdrawal request submitted. Payment will be sent to your account shortly.")
         return redirect('wallet_dashboard')
 
     return render(request, 'wallets/withdraw.html', {

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.utils import timezone
 from .models import (
     VendorWallet,
     WalletTransaction,
@@ -6,6 +7,7 @@ from .models import (
     WalletOTP,
     WalletPasswordToken,
 )
+from sms.services.notifications import notify_withdrawal_receipt
 
 
 # =====================================================
@@ -76,6 +78,7 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('created_at', 'updated_at', 'reference')
     ordering = ('-created_at',)
+    actions = ['mark_as_paid']
 
     fieldsets = (
         ('Vendor & Amount', {
@@ -93,6 +96,20 @@ class WithdrawalRequestAdmin(admin.ModelAdmin):
     def get_vendor(self, obj):
         return obj.wallet.vendor if obj.wallet else '—'
     get_vendor.short_description = 'Vendor'
+
+    def mark_as_paid(self, request, queryset):
+        count = 0
+        for withdrawal in queryset.exclude(status=WithdrawalRequest.STATUS_PAID):
+            withdrawal.status = WithdrawalRequest.STATUS_PAID
+            withdrawal.updated_at = timezone.now()
+            withdrawal.save(update_fields=['status', 'updated_at'])
+            try:
+                notify_withdrawal_receipt(withdrawal)
+            except Exception:
+                pass
+            count += 1
+        self.message_user(request, f'{count} withdrawal(s) marked as paid and receipt sent to vendor(s).')
+    mark_as_paid.short_description = 'Mark selected as Paid & send receipt to vendor'
 
 
 # =====================================================

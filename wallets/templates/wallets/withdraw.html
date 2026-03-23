@@ -58,7 +58,7 @@
                         </div>
                     </div>
 
-                    <!-- Phone Number with live lookup -->
+                    <!-- Phone Number -->
                     <div class="mb-3">
                         <label class="form-label fw-semibold">
                             Mobile Money Number / Account No. <span class="text-danger">*</span>
@@ -66,20 +66,7 @@
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-telephone"></i></span>
                             <input type="text" class="form-control" name="payout_phone" id="payout_phone"
-                                   placeholder="e.g. 0771234567" required autocomplete="off">
-                            <span class="input-group-text" id="lookup_spinner" style="display:none;">
-                                <span class="spinner-border spinner-border-sm text-secondary"></span>
-                            </span>
-                        </div>
-                        <!-- Name preview box -->
-                        <div id="name_preview" class="mt-2 p-2 rounded d-none"
-                             style="background:rgba(25,135,84,0.1);border:1px solid rgba(25,135,84,0.3);font-size:0.85rem;">
-                            <i class="bi bi-person-check-fill text-success me-1"></i>
-                            <span id="name_preview_text" class="fw-semibold"></span>
-                        </div>
-                        <div id="name_error" class="mt-2 text-danger d-none" style="font-size:0.82rem;">
-                            <i class="bi bi-exclamation-circle me-1"></i>
-                            <span id="name_error_text"></span>
+                                   placeholder="e.g. 0771234567" required>
                         </div>
                     </div>
 
@@ -91,7 +78,7 @@
                             <input type="text" class="form-control" name="payout_name" id="payout_name"
                                    placeholder="Full name on account" required>
                         </div>
-                        <div class="form-text">Confirm the name matches the account holder.</div>
+                        <div class="form-text">Enter the name exactly as registered on the account.</div>
                     </div>
 
                     <div class="d-flex gap-2">
@@ -109,57 +96,4 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}
-<script>
-let lookupTimer = null;
-
-document.getElementById('payout_phone').addEventListener('input', function () {
-    const phone = this.value.trim();
-    const method = document.getElementById('payout_method').value;
-
-    clearTimeout(lookupTimer);
-    hideNameFeedback();
-
-    // Only lookup for mobile money, not bank
-    if (method === 'BANK') return;
-    if (phone.length < 10) return;
-
-    lookupTimer = setTimeout(() => lookupName(phone, method), 700);
-});
-
-document.getElementById('payout_method').addEventListener('change', function () {
-    hideNameFeedback();
-    const phone = document.getElementById('payout_phone').value.trim();
-    if (this.value !== 'BANK' && phone.length >= 10) {
-        lookupName(phone, this.value);
-    }
-});
-
-function lookupName(phone, method) {
-    document.getElementById('lookup_spinner').style.display = 'flex';
-    hideNameFeedback();
-
-    fetch(`/wallets/lookup-name/?phone=${encodeURIComponent(phone)}&method=${method}`)
-        .then(r => r.json())
-        .then(data => {
-            document.getElementById('lookup_spinner').style.display = 'none';
-            if (data.success && data.name) {
-                document.getElementById('name_preview_text').textContent = data.name;
-                document.getElementById('name_preview').classList.remove('d-none');
-                document.getElementById('payout_name').value = data.name;
-            } else if (data.error) {
-                document.getElementById('name_error_text').textContent = data.error;
-                document.getElementById('name_error').classList.remove('d-none');
-            }
-        })
-        .catch(() => {
-            document.getElementById('lookup_spinner').style.display = 'none';
-        });
-}
-
-function hideNameFeedback() {
-    document.getElementById('name_preview').classList.add('d-none');
-    document.getElementById('name_error').classList.add('d-none');
-}
-</script>
 {% endblock %}
