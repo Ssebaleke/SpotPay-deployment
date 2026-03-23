@@ -63,28 +63,6 @@
             border-color: #198754;
         }
         
-        .mode { 
-            border: 1px solid var(--border-light); 
-            border-radius: 10px; 
-            padding: 12px; 
-            margin-bottom: 10px;
-            background: var(--bg-primary);
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-        
-        .mode:hover {
-            border-color: #198754;
-        }
-        
-        .mode input[type="radio"] {
-            margin-right: 8px;
-        }
-        
-        .mode strong {
-            color: var(--text-primary);
-        }
-        
         .actions { display: flex; gap: 10px; margin-top: 18px; }
         
         .btn { 
@@ -147,22 +125,6 @@ document.documentElement.setAttribute('data-theme', savedTheme);
             <div class="row">
                 <label for="amount">Amount (UGX)</label>
                 <input id="amount" name="amount" type="number" min="1" step="0.01" required>
-            </div>
-
-            <div class="row">
-                <label class="muted">Withdrawal Option</label>
-
-                <label class="mode">
-                    <input type="radio" name="withdrawal_mode" value="instant" checked>
-                    <strong>Instant Withdrawal</strong>
-                    <div class="muted">Debits your wallet immediately (no admin approval).</div>
-                </label>
-
-                <label class="mode">
-                    <input type="radio" name="withdrawal_mode" value="pending">
-                    <strong>Request Admin Approval</strong>
-                    <div class="muted">Creates a pending withdrawal for admin review.</div>
-                </label>
             </div>
 
             <div class="actions">

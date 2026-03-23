@@ -9,6 +9,12 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Sum, Count, Q
 from django.db import transaction
+from django.contrib.auth.models import User
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.conf import settings
 from decimal import Decimal
 from datetime import timedelta
 
@@ -604,6 +610,60 @@ def vendor_change_password(request):
         'vendor': vendor,
         'form': form,
     })
+
+
+# =====================================================
+# FORGOT PASSWORD
+# =====================================================
+
+def password_reset_request(request):
+    if request.method == 'POST':
+        email = request.POST.get('email', '').strip()
+        user = User.objects.filter(email=email).first()
+        if user:
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            site_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000')
+            reset_link = f"{site_url}/accounts/reset-password/{uid}/{token}/"
+            send_mail(
+                "Reset your SpotPay password",
+                f"Hello {user.username},\n\nClick the link below to reset your password:\n{reset_link}\n\nThis link expires in 24 hours. If you did not request this, ignore this email.",
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+        # always show success to avoid email enumeration
+        messages.success(request, "If that email exists, a reset link has been sent.")
+        return redirect('password_reset_request')
+    return render(request, 'accounts/forgot_password.html')
+
+
+def password_reset_confirm(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (User.DoesNotExist, ValueError, TypeError):
+        user = None
+
+    if not user or not default_token_generator.check_token(user, token):
+        messages.error(request, "This reset link is invalid or has expired.")
+        return redirect('password_reset_request')
+
+    if request.method == 'POST':
+        password = request.POST.get('password', '')
+        confirm = request.POST.get('confirm', '')
+        if len(password) < 8:
+            messages.error(request, "Password must be at least 8 characters.")
+            return render(request, 'accounts/reset_password.html')
+        if password != confirm:
+            messages.error(request, "Passwords do not match.")
+            return render(request, 'accounts/reset_password.html')
+        user.set_password(password)
+        user.save()
+        messages.success(request, "Password reset successful. You can now log in.")
+        return redirect('vendor_login')
+
+    return render(request, 'accounts/reset_password.html')
 
 
 # =====================================================

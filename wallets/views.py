@@ -274,8 +274,6 @@ def wallet_withdraw(request):
     wallet = vendor.wallet
 
     if request.method == 'POST':
-        withdrawal_mode = request.POST.get('withdrawal_mode', 'pending')
-
         try:
             amount = Decimal(request.POST.get('amount'))
         except Exception:
@@ -286,48 +284,33 @@ def wallet_withdraw(request):
             messages.error(request, "Amount must be greater than zero.")
             return redirect('wallet_withdraw')
 
-        if amount > wallet.balance:
-            messages.error(request, "Insufficient wallet balance.")
-            return redirect('wallet_withdraw')
+        with transaction.atomic():
+            locked_wallet = VendorWallet.objects.select_for_update().get(pk=wallet.pk)
 
-        if withdrawal_mode == 'instant':
-            with transaction.atomic():
-                locked_wallet = VendorWallet.objects.select_for_update().get(pk=wallet.pk)
+            if amount > locked_wallet.balance:
+                messages.error(request, "Insufficient wallet balance.")
+                return redirect('wallet_withdraw')
 
-                if amount > locked_wallet.balance:
-                    messages.error(request, "Insufficient wallet balance.")
-                    return redirect('wallet_withdraw')
+            locked_wallet.balance -= amount
+            locked_wallet.save(update_fields=['balance', 'updated_at'])
 
-                locked_wallet.balance -= amount
-                locked_wallet.save(update_fields=['balance', 'updated_at'])
-
-                withdrawal = WithdrawalRequest.objects.create(
-                    wallet=locked_wallet,
-                    amount=amount,
-                    status=WithdrawalRequest.STATUS_PAID,
-                    reference=str(uuid.uuid4()),
-                )
-
-                WalletTransaction.objects.create(
-                    wallet=locked_wallet,
-                    amount=amount,
-                    transaction_type=WalletTransaction.DEBIT,
-                    reason='WITHDRAWAL',
-                    reference=f"AUTO-WD-{withdrawal.reference}",
-                )
-
-            messages.success(request, "Instant withdrawal processed successfully.")
-        else:
-            WithdrawalRequest.objects.create(
-                wallet=wallet,
+            withdrawal = WithdrawalRequest.objects.create(
+                wallet=locked_wallet,
                 amount=amount,
+                status=WithdrawalRequest.STATUS_PAID,
                 reference=str(uuid.uuid4()),
             )
 
-            messages.success(
-                request,
-                "Withdrawal request submitted. Awaiting approval."
+            WalletTransaction.objects.create(
+                wallet=locked_wallet,
+                amount=amount,
+                transaction_type=WalletTransaction.DEBIT,
+                reason='WITHDRAWAL',
+                reference=f"WD-{withdrawal.reference}",
             )
+
+        request.session.pop('wallet_otp_verified', None)
+        messages.success(request, "Withdrawal processed successfully.")
         return redirect('wallet_dashboard')
 
     return render(request, 'wallets/withdraw.html', {

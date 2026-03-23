@@ -173,6 +173,32 @@
                                   placeholder="e.g., Entebbe Road, Kajjansi"></textarea>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Subscription Mode <span class="text-danger">*</span></label>
+                        <select class="form-select" name="subscription_mode" id="subscriptionMode" required onchange="togglePercentageField()">
+                            <option value="MONTHLY">Monthly Subscription — Pay a fixed monthly fee</option>
+                            <option value="PERCENTAGE">Percentage Based — SpotPay takes a % of each sale</option>
+                        </select>
+                        <div class="mt-2" id="modeHintMonthly" style="font-size:12px; color:var(--text-secondary);">
+                            <i class="bi bi-info-circle me-1"></i>You pay a fixed monthly fee to keep this location active.
+                        </div>
+                        <div class="mt-2 d-none" id="modeHintPercentage" style="font-size:12px; color:var(--text-secondary);">
+                            <i class="bi bi-info-circle me-1"></i>No monthly fee. SpotPay deducts a percentage from every sale automatically.
+                        </div>
+                    </div>
+
+                    <div class="mb-3 d-none" id="percentageField">
+                        <label class="form-label fw-semibold">Your Revenue Share % <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="number" class="form-control" name="subscription_percentage"
+                                   placeholder="e.g., 10" min="0" max="100" step="0.01" value="0">
+                            <span class="input-group-text">%</span>
+                        </div>
+                        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px;">
+                            SpotPay keeps this % of each transaction. You keep the rest.
+                        </div>
+                    </div>
+
                     <div class="alert alert-info py-2 px-3 mb-0" style="font-size:12px;">
                         <i class="bi bi-clock me-1"></i>
                         New locations require admin approval before going live.
@@ -192,4 +218,28 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function togglePercentageField() {
+    const mode = document.getElementById('subscriptionMode').value;
+    const pField = document.getElementById('percentageField');
+    const hintMonthly = document.getElementById('modeHintMonthly');
+    const hintPercentage = document.getElementById('modeHintPercentage');
+    const pInput = pField.querySelector('input');
+    if (mode === 'PERCENTAGE') {
+        pField.classList.remove('d-none');
+        hintMonthly.classList.add('d-none');
+        hintPercentage.classList.remove('d-none');
+        pInput.required = true;
+    } else {
+        pField.classList.add('d-none');
+        hintMonthly.classList.remove('d-none');
+        hintPercentage.classList.add('d-none');
+        pInput.required = false;
+        pInput.value = '0';
+    }
+}
+</script>
 {% endblock %}
