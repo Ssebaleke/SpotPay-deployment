@@ -29,6 +29,7 @@
               <th>Package</th>
               <th>Location</th>
               <th>Price</th>
+              <th>Schedule</th>
               <th>Status</th>
               <th class="text-end">Actions</th>
             </tr>
@@ -40,6 +41,15 @@
               <td>{{ package.location.site_name }}</td>
               <td>UGX {{ package.price|intcomma }}</td>
               <td>
+                {% if package.schedule_type == 'ALWAYS' %}
+                  <span class="badge bg-light text-dark">Always</span>
+                {% elif package.schedule_type == 'WEEKDAYS' %}
+                  <span class="badge bg-info text-dark">{{ package.scheduled_days }}</span>
+                {% elif package.schedule_type == 'DATE' %}
+                  <span class="badge bg-warning text-dark">{{ package.scheduled_date }}</span>
+                {% endif %}
+              </td>
+              <td>
                 {% if package.is_active %}<span class="badge bg-success">Active</span>
                 {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
               </td>
@@ -47,7 +57,12 @@
                 <button type="button" class="btn btn-sm btn-outline-primary edit-btn"
                         data-id="{{ package.id }}" data-name="{{ package.name }}"
                         data-price="{{ package.price }}" data-location="{{ package.location.id }}"
-                        data-active="{{ package.is_active|yesno:'true,false' }}">Edit</button>
+                        data-active="{{ package.is_active|yesno:'true,false' }}"
+                        data-schedule-type="{{ package.schedule_type }}"
+                        data-scheduled-days="{{ package.scheduled_days }}"
+                        data-scheduled-date="{{ package.scheduled_date|default:'' }}"
+                        data-scheduled-start="{{ package.scheduled_start|default:'' }}"
+                        data-scheduled-end="{{ package.scheduled_end|default:'' }}">Edit</button>
                 <form method="post" class="d-inline">
                   {% csrf_token %}
                   <input type="hidden" name="action" value="delete">
@@ -141,6 +156,44 @@
             </div>
 
             <div class="col-12">
+              <label class="form-label">Schedule</label>
+              <select name="schedule_type" id="schedule_type" class="form-select" onchange="toggleScheduleFields()">
+                <option value="ALWAYS">Always Available</option>
+                <option value="WEEKDAYS">Specific Days of the Week (e.g. Every Friday)</option>
+                <option value="DATE">Specific Date (e.g. Public Holiday)</option>
+              </select>
+            </div>
+
+            <!-- WEEKDAYS -->
+            <div class="col-12 d-none" id="weekdays_field">
+              <label class="form-label">Select Days</label>
+              <div class="d-flex flex-wrap gap-2">
+                {% for val, label in package_day_choices %}
+                <div class="form-check form-check-inline">
+                  <input class="form-check-input" type="checkbox" name="scheduled_days" value="{{ val }}" id="day_{{ val }}">
+                  <label class="form-check-label" for="day_{{ val }}">{{ label }}</label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <!-- SPECIFIC DATE -->
+            <div class="col-md-6 d-none" id="date_field">
+              <label class="form-label">Date</label>
+              <input type="date" name="scheduled_date" class="form-control">
+            </div>
+
+            <!-- TIME WINDOW (shown for WEEKDAYS and DATE) -->
+            <div class="col-md-3 d-none" id="start_time_field">
+              <label class="form-label">Start Time <small class="text-muted">(optional)</small></label>
+              <input type="time" name="scheduled_start" class="form-control">
+            </div>
+            <div class="col-md-3 d-none" id="end_time_field">
+              <label class="form-label">End Time <small class="text-muted">(optional)</small></label>
+              <input type="time" name="scheduled_end" class="form-control">
+            </div>
+
+            <div class="col-12">
               <div class="form-check">
                 <input class="form-check-input" type="checkbox" name="is_active" checked>
                 <label class="form-check-label">Active</label>
@@ -167,41 +220,59 @@
 
 <!-- JAVASCRIPT -->
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+function toggleScheduleFields() {
+    const type = document.getElementById('schedule_type').value;
+    document.getElementById('weekdays_field').classList.toggle('d-none', type !== 'WEEKDAYS');
+    document.getElementById('date_field').classList.toggle('d-none', type !== 'DATE');
+    document.getElementById('start_time_field').classList.toggle('d-none', type === 'ALWAYS');
+    document.getElementById('end_time_field').classList.toggle('d-none', type === 'ALWAYS');
+}
 
-    // Handle EDIT button
+document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.edit-btn').forEach(button => {
         button.addEventListener('click', function () {
-
             document.getElementById('package_id').value = this.dataset.id;
             document.getElementById('form_action').value = 'edit';
-
             document.querySelector('input[name="name"]').value = this.dataset.name;
             document.querySelector('input[name="price"]').value = this.dataset.price;
             document.querySelector('select[name="location"]').value = this.dataset.location;
             document.querySelector('input[name="is_active"]').checked = (this.dataset.active === 'true');
 
+            // Schedule
+            const schedType = this.dataset.scheduleType || 'ALWAYS';
+            document.getElementById('schedule_type').value = schedType;
+            toggleScheduleFields();
+
+            // Weekdays checkboxes
+            const days = (this.dataset.scheduledDays || '').split(',').map(d => d.trim());
+            document.querySelectorAll('input[name="scheduled_days"]').forEach(cb => {
+                cb.checked = days.includes(cb.value);
+            });
+
+            document.querySelector('input[name="scheduled_date"]').value = this.dataset.scheduledDate || '';
+            document.querySelector('input[name="scheduled_start"]').value = this.dataset.scheduledStart || '';
+            document.querySelector('input[name="scheduled_end"]').value = this.dataset.scheduledEnd || '';
+
             document.querySelector('#packageModal .modal-title').innerText = 'Edit Package';
             document.querySelector('#packageModal button[type="submit"]').innerText = 'Update Package';
-
-            const modal = new bootstrap.Modal(
-                document.getElementById('packageModal')
-            );
-            modal.show();
+            new bootstrap.Modal(document.getElementById('packageModal')).show();
         });
     });
-
 });
 
 function resetPackageForm() {
     document.getElementById('package_id').value = '';
     document.getElementById('form_action').value = 'create';
-
     document.querySelector('input[name="name"]').value = '';
     document.querySelector('input[name="price"]').value = '';
     document.querySelector('select[name="location"]').value = '';
     document.querySelector('input[name="is_active"]').checked = true;
-
+    document.getElementById('schedule_type').value = 'ALWAYS';
+    toggleScheduleFields();
+    document.querySelectorAll('input[name="scheduled_days"]').forEach(cb => cb.checked = false);
+    document.querySelector('input[name="scheduled_date"]').value = '';
+    document.querySelector('input[name="scheduled_start"]').value = '';
+    document.querySelector('input[name="scheduled_end"]').value = '';
     document.querySelector('#packageModal .modal-title').innerText = 'Add Package';
     document.querySelector('#packageModal button[type="submit"]').innerText = 'Save Package';
 }
