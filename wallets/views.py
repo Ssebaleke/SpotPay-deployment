@@ -154,7 +154,7 @@ def wallet_password_reset_request(request):
     link = f"{site_url}/wallets/setup-password/{token.token}/"
 
     send_email(
-        to_email=request.user.email,
+        to_email=vendor.business_email or request.user.email,
         subject="Reset SpotPay Wallet Password",
         html=f"<p>Hello {vendor.company_name},</p><p>Click the link below to reset your wallet password:</p><p><a href='{link}'>{link}</a></p><p>SpotPay Team</p>",
         text=f"Click the link below to reset your wallet password:\n{link}",
@@ -215,8 +215,9 @@ def wallet_send_otp(request):
         expires_at=timezone.now() + timedelta(minutes=5)
     )
 
+    to_email = vendor.business_email or request.user.email
     send_email(
-        to_email=request.user.email,
+        to_email=to_email,
         subject="SpotPay Wallet OTP",
         html=f"<p>Hello,</p><p>Your SpotPay wallet OTP is: <strong style='font-size:24px;letter-spacing:4px;'>{otp}</strong></p><p>This OTP expires in 5 minutes. Do not share it with anyone.</p><p>SpotPay Team</p>",
         text=f"Your SpotPay wallet OTP is: {otp}\n\nThis OTP expires in 5 minutes.",
@@ -463,7 +464,7 @@ def wallet_password_reset_from_auth(request):
     reset_link = f"{site_url}/wallets/setup-password/{token.token}/"
 
     send_email(
-        to_email=request.user.email,
+        to_email=vendor.business_email or request.user.email,
         subject="Reset your SpotPay Wallet Password",
         html=f"<p>Hello {vendor.company_name},</p><p>You requested to reset your SpotPay wallet password.</p><p><a href='{reset_link}'>{reset_link}</a></p><p>If you did not request this, ignore this email.</p><p>SpotPay Team</p>",
         text=f"Hello {vendor.company_name},\n\nReset your wallet password:\n{reset_link}\n\nIf you did not request this, ignore this email.",
