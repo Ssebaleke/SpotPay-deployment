@@ -1,6 +1,9 @@
+import logging
 import requests
 
 from sms.models import EmailProvider
+
+logger = logging.getLogger(__name__)
 
 
 def send_email(*, to_email, subject, html=None, text=None):
@@ -20,6 +23,7 @@ def send_email(*, to_email, subject, html=None, text=None):
             payload["html"] = html
         if text:
             payload["text"] = text
+        logger.warning(f"RESEND: sending to={to_email} subject='{subject}' from={provider.from_email}")
         try:
             response = requests.post(
                 "https://api.resend.com/emails",
@@ -35,10 +39,12 @@ def send_email(*, to_email, subject, html=None, text=None):
                 data = response.json()
             except Exception:
                 data = {"message": response.text}
+            logger.warning(f"RESEND: status={response.status_code} response={data}")
             if response.status_code >= 400:
                 return False, data.get("message", "Resend request failed")
             return True, data.get("id", "sent")
         except Exception as exc:
+            logger.error(f"RESEND: exception={exc}")
             return False, str(exc)
 
     # --- Django SMTP fallback (uses EMAIL_* settings from .env) ---
