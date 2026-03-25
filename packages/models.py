@@ -85,7 +85,7 @@ class Package(models.Model):
         return True
 
     def available_vouchers_count(self):
-        return self.voucher_set.filter(is_used=False).count()
+        return self.vouchers.filter(status='UNUSED').count()
 
     def has_vouchers(self):
         return self.available_vouchers_count() > 0

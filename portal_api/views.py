@@ -68,7 +68,7 @@ def portal_data(request, uuid):
         ],
     }
 
-    cache.set(cache_key, data, 60)  # cache for 60 seconds
+    cache.set(cache_key, data, 10)  # short TTL — scheduled packages are time-sensitive
     return JsonResponse(data)
 
 
