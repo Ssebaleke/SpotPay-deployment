@@ -304,39 +304,38 @@ def wallet_withdraw(request):
         disbursement_success = False
         disbursement_error = None
 
-        # ── Step 1: Attempt YooPay disbursement ──
+        # ── Step 1: Attempt KwaPay disbursement ──
         try:
             from payments.models import PaymentProvider
-            from payments.yoo_client import YoPaymentsClient
+            from payments.kwa_client import KwaPayClient
 
-            yoo_provider = PaymentProvider.objects.filter(
-                provider_type='YOO', is_active=True
+            kwa_provider = PaymentProvider.objects.filter(
+                provider_type='KWA', is_active=True
             ).first()
 
-            if yoo_provider:
-                client = YoPaymentsClient(
-                    username=yoo_provider.api_key,
-                    password=yoo_provider.api_secret,
+            if kwa_provider:
+                client = KwaPayClient(
+                    primary_api=kwa_provider.api_key,
+                    secondary_api=kwa_provider.api_secret,
                 )
-                result = client.withdraw_funds(
+                callback_url = f"{settings.SITE_URL}/payments/webhook/kwa/ipn/"
+                result = client.withdraw(
                     amount=int(amount),
-                    account=payout_phone,
-                    reference=withdrawal_ref,
-                    narrative=f"SpotPay withdrawal - {vendor.company_name}",
-                    provider_code='MTN' if payout_method == 'MTN' else 'AIRTEL' if payout_method == 'AIRTEL' else None,
+                    phone=payout_phone,
+                    callback_url=callback_url,
                 )
-                logger.warning(f"YOO WITHDRAWAL RESULT: {result}")
+                logger.warning(f"KWA WITHDRAWAL RESULT: {result}")
 
-                if YoPaymentsClient.is_error(result):
-                    disbursement_error = result.get('error_message') or result.get('status_message') or 'Disbursement failed'
-                    logger.warning(f"YOO WITHDRAWAL FAILED: {disbursement_error}")
+                if KwaPayClient.is_failed(result):
+                    disbursement_error = result.get('message') or 'Disbursement failed'
+                    logger.warning(f"KWA WITHDRAWAL FAILED: {disbursement_error}")
                 else:
                     disbursement_success = True
             else:
-                disbursement_error = "No YooPay provider configured"
+                disbursement_error = "No KwaPay provider configured"
 
         except Exception as e:
-            logger.warning(f"YOO WITHDRAWAL EXCEPTION: {e}")
+            logger.warning(f"KWA WITHDRAWAL EXCEPTION: {e}")
             disbursement_error = str(e)
 
         # ── Step 2: Deduct wallet and record withdrawal ──

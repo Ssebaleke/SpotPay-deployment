@@ -69,6 +69,43 @@ class KwaPayClient:
 
         return data
 
+    def withdraw(self, amount: int, phone: str, callback_url: str) -> dict:
+        """
+        Initiate a mobile money withdrawal (disbursement to vendor).
+
+        Args:
+            amount       : Amount in UGX (integer).
+            phone        : Vendor phone in international format e.g. 256771234567.
+            callback_url : IPN URL KwaPay POSTs result to when transaction settles.
+
+        Returns:
+            Normalized dict with keys: error, internal_reference, status, message, network.
+        """
+        payload = {
+            "primary_api": self.primary_api,
+            "secondary_api": self.secondary_api,
+            "phone_number": self._normalize_phone(phone),
+            "amount": int(amount),
+            "callback": callback_url,
+        }
+
+        try:
+            logger.info("KWA WITHDRAW → %s", payload.get("phone_number"))
+            resp = requests.post(
+                f"{_BASE_URL}/withdraw/",
+                json=payload,
+                timeout=_TIMEOUT,
+            )
+            logger.info("KWA WITHDRAW ← HTTP %s | %.600s", resp.status_code, resp.text)
+            data = resp.json()
+        except requests.RequestException as exc:
+            logger.error("KWA WITHDRAW network error: %s", exc)
+            return {"error": True, "message": str(exc)}
+        except ValueError:
+            return {"error": True, "message": "Invalid JSON response from KwaPay"}
+
+        return data
+
     def check_status(self, internal_reference: str) -> dict:
         """
         Check the status of a previously initiated transaction.
