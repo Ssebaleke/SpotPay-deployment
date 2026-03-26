@@ -28,7 +28,6 @@ services:
       sh -c "
       echo '0 6 * * * cd /app && python manage.py enforce_subscriptions >> /var/log/cron.log 2>&1' > /etc/cron.d/spotpay &&
       chmod 0644 /etc/cron.d/spotpay &&
-      apt-get update -qq && apt-get install -y -qq cron &&
       cron -f
       "
     restart: unless-stopped

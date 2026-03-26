@@ -12,6 +12,7 @@ class PaymentProvider(models.Model):
         ("MOMO", "Mobile Money (MakyPay)"),
         ("CARD", "Card / Gateway"),
         ("YOO", "Mobile Money (YooPay)"),
+        ("KWA", "Mobile Money (KwaPay)"),
     )
 
     ENVIRONMENTS = (

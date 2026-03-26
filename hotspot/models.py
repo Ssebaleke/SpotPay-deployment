@@ -185,7 +185,9 @@ class HotspotLocation(models.Model):
 
         # Generate portal URL once approved
         if self.status == "ACTIVE" and not self.portal_url:
-            self.portal_url = f"http://127.0.0.1:8000/api/portal/{self.uuid}/"
+            from django.conf import settings
+            site_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000').rstrip('/')
+            self.portal_url = f"{site_url}/api/portal/{self.uuid}/"
 
         super().save(*args, **kwargs)
 
@@ -224,17 +226,16 @@ class HotspotLocation(models.Model):
     def has_active_subscription(self):
         """
         Single source of truth for service access.
+        Checks expiry date directly — never relies on stale DB flags.
         Used everywhere (portal, APIs, payments).
         """
-
         # Percentage-based locations are always allowed
         if self.subscription_mode == "PERCENTAGE":
             return True
 
-        if not self.subscription_active:
+        # Must have an expiry date set
+        if not self.subscription_expires_at:
             return False
 
-        if self.subscription_expires_at:
-            return self.subscription_expires_at > timezone.now()
-
-        return True
+        # Check live against current time — not the DB flag
+        return self.subscription_expires_at > timezone.now()

@@ -300,6 +300,40 @@ def admin_reject_vendor(request, vendor_id):
 
 @login_required
 @user_passes_test(lambda user: user.is_staff)
+def admin_suspend_vendor(request, vendor_id):
+    if request.method != 'POST':
+        return redirect('admin_dashboard')
+    vendor = Vendor.objects.select_related('user').filter(id=vendor_id).first()
+    if not vendor:
+        messages.error(request, 'Vendor not found.')
+        return redirect('admin_dashboard')
+    vendor.status = 'SUSPENDED'
+    vendor.save(update_fields=['status', 'updated_at'])
+    vendor.user.is_active = False
+    vendor.user.save()
+    messages.success(request, f'{vendor.company_name} suspended. They can no longer log in.')
+    return redirect('admin_dashboard')
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_unsuspend_vendor(request, vendor_id):
+    if request.method != 'POST':
+        return redirect('admin_dashboard')
+    vendor = Vendor.objects.select_related('user').filter(id=vendor_id).first()
+    if not vendor:
+        messages.error(request, 'Vendor not found.')
+        return redirect('admin_dashboard')
+    vendor.status = 'ACTIVE'
+    vendor.save(update_fields=['status', 'updated_at'])
+    vendor.user.is_active = True
+    vendor.user.save()
+    messages.success(request, f'{vendor.company_name} reactivated.')
+    return redirect('admin_dashboard')
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
 def admin_approve_withdrawal(request, withdrawal_id):
     if request.method != 'POST':
         messages.error(request, 'Invalid request method.')

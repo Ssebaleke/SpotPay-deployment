@@ -29,4 +29,8 @@ def load_provider_adapter(provider):
         from payments.adapters.card import CardAdapter
         return CardAdapter(provider)
 
+    if provider_type == "KWA":
+        from payments.adapters.kwa import KwaAdapter
+        return KwaAdapter(provider)
+
     raise ValueError(f"Unsupported payment provider: {provider_type}")

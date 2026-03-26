@@ -174,8 +174,86 @@ def yoo_ipn(request):
 
 
 # ---------------------------------------------------------------------------
-# Failure notification
+# KwaPay IPN
 # ---------------------------------------------------------------------------
+
+@csrf_exempt
+def kwa_ipn(request):
+    """
+    POST /payments/webhook/kwa/ipn/
+    KwaPay POSTs JSON to this URL when a transaction settles.
+    """
+    import json as _json
+
+    if request.method != "POST":
+        return HttpResponse("OK")
+
+    try:
+        data = _json.loads(request.body.decode("utf-8", errors="replace"))
+    except Exception:
+        data = {}
+
+    logger.warning("KWA IPN: %s", data)
+
+    reference = data.get("internal_reference")
+    status = str(data.get("status", "")).upper()
+    is_success = status == "SUCCESSFUL"
+    is_failed = status == "FAILED"
+
+    if not reference:
+        logger.warning("KWA IPN: no internal_reference — ignoring")
+        return HttpResponse("OK")
+
+    payment_id = None
+    run_success_handler = False
+
+    with transaction.atomic():
+        payment = (
+            Payment.objects.select_for_update().filter(provider_reference=reference).first()
+            or Payment.objects.select_for_update().filter(uuid=reference).first()
+        )
+
+        if not payment:
+            logger.warning("KWA IPN: no payment found for reference=%s", reference)
+            return HttpResponse("OK")
+
+        if payment.status == "SUCCESS":
+            return HttpResponse("OK")  # idempotent
+
+        payment.raw_callback_data = data
+
+        if is_success:
+            payment.mark_success(data)
+
+            if payment.purpose == "SUBSCRIPTION" and payment.location_id:
+                _handle_subscription_renewal(payment)
+
+            if payment.purpose == "SMS_PURCHASE" and payment.vendor_id:
+                try:
+                    credit_sms_wallet(vendor=payment.vendor, amount_paid=int(payment.amount))
+                except Exception as exc:
+                    payment.processor_message = f"SMS credit warning: {exc}"
+                    payment.save(update_fields=["processor_message"])
+
+            if payment.vendor_id:
+                if payment.purpose in ("SMS_PURCHASE", "SUBSCRIPTION"):
+                    notify_vendor_receipt(payment)
+                else:
+                    notify_vendor_payment_received(payment)
+
+            payment_id = payment.id
+            run_success_handler = True
+
+        elif is_failed:
+            payment.mark_failed(data)
+        else:
+            payment.save(update_fields=["raw_callback_data"])
+
+    if run_success_handler and payment_id:
+        payment = Payment.objects.get(id=payment_id)
+        handle_payment_success(payment)
+
+    return HttpResponse("OK")
 
 @csrf_exempt
 def yoo_failure_notification(request):

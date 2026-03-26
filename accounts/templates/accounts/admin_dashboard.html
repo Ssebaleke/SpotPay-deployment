@@ -439,7 +439,56 @@
         </div>
     </div>
 
-    <!-- Vendor Performance -->
+    <!-- Vendor Management -->
+    <div class="panel mb-4">
+        <div class="panel-title">Vendor Management</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Company</th><th>Contact</th><th>Email</th><th>Status</th><th class="text-end">Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for v in all_vendors_list %}
+                    <tr>
+                        <td class="fw-semibold">{{ v.company_name }}</td>
+                        <td>{{ v.contact_person }}</td>
+                        <td>{{ v.business_email }}</td>
+                        <td>
+                            {% if v.status == 'ACTIVE' %}<span class="badge bg-success">Active</span>
+                            {% elif v.status == 'PENDING' %}<span class="badge bg-warning text-dark">Pending</span>
+                            {% elif v.status == 'SUSPENDED' %}<span class="badge bg-secondary">Suspended</span>
+                            {% else %}<span class="badge bg-danger">Rejected</span>{% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                {% if v.status == 'PENDING' %}
+                                <form method="post" action="{% url 'admin_approve_vendor' v.id %}">{% csrf_token %}
+                                    <button class="btn btn-sm btn-success py-0 px-2" onclick="return confirm('Approve {{ v.company_name }}?')">Approve</button>
+                                </form>
+                                <form method="post" action="{% url 'admin_reject_vendor' v.id %}">{% csrf_token %}
+                                    <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="return confirm('Reject {{ v.company_name }}?')">Reject</button>
+                                </form>
+                                {% elif v.status == 'ACTIVE' %}
+                                <form method="post" action="{% url 'admin_suspend_vendor' v.id %}">{% csrf_token %}
+                                    <button class="btn btn-sm btn-warning py-0 px-2" onclick="return confirm('Suspend {{ v.company_name }}? They will lose login access.')">Suspend</button>
+                                </form>
+                                {% elif v.status == 'SUSPENDED' %}
+                                <form method="post" action="{% url 'admin_unsuspend_vendor' v.id %}">{% csrf_token %}
+                                    <button class="btn btn-sm btn-success py-0 px-2" onclick="return confirm('Reactivate {{ v.company_name }}?')">Reactivate</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center py-4 text-muted">No vendors yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+        <!-- Vendor Performance -->
     <div class="panel mb-4">
         <div class="panel-title">Vendor Performance Ranking</div>
         <div class="table-responsive">

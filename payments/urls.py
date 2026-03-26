@@ -17,6 +17,9 @@ urlpatterns = [
     # FailureNotificationUrl → /payments/webhook/yoo/failure/
     path("webhook/yoo/failure/", ipn_views.yoo_failure_notification, name="yoo_failure_notification"),
 
+    # KwaPay IPN
+    path("webhook/kwa/ipn/", ipn_views.kwa_ipn, name="kwa_ipn"),
+
     # Payment status polling (used by portal.js)
     path("status/<str:reference>/", views.payment_status, name="payment_status"),
 
