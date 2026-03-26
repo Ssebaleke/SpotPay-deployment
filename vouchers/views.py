@@ -74,11 +74,8 @@ def voucher_list(request):
 
         reader = csv.DictReader(decoded_file)
 
-        created_count = 0
-        skipped_count = 0
-
+        codes = []
         for row in reader:
-            # Normalize row keys to lowercase for flexible matching
             row = {k.strip().lower(): (v.strip() if v else '') for k, v in row.items()}
             code = (
                 row.get('username')
@@ -88,27 +85,28 @@ def voucher_list(request):
                 or row.get('voucher_code')
                 or (list(row.values())[0] if row else None)
             )
+            if code and code.strip():
+                codes.append(code.strip())
 
-            if not code:
-                skipped_count += 1
-                continue
+        if not codes:
+            messages.error(request, "No valid voucher codes found in CSV.")
+            batch.delete()
+            return redirect('voucher_list')
 
-            voucher, created = Voucher.objects.get_or_create(
-                code=code.strip(),
-                defaults={
-                    'package': package,
-                    'batch': batch,
-                }
-            )
+        # exclude already existing codes
+        existing_codes = set(
+            Voucher.objects.filter(code__in=codes).values_list('code', flat=True)
+        )
+        new_codes = [c for c in codes if c not in existing_codes]
+        skipped_count = len(codes) - len(new_codes)
 
-            if not created and voucher.package is None:
-                voucher.package = package
-                voucher.save()
+        with transaction.atomic():
+            Voucher.objects.bulk_create([
+                Voucher(code=c, package=package, batch=batch)
+                for c in new_codes
+            ], ignore_conflicts=True)
 
-            if created:
-                created_count += 1
-            else:
-                skipped_count += 1
+        created_count = len(new_codes)
 
         batch.total_uploaded = created_count
         if created_count == 0:
