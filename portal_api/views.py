@@ -23,6 +23,13 @@ from payments.models import Payment
 # =====================================================
 
 def portal_data(request, uuid):
+    from django.core.cache import cache
+
+    cache_key = f"portal_data_{uuid}"
+    cached = cache.get(cache_key)
+    if cached:
+        return JsonResponse(cached)
+
     location = get_object_or_404(
         HotspotLocation,
         uuid=uuid,
@@ -35,7 +42,6 @@ def portal_data(request, uuid):
         vouchers__status='UNUSED'
     ).distinct()
 
-    # filter by schedule
     packages = [p for p in packages if p.is_available_now()]
 
     ads = location.ads.filter(is_active=True)
@@ -61,6 +67,7 @@ def portal_data(request, uuid):
         ],
     }
 
+    cache.set(cache_key, data, 10)
     return JsonResponse(data)
 
 

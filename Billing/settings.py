@@ -197,6 +197,16 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER)
 
 # ==================================================
+# CACHE (Redis — shared across all gunicorn workers)
+# ==================================================
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL", "redis://redis:6379/1"),
+    }
+}
+
+# ==================================================
 # DEFAULT FIELD
 # ==================================================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

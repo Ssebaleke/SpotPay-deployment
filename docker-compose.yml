@@ -1,8 +1,14 @@
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
   web:
     build: .
     env_file:
       - .env
+    depends_on:
+      - redis
     command: >
       sh -c "
       python manage.py migrate --noinput &&
