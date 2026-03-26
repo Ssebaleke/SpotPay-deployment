@@ -1,4 +1,4 @@
-name: Deploy SpotPay to VPS
+name: Deploy SpotPay
 
 on:
   push:
@@ -10,135 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy via SSH (Zero Downtime)
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to server
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -e
-
-            echo "Going to project folder..."
             cd /root/SpotPay-deployment
-
-            echo "Pulling latest code..."
-            git fetch --all
-            git reset --hard origin/main
-
-            echo "Creating .env file from secrets..."
-            cat > .env << 'EOF'
-            ${{ secrets.ENV_FILE }}
-            EOF
-
-            echo "Validating environment variables..."
-            if ! grep -q 'DATABASE_URL=' .env; then
-              echo "❌ DATABASE_URL missing in .env. Aborting deploy!"
-              exit 1
-            fi
-            if ! grep -q 'SECRET_KEY=' .env; then
-              echo "❌ SECRET_KEY missing in .env. Aborting deploy!"
-              exit 1
-            fi
-
-            echo "Checking SSL certificate status..."
-            if [ ! -f ssl/fullchain.pem ] || [ ! -f ssl/privkey.pem ]; then
-              echo "⚠️  SSL certificate not found in ssl/ directory. Installing Let's Encrypt certificate..."
-              
-              # Stop all containers to free port 80
-              echo "Stopping all containers to free port 80..."
-              docker compose down || true
-              
-              # Kill any process using port 80
-              echo "Checking for processes on port 80..."
-              lsof -ti:80 | xargs kill -9 2>/dev/null || true
-              fuser -k 80/tcp 2>/dev/null || true
-              
-              # Wait for port to be free
-              sleep 3
-              
-              # Install certbot if not present
-              if ! command -v certbot &> /dev/null; then
-                echo "Installing certbot..."
-                apt-get update -qq
-                apt-get install -y certbot
-              fi
-              
-              # Obtain SSL certificate (for both main domain and www subdomain)
-              echo "Obtaining SSL certificate for spotpay.it.com and www.spotpay.it.com..."
-              certbot certonly --standalone \
-                -d spotpay.it.com \
-                -d www.spotpay.it.com \
-                --expand \
-                --non-interactive \
-                --agree-tos \
-                --email support@spotpay.it.com \
-                --preferred-challenges http || {
-                  echo "⚠️  SSL certificate installation failed. Continuing with HTTP only."
-                  echo "Note: Ensure DNS A records for both spotpay.it.com and www.spotpay.it.com point to this server's IP."
-                }
-              
-              if [ -f /etc/letsencrypt/live/spotpay.it.com/fullchain.pem ]; then
-                echo "✅ SSL certificate obtained successfully"
-                
-                # Create ssl directory and copy certificates
-                echo "Copying certificates to ssl/ directory..."
-                mkdir -p ssl
-                chmod 755 /etc/letsencrypt/live/
-                chmod 755 /etc/letsencrypt/archive/
-                chmod 755 /etc/letsencrypt/live/spotpay.it.com/
-                chmod 755 /etc/letsencrypt/archive/spotpay.it.com/
-                chmod 644 /etc/letsencrypt/archive/spotpay.it.com/privkey*.pem
-                cp /etc/letsencrypt/live/spotpay.it.com/fullchain.pem ssl/
-                cp /etc/letsencrypt/live/spotpay.it.com/privkey.pem ssl/
-                
-                # Setup auto-renewal cron job with certificate copy
-                echo "Setting up SSL auto-renewal..."
-                (crontab -l 2>/dev/null | grep -v certbot; echo "0 0,12 * * * certbot renew --quiet --post-hook 'cp /etc/letsencrypt/live/spotpay.it.com/*.pem /root/SpotPay-deployment/ssl/ && cd /root/SpotPay-deployment && docker compose restart nginx'") | crontab -
-                
-                echo "✅ HTTPS enabled and auto-renewal configured"
-              fi
-            else
-              echo "✅ SSL certificates already exist in ssl/ directory"
-            fi
-
-            echo "Stopping existing containers before rebuild..."
-            docker compose down || true
-            
-            echo "Building new containers (no downtime)..."
-            docker compose build
-
-            echo "Running migrations and static collection in a temp container..."
-            docker compose run --rm web python manage.py migrate --noinput
-            docker compose run --rm web python manage.py collectstatic --noinput
-
-            echo "Health checking new image..."
-            docker compose up -d --no-deps --build web
-            echo "Waiting for gunicorn to be ready..."
-            for i in $(seq 1 15); do
-              if docker compose logs web | grep -q 'Booting worker'; then
-                echo "✅ Gunicorn is up."
-                break
-              fi
-              echo "Attempt $i/15 - waiting 3s..."
-              sleep 3
-            done
-            if ! docker compose logs web | grep -q 'Booting worker'; then
-              echo "❌ Health check failed. Not restarting nginx. Aborting!"
-              docker compose logs web
-              exit 1
-            fi
-
-            echo "Reloading nginx (zero downtime)..."
-            docker compose stop nginx || true
-            docker compose rm -f nginx || true
-            docker compose up -d --no-deps nginx
-
-            echo "Pruning old images only (no volumes)..."
-            docker image prune -f
-
-            echo "Checking container status..."
-            docker compose ps
-
-            echo "Deploy complete ✅"
+            git pull origin main
+            docker compose down
+            docker compose up -d --build
