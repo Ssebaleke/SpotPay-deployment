@@ -256,6 +256,91 @@ def kwa_ipn(request):
     return HttpResponse("OK")
 
 @csrf_exempt
+def kwa_verify(request, reference):
+    """
+    GET /payments/kwa/verify/<reference>/
+    Manually poll KwaPay check_status and complete payment if successful.
+    Used when IPN callback is missed.
+    """
+    import json as _json
+    from payments.models import PaymentProvider
+    from payments.kwa_client import KwaPayClient
+
+    payment = (
+        Payment.objects.filter(provider_reference=reference).first()
+        or Payment.objects.filter(uuid=reference).first()
+    )
+
+    if not payment:
+        return HttpResponse("Payment not found", status=404)
+
+    if payment.status == "SUCCESS":
+        return HttpResponse("Already completed", status=200)
+
+    provider = PaymentProvider.objects.filter(provider_type="KWA", is_active=True).first()
+    if not provider:
+        return HttpResponse("No KwaPay provider configured", status=400)
+
+    client = KwaPayClient(
+        primary_api=provider.api_key,
+        secondary_api=provider.api_secret,
+    )
+
+    result = client.check_status(payment.provider_reference)
+    logger.warning("KWA VERIFY: ref=%s result=%s", reference, result)
+
+    status = str(result.get("status", "")).upper()
+    is_success = status == "SUCCESSFUL"
+    is_failed = status == "FAILED"
+
+    payment_id = None
+    run_success_handler = False
+
+    with transaction.atomic():
+        payment = Payment.objects.select_for_update().filter(
+            provider_reference=payment.provider_reference
+        ).first()
+
+        if payment.status == "SUCCESS":
+            return HttpResponse("Already completed", status=200)
+
+        payment.raw_callback_data = result
+
+        if is_success:
+            payment.mark_success(result)
+
+            if payment.purpose == "SUBSCRIPTION" and payment.location_id:
+                _handle_subscription_renewal(payment)
+
+            if payment.purpose == "SMS_PURCHASE" and payment.vendor_id:
+                try:
+                    credit_sms_wallet(vendor=payment.vendor, amount_paid=int(payment.amount))
+                except Exception as exc:
+                    payment.processor_message = f"SMS credit warning: {exc}"
+                    payment.save(update_fields=["processor_message"])
+
+            if payment.vendor_id:
+                if payment.purpose in ("SMS_PURCHASE", "SUBSCRIPTION"):
+                    notify_vendor_receipt(payment)
+                else:
+                    notify_vendor_payment_received(payment)
+
+            payment_id = payment.id
+            run_success_handler = True
+
+        elif is_failed:
+            payment.mark_failed(result)
+        else:
+            payment.save(update_fields=["raw_callback_data"])
+
+    if run_success_handler and payment_id:
+        payment = Payment.objects.get(id=payment_id)
+        handle_payment_success(payment)
+
+    return HttpResponse(f"status={status}", status=200)
+
+
+@csrf_exempt
 def yoo_failure_notification(request):
     """
     POST /payments/webhook/yoo/failure/

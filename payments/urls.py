@@ -20,6 +20,9 @@ urlpatterns = [
     # KwaPay IPN
     path("webhook/kwa/ipn/", ipn_views.kwa_ipn, name="kwa_ipn"),
 
+    # KwaPay manual verify (polls check_status for stuck PENDING payments)
+    path("kwa/verify/<str:reference>/", ipn_views.kwa_verify, name="kwa_verify"),
+
     # Payment status polling (used by portal.js)
     path("status/<str:reference>/", views.payment_status, name="payment_status"),
 
