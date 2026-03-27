@@ -219,8 +219,8 @@ def wallet_send_otp(request):
     send_email(
         to_email=to_email,
         subject="SpotPay Wallet OTP",
-        html=f"<p>Hello,</p><p>Your SpotPay wallet OTP is: <strong style='font-size:24px;letter-spacing:4px;'>{otp}</strong></p><p>This OTP expires in 5 minutes. Do not share it with anyone.</p><p>SpotPay Team</p>",
-        text=f"Your SpotPay wallet OTP is: {otp}\n\nThis OTP expires in 5 minutes.",
+        html=f"<p>Hello,</p><p>Your verification code is: <strong>{otp}</strong></p><p>Valid for 5 minutes. Do not share with anyone.</p><p>SpotPay Team</p>",
+        text=f"Your SpotPay verification code is: {otp}. Valid for 5 minutes.",
     )
 
     messages.info(request, "OTP sent to your email.")

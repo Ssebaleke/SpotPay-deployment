@@ -19,19 +19,19 @@ def notify_vendor_payment_received(payment):
         return
 
     subject = "Payment Received - SpotPay"
+    html = (
+        f"<p>Hello {vendor.company_name},</p>"
+        f"<p>A payment of {payment.currency} {payment.amount} has been received.</p>"
+        f"<p>Reference: {payment.provider_reference or payment.uuid}</p>"
+        f"<p>Date: {payment.completed_at or payment.initiated_at}</p>"
+        f"<p>SpotPay</p>"
+    )
     text = (
         f"Hello {vendor.company_name},\n\n"
-        f"A payment of {payment.currency} {payment.amount} was received successfully.\n"
+        f"Payment received: {payment.currency} {payment.amount}\n"
         f"Reference: {payment.provider_reference or payment.uuid}\n"
         f"Date: {payment.completed_at or payment.initiated_at}\n\n"
         "SpotPay"
-    )
-    html = (
-        f"<p>Hello {vendor.company_name},</p>"
-        f"<p>A payment of <strong>{payment.currency} {payment.amount}</strong> was received successfully.</p>"
-        f"<p>Reference: <strong>{payment.provider_reference or payment.uuid}</strong></p>"
-        f"<p>Date: {payment.completed_at or payment.initiated_at}</p>"
-        "<p>SpotPay</p>"
     )
 
     _send(
@@ -63,16 +63,14 @@ def notify_vendor_receipt(payment):
         "TRANSACTION": "WiFi Transaction",
     }.get(payment.purpose, payment.purpose)
 
-    subject = f"Payment Receipt - {purpose_label} - SpotPay"
+    subject = f"Receipt - {purpose_label} - SpotPay"
     html = (
         f"<p>Hello {vendor.company_name},</p>"
-        f"<p>Your payment has been received successfully.</p>"
-        f"<table style='border-collapse:collapse; width:100%; font-size:14px;'>"
-        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Type</strong></td><td style='padding:8px; border:1px solid #ddd;'>{purpose_label}</td></tr>"
-        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Amount</strong></td><td style='padding:8px; border:1px solid #ddd;'>{payment.currency} {payment.amount}</td></tr>"
-        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Reference</strong></td><td style='padding:8px; border:1px solid #ddd;'>{payment.provider_reference or payment.uuid}</td></tr>"
-        f"<tr><td style='padding:8px; border:1px solid #ddd;'><strong>Date</strong></td><td style='padding:8px; border:1px solid #ddd;'>{payment.completed_at or payment.initiated_at}</td></tr>"
-        f"</table>"
+        f"<p>Your payment has been received.</p>"
+        f"<p>Type: {purpose_label}</p>"
+        f"<p>Amount: {payment.currency} {payment.amount}</p>"
+        f"<p>Reference: {payment.provider_reference or payment.uuid}</p>"
+        f"<p>Date: {payment.completed_at or payment.initiated_at}</p>"
         f"<p>Thank you for using SpotPay.</p>"
     )
 
