@@ -57,5 +57,29 @@
             </form>
         </div>
     </div>
+
+    <!-- SMS Notification Toggle -->
+    <div class="col-lg-8 mt-4">
+        <div class="chart-container">
+            <h5 class="mb-1">Notification Preferences</h5>
+            <p class="text-muted small mb-3">Control whether you receive an SMS for every customer purchase.</p>
+            <div class="d-flex align-items-center justify-content-between">
+                <div>
+                    <strong>SMS per Purchase</strong>
+                    <div class="text-muted small">Receive an SMS every time a customer buys a voucher at your hotspot. Uses your SMS balance.</div>
+                </div>
+                <form method="POST" action="{% url 'toggle_sms_notifications' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm {% if vendor.sms_notifications_enabled %}btn-success{% else %}btn-outline-secondary{% endif %}">
+                        {% if vendor.sms_notifications_enabled %}
+                            <i class="bi bi-bell-fill me-1"></i> Enabled
+                        {% else %}
+                            <i class="bi bi-bell-slash me-1"></i> Disabled
+                        {% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -39,6 +39,12 @@ class Vendor(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Notification Preferences
+    sms_notifications_enabled = models.BooleanField(
+        default=False,
+        help_text="Send SMS to vendor on every customer purchase"
+    )
     
     class Meta:
         ordering = ['-created_at']

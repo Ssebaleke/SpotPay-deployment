@@ -43,12 +43,18 @@ def notify_vendor_payment_received(payment):
     )
 
     if vendor.business_phone:
-        send_sms(
-            vendor=vendor,
-            phone=vendor.business_phone,
-            message=f"Payment received: {payment.currency} {payment.amount}. Ref {payment.provider_reference or payment.uuid}",
-            purpose="PAYMENT_RECEIVED",
-        )
+        if vendor.sms_notifications_enabled:
+            try:
+                sms_wallet = vendor.sms_wallet
+                if sms_wallet.balance > 0:
+                    send_sms(
+                        vendor=vendor,
+                        phone=vendor.business_phone,
+                        message=f"Payment received: {payment.currency} {payment.amount}. Ref {payment.provider_reference or payment.uuid}",
+                        purpose="PAYMENT_RECEIVED",
+                    )
+            except Exception:
+                pass
 
 
 def notify_vendor_receipt(payment):

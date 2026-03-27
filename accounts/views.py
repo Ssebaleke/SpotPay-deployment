@@ -773,3 +773,14 @@ def pay_subscription(request):
         return redirect("vendor_dashboard")
 
     return render(request, "payments/pay_subscription.html")
+
+
+@login_required
+def toggle_sms_notifications(request):
+    if request.method == 'POST':
+        vendor = request.user.vendor
+        vendor.sms_notifications_enabled = not vendor.sms_notifications_enabled
+        vendor.save(update_fields=['sms_notifications_enabled'])
+        status = 'enabled' if vendor.sms_notifications_enabled else 'disabled'
+        messages.success(request, f'SMS notifications {status}.')
+    return redirect('vendor_profile')

@@ -180,9 +180,9 @@ def download_portal_zip(request, location_uuid):
     def replace_placeholders(text):
         return (
             text
-            .replace("{{API_BASE}}", settings.PORTAL_API_BASE)
+            .replace("{{API_BASE}}", settings.PORTAL_API_BASE_HTTP)
             .replace("{{LOCATION_UUID}}", str(location.uuid))
-            .replace("{{BUY_URL}}", f"{settings.SITE_URL}/api/portal/{location.uuid}/buy/")
+            .replace("{{BUY_URL}}", f"{settings.SITE_URL.replace('https://', 'http://')}/api/portal/{location.uuid}/buy/")
             .replace("{{SUPPORT_PHONE}}", support_phone)
         )
 

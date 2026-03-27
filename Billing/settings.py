@@ -219,6 +219,11 @@ SITE_URL = os.getenv("SITE_URL", "http://127.0.0.1:8000").strip().rstrip("/")
 # IMPORTANT: keep it WITHOUT trailing slash to avoid double paths
 PORTAL_API_BASE = os.getenv("PORTAL_API_BASE", f"{SITE_URL}/api/portal").strip().rstrip("/")
 
+# HTTP version for captive portal — devices behind walled garden can't verify SSL
+# Use server IP or HTTP URL so devices connect without cert errors
+_site_url_http = SITE_URL.replace("https://", "http://")
+PORTAL_API_BASE_HTTP = os.getenv("PORTAL_API_BASE_HTTP", f"{_site_url_http}/api/portal").strip().rstrip("/")
+
 # ==================================================
 # PROXY / HTTPS (safe defaults; won't break HTTP)
 # If you're behind nginx later, these help correct scheme/secure cookies

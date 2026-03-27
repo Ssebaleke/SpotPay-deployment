@@ -17,6 +17,7 @@ urlpatterns = [
     path('profile/', views.vendor_profile, name='vendor_profile'),
     path('change-password/', views.vendor_change_password, name='vendor_change_password'),
     path("pay-subscription/", views.pay_subscription, name="pay_subscription"),
+    path('toggle-sms-notifications/', views.toggle_sms_notifications, name='toggle_sms_notifications'),
     path('forgot-password/', views.password_reset_request, name='password_reset_request'),
     path('reset-password/<uidb64>/<token>/', views.password_reset_confirm, name='password_reset_confirm'),
 ]
