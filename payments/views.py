@@ -5,8 +5,8 @@ from datetime import timedelta
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import redirect, get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
-from django.utils import timezone
 from django.db import transaction
+from django.utils import timezone
 
 from .models import Payment, PaymentSystemConfig, PaymentSplit
 from .utils import get_active_provider, load_provider_adapter
@@ -92,6 +92,50 @@ def payment_status(request, reference):
     if not payment:
         from django.http import Http404
         raise Http404
+
+    # If still PENDING and using KwaPay, poll live status
+    if payment.status == "PENDING" and payment.provider and payment.provider.provider_type == "KWA":
+        try:
+            from payments.kwa_client import KwaPayClient
+            from payments.services.payment_success import handle_payment_success
+            from sms.services.sms_topup import credit_sms_wallet
+            from sms.services.notifications import notify_vendor_payment_received, notify_vendor_receipt
+
+            client = KwaPayClient(
+                primary_api=payment.provider.api_key,
+                secondary_api=payment.provider.api_secret,
+            )
+            result = client.check_status(payment.provider_reference)
+            status = str(result.get("status", "")).upper()
+
+            if status == "SUCCESSFUL" and payment.status != "SUCCESS":
+                with transaction.atomic():
+                    p = Payment.objects.select_for_update().get(pk=payment.pk)
+                    if p.status == "PENDING":
+                        p.mark_success(result)
+                        if p.purpose == "SMS_PURCHASE" and p.vendor_id:
+                            try:
+                                credit_sms_wallet(vendor=p.vendor, amount_paid=int(p.amount))
+                            except Exception:
+                                pass
+                        if p.vendor_id:
+                            if p.purpose in ("SMS_PURCHASE", "SUBSCRIPTION"):
+                                notify_vendor_receipt(p)
+                            else:
+                                notify_vendor_payment_received(p)
+                payment.refresh_from_db()
+                if payment.status == "SUCCESS":
+                    handle_payment_success(payment)
+
+            elif status == "FAILED" and payment.status == "PENDING":
+                with transaction.atomic():
+                    p = Payment.objects.select_for_update().get(pk=payment.pk)
+                    if p.status == "PENDING":
+                        p.mark_failed(result)
+                payment.refresh_from_db()
+
+        except Exception:
+            pass  # never break status polling on KwaPay errors
 
     resp = {
         "success": True,
