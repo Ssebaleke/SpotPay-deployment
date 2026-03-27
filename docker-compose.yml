@@ -33,6 +33,7 @@ services:
     command: >
       sh -c "
       echo '0 6 * * * cd /app && python manage.py enforce_subscriptions >> /var/log/cron.log 2>&1' > /etc/cron.d/spotpay &&
+      echo '*/2 * * * * cd /app && python manage.py verify_kwa_payments >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
       chmod 0644 /etc/cron.d/spotpay &&
       cron -f
       "
