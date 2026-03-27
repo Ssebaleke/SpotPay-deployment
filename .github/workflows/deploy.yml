@@ -39,13 +39,12 @@ jobs:
               cp /etc/letsencrypt/live/spotpay.it.com/privkey.pem ssl/privkey.pem
             fi
 
-            # Verify key is valid (must be > 500 bytes)
-            KEY_SIZE=$(wc -c < ssl/privkey.pem)
-            if [ "$KEY_SIZE" -lt 500 ]; then
-              echo "ERROR: privkey.pem is too small ($KEY_SIZE bytes) — cert is corrupted. Aborting!"
+            # Verify key is valid (must contain PRIVATE KEY header)
+            if ! grep -q 'PRIVATE KEY' ssl/privkey.pem; then
+              echo "ERROR: privkey.pem does not contain a valid private key. Aborting!"
               exit 1
             fi
-            echo "SSL key size: $KEY_SIZE bytes — OK"
+            echo "SSL key valid — OK"
 
             docker compose down
             docker compose up -d --build
