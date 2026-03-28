@@ -53,13 +53,13 @@ class KwaPayClient:
         }
 
         try:
-            logger.info("KWA DEPOSIT → %s", payload.get("phone_number"))
+            logger.warning("KWA DEPOSIT → phone=%s amount=%s", payload.get("phone_number"), payload.get("amount"))
             resp = requests.post(
                 f"{_BASE_URL}/deposit/",
                 json=payload,
                 timeout=_TIMEOUT,
             )
-            logger.info("KWA DEPOSIT ← HTTP %s | %.600s", resp.status_code, resp.text)
+            logger.warning("KWA DEPOSIT ← HTTP %s | %.600s", resp.status_code, resp.text)
             data = resp.json()
         except requests.RequestException as exc:
             logger.error("KWA DEPOSIT network error: %s", exc)
@@ -129,7 +129,7 @@ class KwaPayClient:
                 json=payload,
                 timeout=_TIMEOUT,
             )
-            logger.info("KWA STATUS ← HTTP %s | %.600s", resp.status_code, resp.text)
+            logger.warning("KWA STATUS ← HTTP %s | %.600s", resp.status_code, resp.text)
             return resp.json()
         except requests.RequestException as exc:
             logger.error("KWA STATUS network error: %s", exc)

@@ -50,4 +50,8 @@ class KwaAdapter:
         if self.client.is_failed(result):
             raise ValueError(f"KwaPay error: {result.get('message', 'Unknown error')}")
 
-        return result.get("internal_reference") or str(payment.uuid)
+        internal_ref = result.get("internal_reference")
+        if not internal_ref:
+            raise ValueError(f"KwaPay did not return internal_reference. Full response: {result}")
+
+        return internal_ref

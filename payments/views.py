@@ -68,7 +68,11 @@ def initiate_payment(request):
     )
 
     adapter = load_provider_adapter(provider)
-    ref = adapter.charge(payment, data)
+    try:
+        ref = adapter.charge(payment, data)
+    except Exception as exc:
+        payment.mark_failed({"reason": str(exc)})
+        return JsonResponse({"error": str(exc)}, status=400)
 
     payment.provider_reference = ref
     payment.save(update_fields=["provider_reference"])
