@@ -58,6 +58,18 @@ class Command(BaseCommand):
                 skipped += 1
                 continue
 
+            # Permanently skip after 3 provider send failures
+            provider_failures = SMSLog.objects.filter(
+                payment=payment,
+                status="FAILED",
+            ).exclude(
+                failure_reason="Insufficient SMS balance",
+            ).count()
+
+            if provider_failures >= 3:
+                skipped += 1
+                continue
+
             try:
                 success, result = send_voucher_sms(
                     vendor=payment.vendor,
