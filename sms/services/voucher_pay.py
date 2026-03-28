@@ -25,7 +25,7 @@ def send_voucher_sms(*, vendor, phone, voucher_code, package_name, payment=None,
 
     location_name = location.site_name if location else vendor.company_name
     dns = (location.hotspot_dns or "hot.spot") if location else "hot.spot"
-    connect_link = f"http://{dns}/login?username={voucher_code}&password={voucher_code}"
+    connect_link = f"http://{dns}/login?username={voucher_code}&password={voucher_code}&dst=http://google.com"
 
     message = (
         f"{location_name} WiFi\n"
