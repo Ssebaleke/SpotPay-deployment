@@ -18,7 +18,9 @@ COPY . /app
 
 # Create a wrapper that exports env vars before running manage.py
 RUN echo '#!/bin/sh' > /usr/local/bin/django-cron && \
-    echo 'export $(cat /proc/1/environ | tr "\0" "\n" | grep -v "^$")' >> /usr/local/bin/django-cron && \
+    echo 'set -a' >> /usr/local/bin/django-cron && \
+    echo '. /app/.cronenv' >> /usr/local/bin/django-cron && \
+    echo 'set +a' >> /usr/local/bin/django-cron && \
     echo 'cd /app && exec /usr/local/bin/python3 manage.py "$@"' >> /usr/local/bin/django-cron && \
     chmod +x /usr/local/bin/django-cron
 

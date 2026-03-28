@@ -33,6 +33,7 @@ services:
     command: >
       sh -c "
       touch /var/log/cron.log &&
+      printenv | sed 's/=\(.*\)/="\1"/' > /app/.cronenv &&
       echo '0 6 * * * root /usr/local/bin/django-cron enforce_subscriptions >> /var/log/cron.log 2>&1' > /etc/cron.d/spotpay &&
       echo '*/2 * * * * root /usr/local/bin/django-cron verify_kwa_payments >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
       echo '*/5 * * * * root /usr/local/bin/django-cron fix_missing_vouchers >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
