@@ -180,11 +180,13 @@ class SMSLogAdmin(admin.ModelAdmin):
         "vendor",
         "phone",
         "voucher_code",
-        "status",
+        "status_badge",
         "failure_reason",
         "provider",
+        "payment_amount",
+        "payment_package",
     )
-    list_filter = ("status", "provider", "created_at")
+    list_filter = ("status", "provider", "created_at", "vendor")
     search_fields = ("phone", "voucher_code", "vendor__company_name")
     readonly_fields = (
         "vendor",
@@ -197,11 +199,25 @@ class SMSLogAdmin(admin.ModelAdmin):
         "failure_reason",
         "created_at",
     )
+    date_hierarchy = "created_at"
 
-    def short_message(self, obj):
-        return obj.message[:50] + "..." if len(obj.message) > 50 else obj.message
+    def status_badge(self, obj):
+        if obj.status == "SENT":
+            return format_html('<b style="color:green">✓ Sent</b>')
+        return format_html('<b style="color:red">✗ {}</b>', obj.status)
+    status_badge.short_description = "Status"
 
-    short_message.short_description = "Message Preview"
+    def payment_amount(self, obj):
+        if obj.payment:
+            return f"UGX {obj.payment.amount}"
+        return "-"
+    payment_amount.short_description = "Amount"
+
+    def payment_package(self, obj):
+        if obj.payment and obj.payment.package:
+            return obj.payment.package.name
+        return "-"
+    payment_package.short_description = "Package"
 
     def has_add_permission(self, request):
         return False

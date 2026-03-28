@@ -31,7 +31,7 @@ class PaymentProviderAdmin(admin.ModelAdmin):
             "fields": ("name", "provider_type", "environment", "is_active")
         }),
         ("API Settings", {
-            "fields": ("base_url", "api_key", "api_secret")
+            "fields": ("base_url", "api_key", "api_secret", "gateway_fee_percentage")
         }),
         ("Webhook URL (register this in MakyPay dashboard)", {
             "fields": ("webhook_url_display",)
@@ -78,18 +78,14 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = (
         "uuid",
         "purpose",
-        "payer_type",
-        "status",
+        "status_badge",
         "amount",
-        "currency",
         "phone",
         "vendor",
         "location",
         "package",
-        "provider",
-        "provider_reference",
-        "external_reference",
         "issued_voucher_code",
+        "sms_status",
         "initiated_at",
         "completed_at",
     )
@@ -97,21 +93,17 @@ class PaymentAdmin(admin.ModelAdmin):
     list_filter = (
         "status",
         "purpose",
-        "payer_type",
-        "currency",
         "provider",
         "initiated_at",
-        "completed_at",
     )
 
     search_fields = (
         "uuid",
         "phone",
         "provider_reference",
-        "external_reference",
-        "vendor__user__username",   # adjust if your Vendor model differs
-        "location__name",          # adjust if your HotspotLocation differs
-        "package__name",           # adjust if your Package model differs
+        "vendor__company_name",
+        "location__site_name",
+        "package__name",
     )
 
     readonly_fields = (
@@ -133,7 +125,7 @@ class PaymentAdmin(admin.ModelAdmin):
                 "vendor", "location", "package",
             )
         }),
-        ("Hotspot Info (optional)", {
+        ("Hotspot Info", {
             "fields": ("mac_address", "ip_address"),
         }),
         ("Provider", {
@@ -152,20 +144,32 @@ class PaymentAdmin(admin.ModelAdmin):
         }),
     )
 
+    def status_badge(self, obj):
+        colors = {"SUCCESS": "green", "PENDING": "orange", "FAILED": "red"}
+        color = colors.get(obj.status, "gray")
+        return format_html('<b style="color:{}">{}</b>', color, obj.status)
+    status_badge.short_description = "Status"
+
     def issued_voucher_code(self, obj):
-        """
-        Shows voucher code if PaymentVoucher exists.
-        """
         try:
             return obj.issued_voucher.voucher.code
         except Exception:
             return "-"
     issued_voucher_code.short_description = "Voucher"
 
+    def sms_status(self, obj):
+        from sms.models import SMSLog
+        log = SMSLog.objects.filter(payment=obj).first()
+        if not log:
+            return format_html('<span style="color:gray">-</span>')
+        if log.status == "SENT":
+            return format_html('<b style="color:green">✓ Sent</b>')
+        return format_html('<b style="color:red">✗ {}</b>', log.failure_reason or "Failed")
+    sms_status.short_description = "SMS"
+
     def raw_callback_pretty(self, obj):
         if not obj.raw_callback_data:
             return "-"
-        # show raw json in readable format
         return format_html(
             "<pre style='white-space:pre-wrap;max-width:900px;'>{}</pre>",
             obj.raw_callback_data
@@ -178,6 +182,8 @@ class PaymentSplitAdmin(admin.ModelAdmin):
     list_display = (
         "payment",
         "subscription_mode",
+        "gateway_fee_percentage",
+        "gateway_fee_amount",
         "spotpay_percentage",
         "spotpay_amount",
         "vendor_amount",
