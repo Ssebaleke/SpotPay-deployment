@@ -16,8 +16,9 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
 
-# Create a wrapper that exports env vars before running manage.py
-RUN echo '#!/bin/sh' > /usr/local/bin/django-cron && \
+# Scheduler entrypoint + django-cron wrapper
+RUN chmod +x /app/scheduler_entrypoint.sh && \
+    echo '#!/bin/sh' > /usr/local/bin/django-cron && \
     echo 'set -a' >> /usr/local/bin/django-cron && \
     echo '. /app/.cronenv' >> /usr/local/bin/django-cron && \
     echo 'set +a' >> /usr/local/bin/django-cron && \

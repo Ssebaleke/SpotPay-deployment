@@ -30,18 +30,7 @@ services:
     build: .
     env_file:
       - .env
-    command: >
-      sh -c "
-      touch /var/log/cron.log &&
-      printenv | sed 's/=\(.*\)/="\1"/' > /app/.cronenv &&
-      echo '0 6 * * * root /usr/local/bin/django-cron enforce_subscriptions >> /var/log/cron.log 2>&1' > /etc/cron.d/spotpay &&
-      echo '*/2 * * * * root /usr/local/bin/django-cron verify_kwa_payments >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
-      echo '*/5 * * * * root /usr/local/bin/django-cron fix_missing_vouchers >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
-      echo '*/5 * * * * root /usr/local/bin/django-cron retry_voucher_sms >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
-      echo '' >> /etc/cron.d/spotpay &&
-      chmod 0644 /etc/cron.d/spotpay &&
-      cron && tail -f /var/log/cron.log
-      "
+    command: /app/scheduler_entrypoint.sh
     restart: unless-stopped
     depends_on:
       - web
