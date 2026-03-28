@@ -162,6 +162,15 @@ def payment_status(request, reference):
                 voucher_code = payment.issued_voucher.voucher.code
             except Exception:
                 voucher_code = None
+        # If voucher not yet assigned, try issuing it now
+        if not voucher_code and payment.purpose == "TRANSACTION":
+            try:
+                handle_payment_success(payment)
+                payment.refresh_from_db()
+                if hasattr(payment, "issued_voucher"):
+                    voucher_code = payment.issued_voucher.voucher.code
+            except Exception:
+                pass
         resp["voucher"] = voucher_code
 
     return JsonResponse(resp)
