@@ -68,6 +68,17 @@ class Command(BaseCommand):
                 status = str(result.get("status", "")).upper()
                 logger.warning("KWA VERIFY CMD: ref=%s status=%s", payment.provider_reference, status)
 
+                # Auto-fail payments with empty/unknown status older than 10 minutes
+                if not status or status not in ("SUCCESSFUL", "FAILED", "PENDING"):
+                    age_minutes = (timezone.now() - payment.initiated_at).total_seconds() / 60
+                    if age_minutes >= 10:
+                        with transaction.atomic():
+                            p = Payment.objects.select_for_update().get(pk=payment.pk)
+                            if p.status == "PENDING":
+                                p.mark_failed({"reason": "No status from KwaPay after timeout"})
+                                self.stdout.write(f"  ⏱ Timed-out payment {p.uuid} (no KwaPay status)")
+                    continue
+
                 payment_id = None
                 run_success_handler = False
 
