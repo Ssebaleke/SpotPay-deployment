@@ -47,6 +47,17 @@ class Command(BaseCommand):
                 skipped += 1
                 continue
 
+            # Skip if last failure was due to insufficient balance — vendor needs to top up first
+            insufficient_balance = SMSLog.objects.filter(
+                payment=payment,
+                status="FAILED",
+                failure_reason="Insufficient SMS balance",
+            ).exists()
+
+            if insufficient_balance:
+                skipped += 1
+                continue
+
             try:
                 success, result = send_voucher_sms(
                     vendor=payment.vendor,
