@@ -186,7 +186,7 @@ def admin_dashboard(request):
     # 7-day daily trend for admin chart
     admin_trend_labels = []
     admin_trend_values = []
-    today_date = timezone.now().date()
+    today_date = timezone.localdate()
     for day_offset in range(6, -1, -1):
         day = today_date - timedelta(days=day_offset)
         day_total = (
@@ -472,7 +472,7 @@ def vendor_dashboard(request):
     )
 
     successful_payments_qs = vendor_payments.filter(status="SUCCESS")
-    today = timezone.now().date()
+    today = timezone.localdate()
     now = timezone.now()
     week_start = now - timezone.timedelta(days=6)
     month_start = now.replace(day=1)
