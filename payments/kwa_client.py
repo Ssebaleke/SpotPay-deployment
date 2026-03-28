@@ -20,7 +20,7 @@ import requests
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://pay.kwaug.net/api/v1"
-_TIMEOUT = 60
+_TIMEOUT = 15
 
 
 class KwaPayClient:
