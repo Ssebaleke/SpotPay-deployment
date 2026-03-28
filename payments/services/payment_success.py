@@ -46,12 +46,23 @@ def handle_payment_success(payment):
                 pct = config.subscription_mode_percentage
 
             amount = Decimal(str(payment.amount))
-            spotpay_amount = (amount * pct / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
-            vendor_amount = amount - spotpay_amount
+
+            # Deduct gateway fee first
+            gateway_pct = Decimal('0.00')
+            if payment.provider_id:
+                gateway_pct = Decimal(str(payment.provider.gateway_fee_percentage or 0))
+            gateway_fee = (amount * gateway_pct / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+            net_amount = amount - gateway_fee
+
+            # SpotPay commission on net amount
+            spotpay_amount = (net_amount * pct / Decimal('100')).quantize(Decimal('1'), rounding=ROUND_HALF_UP)
+            vendor_amount = net_amount - spotpay_amount
 
             PaymentSplit.objects.create(
                 payment=payment,
                 subscription_mode=mode,
+                gateway_fee_percentage=gateway_pct,
+                gateway_fee_amount=gateway_fee,
                 spotpay_percentage=pct,
                 spotpay_amount=spotpay_amount,
                 vendor_amount=vendor_amount,

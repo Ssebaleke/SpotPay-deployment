@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from decimal import Decimal
 import uuid
 
 
@@ -38,6 +39,14 @@ class PaymentProvider(models.Model):
 
     # Only one provider should be active at a time
     is_active = models.BooleanField(default=False)
+
+    # Gateway fee % charged by this provider per transaction (e.g. 2.0 for 2%)
+    gateway_fee_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Transaction fee % charged by this payment provider (e.g. 2.0)"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -234,7 +243,9 @@ class PaymentSplit(models.Model):
         related_name="split"
     )
 
-    subscription_mode = models.CharField(max_length=20, default="MONTHLY")  # MONTHLY or PERCENTAGE
+    subscription_mode = models.CharField(max_length=20, default="MONTHLY")
+    gateway_fee_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal('0.00'))
+    gateway_fee_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'))
     spotpay_percentage = models.DecimalField(max_digits=5, decimal_places=2)
     spotpay_amount = models.DecimalField(max_digits=12, decimal_places=2)
     vendor_amount = models.DecimalField(max_digits=12, decimal_places=2)
@@ -242,7 +253,7 @@ class PaymentSplit(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Split {self.payment.uuid} | SpotPay {self.spotpay_percentage}% = {self.spotpay_amount} UGX"
+        return f"Split {self.payment.uuid} | Gateway {self.gateway_fee_percentage}% = {self.gateway_fee_amount} | SpotPay {self.spotpay_percentage}% = {self.spotpay_amount} UGX"
 
 
 # =====================================================
