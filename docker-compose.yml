@@ -32,12 +32,13 @@ services:
       - .env
     command: >
       sh -c "
-      echo '0 6 * * * cd /app && python manage.py enforce_subscriptions >> /var/log/cron.log 2>&1' > /etc/cron.d/spotpay &&
-      echo '*/2 * * * * cd /app && python manage.py verify_kwa_payments >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
-      echo '*/5 * * * * cd /app && python manage.py fix_missing_vouchers >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
-      echo '*/5 * * * * cd /app && python manage.py retry_voucher_sms >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
+      touch /var/log/cron.log &&
+      echo '0 6 * * * root cd /app && python manage.py enforce_subscriptions >> /var/log/cron.log 2>&1' > /etc/cron.d/spotpay &&
+      echo '*/2 * * * * root cd /app && python manage.py verify_kwa_payments >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
+      echo '*/5 * * * * root cd /app && python manage.py fix_missing_vouchers >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
+      echo '*/5 * * * * root cd /app && python manage.py retry_voucher_sms >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
       chmod 0644 /etc/cron.d/spotpay &&
-      cron -f
+      cron && tail -f /var/log/cron.log
       "
     restart: unless-stopped
     depends_on:

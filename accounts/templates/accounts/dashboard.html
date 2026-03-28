@@ -288,6 +288,7 @@
 
 {{ trend_labels|json_script:"trend-labels-data" }}
 {{ trend_values|json_script:"trend-values-data" }}
+{{ weekly_buyers_counts|json_script:"weekly-buyers-data" }}
 
 <!-- Sell Voucher Modal -->
 <div class="modal fade" id="sellVoucherModal" tabindex="-1">
@@ -362,6 +363,65 @@
                 }
             }
         });
+    }
+
+    // Weekly Buyers Donut Chart
+    const buyersData = JSON.parse(document.getElementById('weekly-buyers-data').textContent);
+    const donutColors = ['#4361ee','#f77f00','#e63946','#2dc653','#4cc9f0','#7b2ff7','#2ec4b6'];
+    const donutCtx = document.getElementById('weeklyDonutChart');
+    if (donutCtx) {
+        const totalBuyers = buyersData.reduce((a, b) => a + b, 0);
+        new Chart(donutCtx, {
+            type: 'doughnut',
+            data: {
+                labels: trendLabels,
+                datasets: [{
+                    data: buyersData,
+                    backgroundColor: donutColors,
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '68%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.label}: ${ctx.parsed} buyer${ctx.parsed !== 1 ? 's' : ''}`
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'centerText',
+                afterDraw(chart) {
+                    const { ctx, chartArea: { width, height, left, top } } = chart;
+                    ctx.save();
+                    ctx.font = 'bold 18px sans-serif';
+                    ctx.fillStyle = '#333';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(totalBuyers, left + width / 2, top + height / 2 - 8);
+                    ctx.font = '11px sans-serif';
+                    ctx.fillStyle = '#888';
+                    ctx.fillText('buyers', left + width / 2, top + height / 2 + 10);
+                    ctx.restore();
+                }
+            }]
+        });
+
+        // Build legend
+        const legend = document.getElementById('donutLegend');
+        if (legend) {
+            trendLabels.forEach((label, i) => {
+                const dot = `<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${donutColors[i]};margin-right:4px;"></span>`;
+                legend.insertAdjacentHTML('beforeend',
+                    `<span style="font-size:.7rem;white-space:nowrap;">${dot}${label}: <b>${buyersData[i]}</b></span>`);
+            });
+        }
     }
 
     // Sell Voucher Modal

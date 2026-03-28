@@ -505,14 +505,17 @@ def vendor_dashboard(request):
 
     trend_labels = []
     trend_values = []
+    weekly_buyers_counts = []
     for day_offset in range(6, -1, -1):
         day = today - timedelta(days=day_offset)
         day_total = (
             successful_payments_qs.filter(completed_at__date=day).aggregate(total=Sum("amount"))["total"]
             or Decimal("0.00")
         )
+        day_buyers = successful_payments_qs.filter(completed_at__date=day).count()
         trend_labels.append(day.strftime("%a"))
         trend_values.append(float(day_total))
+        weekly_buyers_counts.append(day_buyers)
 
     successful_payments_count = successful_payments_qs.count()
     pending_payments_count = vendor_payments.filter(status="PENDING").count()
@@ -583,6 +586,7 @@ def vendor_dashboard(request):
         'status_filter': status_filter,
         'trend_labels': trend_labels,
         'trend_values': trend_values,
+        'weekly_buyers_counts': weekly_buyers_counts,
     })
 
 
