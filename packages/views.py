@@ -1,5 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.paginator import Paginator
 
 from .models import Package
 from hotspot.models import HotspotLocation
@@ -75,11 +76,15 @@ def package_list(request):
 
         return redirect('package_list')
 
+    paginator = Paginator(packages, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     return render(
         request,
         'packages/package_list.html',
         {
-            'packages': packages,
+            'packages': page_obj,
+            'page_obj': page_obj,
             'locations': locations,
             'package_day_choices': Package.DAY_CHOICES,
         }

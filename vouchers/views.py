@@ -34,6 +34,10 @@ def voucher_list(request):
         'batch'
     ).order_by('-created_at')
 
+    filter_package_id = request.GET.get('package')
+    if filter_package_id:
+        vouchers = vouchers.filter(package_id=filter_package_id)
+
     batches = VoucherBatch.objects.filter(
         package__location__vendor=vendor
     ).select_related(
@@ -134,6 +138,7 @@ def voucher_list(request):
         'packages': packages,
         'page_obj': page_obj,
         'batches': batches,
+        'filter_package_id': filter_package_id,
     })
 
 
