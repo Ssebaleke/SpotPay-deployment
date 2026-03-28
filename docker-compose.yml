@@ -33,11 +33,10 @@ services:
     command: >
       sh -c "
       touch /var/log/cron.log &&
-      printenv | grep -v 'no_proxy' > /etc/environment &&
-      echo '0 6 * * * root . /etc/environment; cd /app && /usr/local/bin/python3 manage.py enforce_subscriptions >> /var/log/cron.log 2>&1' > /etc/cron.d/spotpay &&
-      echo '*/2 * * * * root . /etc/environment; cd /app && /usr/local/bin/python3 manage.py verify_kwa_payments >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
-      echo '*/5 * * * * root . /etc/environment; cd /app && /usr/local/bin/python3 manage.py fix_missing_vouchers >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
-      echo '*/5 * * * * root . /etc/environment; cd /app && /usr/local/bin/python3 manage.py retry_voucher_sms >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
+      echo '0 6 * * * root /usr/local/bin/django-cron enforce_subscriptions >> /var/log/cron.log 2>&1' > /etc/cron.d/spotpay &&
+      echo '*/2 * * * * root /usr/local/bin/django-cron verify_kwa_payments >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
+      echo '*/5 * * * * root /usr/local/bin/django-cron fix_missing_vouchers >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
+      echo '*/5 * * * * root /usr/local/bin/django-cron retry_voucher_sms >> /var/log/cron.log 2>&1' >> /etc/cron.d/spotpay &&
       echo '' >> /etc/cron.d/spotpay &&
       chmod 0644 /etc/cron.d/spotpay &&
       cron && tail -f /var/log/cron.log
