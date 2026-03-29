@@ -49,9 +49,9 @@ class Command(BaseCommand):
             secondary_api=provider.api_secret,
         )
 
-        # Only check payments older than 1 min and younger than 24 hours
+        # Only check payments older than 1 min and younger than 30 minutes
         cutoff_min = timezone.now() - timedelta(minutes=1)
-        cutoff_max = timezone.now() - timedelta(hours=24)
+        cutoff_max = timezone.now() - timedelta(minutes=30)
 
         pending = Payment.objects.filter(
             status="PENDING",
@@ -59,6 +59,20 @@ class Command(BaseCommand):
             initiated_at__lte=cutoff_min,
             initiated_at__gte=cutoff_max,
         ).exclude(provider_reference=None)
+
+        # Auto-fail any PENDING KwaPay payments older than 30 minutes
+        stale = Payment.objects.filter(
+            status="PENDING",
+            provider=provider,
+            initiated_at__lt=cutoff_max,
+        ).exclude(provider_reference=None)
+
+        for payment in stale:
+            with transaction.atomic():
+                p = Payment.objects.select_for_update().get(pk=payment.pk)
+                if p.status == "PENDING":
+                    p.mark_failed({"reason": "Payment not confirmed after 30 minutes"})
+                    self.stdout.write(f"  ⏱ Stale payment auto-failed {p.uuid}")
 
         self.stdout.write(f"Checking {pending.count()} pending KwaPay payments...")
 
