@@ -2,7 +2,8 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, Count, Q
+from django.db.models import Sum, Count
+from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.contrib import messages
@@ -10,7 +11,6 @@ from django.contrib import messages
 from accounts.models import Vendor
 from hotspot.models import HotspotLocation
 from payments.models import Payment
-from packages.models import Package
 
 
 @login_required
@@ -25,12 +25,11 @@ def analytics_dashboard(request):
         return redirect('vendor_login')
 
     now = timezone.now()
-    today = now.date()
-    week_start = today - timedelta(days=today.weekday())  # Monday of current week
+    today = timezone.localdate()
+    week_start = today - timedelta(days=today.weekday())
     locations = HotspotLocation.objects.filter(vendor=vendor)
     base_qs = Payment.objects.filter(vendor=vendor, purpose='TRANSACTION', status='SUCCESS')
 
-    # Summary totals
     total_revenue   = base_qs.aggregate(t=Sum('amount'))['t'] or Decimal('0')
     total_customers = base_qs.count()
     today_revenue   = base_qs.filter(completed_at__date=today).aggregate(t=Sum('amount'))['t'] or Decimal('0')
@@ -40,7 +39,6 @@ def analytics_dashboard(request):
     month_revenue   = base_qs.filter(completed_at__year=now.year, completed_at__month=now.month).aggregate(t=Sum('amount'))['t'] or Decimal('0')
     month_customers = base_qs.filter(completed_at__year=now.year, completed_at__month=now.month).count()
 
-    # Per-location rows for dropdown
     location_rows = []
     for loc in locations:
         qs = base_qs.filter(location=loc)
@@ -51,7 +49,6 @@ def analytics_dashboard(request):
             'customers': qs.count(),
         })
 
-    # Top packages by sales count (donut data)
     top_packages = (
         base_qs.values('package__name')
         .annotate(sales=Count('id'), revenue=Sum('amount'))
@@ -86,7 +83,7 @@ def analytics_data(request):
     period = request.GET.get('period', 'weekly')
     location_id = request.GET.get('location', '')
     now = timezone.now()
-    today = now.date()
+    today = timezone.localdate()
 
     base_qs = Payment.objects.filter(
         vendor=vendor,
@@ -137,17 +134,16 @@ def analytics_data(request):
     else:
         return JsonResponse({'error': 'Invalid period'}, status=400)
 
-    total_all      = base_qs.aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
-    total_month    = base_qs.filter(completed_at__year=now.year, completed_at__month=now.month).aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
-    total_today    = base_qs.filter(completed_at__date=today).aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
-    week_start     = today - timedelta(days=today.weekday())
-    total_week     = base_qs.filter(completed_at__date__gte=week_start).aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
-    count_all      = base_qs.count()
-    count_month    = base_qs.filter(completed_at__year=now.year, completed_at__month=now.month).count()
-    count_today    = base_qs.filter(completed_at__date=today).count()
-    count_week     = base_qs.filter(completed_at__date__gte=week_start).count()
+    week_start  = today - timedelta(days=today.weekday())
+    total_all   = base_qs.aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
+    total_month = base_qs.filter(completed_at__year=now.year, completed_at__month=now.month).aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
+    total_today = base_qs.filter(completed_at__date=today).aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
+    total_week  = base_qs.filter(completed_at__date__gte=week_start).aggregate(t=Sum('amount'))['t'] or Decimal('0.00')
+    count_all   = base_qs.count()
+    count_month = base_qs.filter(completed_at__year=now.year, completed_at__month=now.month).count()
+    count_today = base_qs.filter(completed_at__date=today).count()
+    count_week  = base_qs.filter(completed_at__date__gte=week_start).count()
 
-    # Top packages for donut
     top_pkgs = list(
         base_qs.values('package__name')
         .annotate(sales=Count('id'), revenue=Sum('amount'))
