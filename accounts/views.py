@@ -479,6 +479,12 @@ def vendor_dashboard(request):
     month_start = now.replace(day=1)
     year_start = now.replace(month=1, day=1)
 
+    # Location filter — applies to cards, charts AND transactions table
+    location_filter = request.GET.get('location', '').strip()
+    if location_filter:
+        successful_payments_qs = successful_payments_qs.filter(location_id=location_filter)
+        vendor_payments = vendor_payments.filter(location_id=location_filter)
+
     total_payments_received = (
         successful_payments_qs.aggregate(total=Sum("amount"))["total"]
         or Decimal("0.00")
@@ -539,14 +545,11 @@ def vendor_dashboard(request):
     # Search + filter
     search_q = request.GET.get('q', '').strip()
     status_filter = request.GET.get('status', '').strip()
-    location_filter = request.GET.get('location', '').strip()
     txn_qs = vendor_payments.select_related("package", "location")
     if search_q:
         txn_qs = txn_qs.filter(phone__icontains=search_q)
     if status_filter:
         txn_qs = txn_qs.filter(status=status_filter)
-    if location_filter:
-        txn_qs = txn_qs.filter(location_id=location_filter)
     txn_qs = txn_qs.order_by("-initiated_at")
 
     from django.core.paginator import Paginator
