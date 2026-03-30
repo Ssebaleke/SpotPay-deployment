@@ -38,6 +38,12 @@ class HotspotLocation(models.Model):
         ("PERCENTAGE", "Percentage Based"),
     ]
 
+    LOGIN_TYPES = [
+        ('PLAIN', 'Plain — username = password (Mikhmon default)'),
+        ('CHAP', 'CHAP MD5 — username ≠ password (KaWifi style)'),
+        ('SEPARATE', 'Separate username & password fields'),
+    ]
+
     # ============================
     # CORE RELATION
     # ============================
@@ -75,6 +81,13 @@ class HotspotLocation(models.Model):
         max_length=20,
         choices=SUBSCRIPTION_MODES,
         default="MONTHLY"
+    )
+
+    login_type = models.CharField(
+        max_length=10,
+        choices=LOGIN_TYPES,
+        default='PLAIN',
+        help_text="How voucher authentication works on this MikroTik"
     )
 
     subscription_percentage = models.DecimalField(

@@ -173,7 +173,18 @@ def download_portal_zip(request, location_uuid):
         status="ACTIVE"
     )
 
-    template = get_object_or_404(PortalTemplate, is_active=True)
+    template = PortalTemplate.objects.filter(
+        is_active=True,
+        login_type=location.login_type
+    ).first()
+
+    if not template:
+        # fallback to any active template
+        template = PortalTemplate.objects.filter(is_active=True).first()
+
+    if not template:
+        from django.http import Http404
+        raise Http404
 
     support_phone = getattr(location.vendor, "business_phone", "") or ""
 

@@ -7,7 +7,7 @@ class HotspotLocationForm(forms.ModelForm):
     
     class Meta:
         model = HotspotLocation
-        fields = ['site_name', 'location_type', 'address', 'town_city', 'subscription_mode']
+        fields = ['site_name', 'location_type', 'address', 'town_city', 'subscription_mode', 'login_type']
         widgets = {
             'address': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Full physical address'}),
             'site_name': forms.TextInput(attrs={'placeholder': 'e.g., Tech Cafe Westlands'}),
