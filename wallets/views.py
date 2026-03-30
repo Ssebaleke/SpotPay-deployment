@@ -223,7 +223,25 @@ def wallet_send_otp(request):
         text=f"Your SpotPay verification code is: {otp}. Valid for 5 minutes.",
     )
 
-    messages.info(request, "OTP sent to your email.")
+    # Also send OTP via SMS if vendor has SMS balance
+    if vendor.business_phone:
+        try:
+            from sms.models import VendorSMSWallet
+            from sms.services.sms_gateway import send_sms
+            sms_wallet = VendorSMSWallet.objects.filter(vendor=vendor).first()
+            if sms_wallet and sms_wallet.balance_units >= 1:
+                send_sms(
+                    vendor=vendor,
+                    phone=vendor.business_phone,
+                    message=f"SpotPay Wallet OTP: {otp}. Valid for 5 minutes. Do not share.",
+                    purpose="WALLET_OTP",
+                )
+                sms_wallet.balance_units -= 1
+                sms_wallet.save(update_fields=["balance_units"])
+        except Exception:
+            pass  # SMS failure must never block OTP flow
+
+    messages.info(request, "OTP sent to your email and phone.")
     return redirect('wallet_verify_otp')
 
 

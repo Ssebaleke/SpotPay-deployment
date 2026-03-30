@@ -85,4 +85,4 @@ def handle_payment_success(payment):
             location=location,
         )
 
-    notify_vendor_receipt(payment)
+    # notify_vendor_receipt(payment)  # paused — Resend free tier limit

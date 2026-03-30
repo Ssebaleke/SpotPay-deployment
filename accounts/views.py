@@ -539,11 +539,14 @@ def vendor_dashboard(request):
     # Search + filter
     search_q = request.GET.get('q', '').strip()
     status_filter = request.GET.get('status', '').strip()
+    location_filter = request.GET.get('location', '').strip()
     txn_qs = vendor_payments.select_related("package", "location")
     if search_q:
         txn_qs = txn_qs.filter(phone__icontains=search_q)
     if status_filter:
         txn_qs = txn_qs.filter(status=status_filter)
+    if location_filter:
+        txn_qs = txn_qs.filter(location_id=location_filter)
     txn_qs = txn_qs.order_by("-initiated_at")
 
     from django.core.paginator import Paginator
@@ -586,6 +589,8 @@ def vendor_dashboard(request):
         'recent_transactions': recent_transactions,
         'search_q': search_q,
         'status_filter': status_filter,
+        'location_filter': location_filter,
+        'vendor_locations': locations,
         'trend_labels': trend_labels,
         'trend_values': trend_values,
         'weekly_buyers_counts': weekly_buyers_counts,
