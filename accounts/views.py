@@ -183,11 +183,12 @@ def admin_dashboard(request):
             if transaction_count > 0 else 0
         )
 
-    # 7-day daily trend for admin chart
+    # Mon-Sun weekly trend for admin chart
     admin_trend_labels = []
     admin_trend_values = []
     today_date = timezone.localdate()
-    for day_offset in range(6, -1, -1):
+    days_since_monday = today_date.weekday()
+    for day_offset in range(days_since_monday, -1, -1):
         day = today_date - timedelta(days=day_offset)
         day_total = (
             Payment.objects.filter(
@@ -474,7 +475,7 @@ def vendor_dashboard(request):
     successful_payments_qs = vendor_payments.filter(status="SUCCESS")
     today = timezone.localdate()
     now = timezone.now()
-    week_start = now - timezone.timedelta(days=6)
+    week_start = today - timedelta(days=today.weekday())  # Monday of current week
     month_start = now.replace(day=1)
     year_start = now.replace(month=1, day=1)
 
@@ -491,7 +492,7 @@ def vendor_dashboard(request):
     )
 
     weekly_payments_total = (
-        successful_payments_qs.filter(completed_at__gte=week_start).aggregate(total=Sum("amount"))["total"]
+        successful_payments_qs.filter(completed_at__date__gte=week_start).aggregate(total=Sum("amount"))["total"]
         or Decimal("0.00")
     )
     monthly_payments_total = (
@@ -506,7 +507,8 @@ def vendor_dashboard(request):
     trend_labels = []
     trend_values = []
     weekly_buyers_counts = []
-    for day_offset in range(6, -1, -1):
+    days_since_monday = today.weekday()  # 0=Mon, 6=Sun
+    for day_offset in range(days_since_monday, -1, -1):
         day = today - timedelta(days=day_offset)
         day_total = (
             successful_payments_qs.filter(completed_at__date=day).aggregate(total=Sum("amount"))["total"]
