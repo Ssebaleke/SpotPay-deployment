@@ -173,14 +173,7 @@ def download_portal_zip(request, location_uuid):
         status="ACTIVE"
     )
 
-    template = PortalTemplate.objects.filter(
-        is_active=True,
-        login_type=location.login_type
-    ).first()
-
-    if not template:
-        # fallback to any active template
-        template = PortalTemplate.objects.filter(is_active=True).first()
+    template = PortalTemplate.objects.filter(is_active=True).first()
 
     if not template:
         from django.http import Http404
@@ -195,6 +188,7 @@ def download_portal_zip(request, location_uuid):
             .replace("{{LOCATION_UUID}}", str(location.uuid))
             .replace("{{BUY_URL}}", f"{settings.SITE_URL.replace('https://', 'http://')}/api/portal/{location.uuid}/buy/")
             .replace("{{SUPPORT_PHONE}}", support_phone)
+            .replace("{{LOGIN_TYPE}}", location.login_type)
         )
 
     # --- Single file mode: ?file=login.html or ?file=js/portal.js ---
