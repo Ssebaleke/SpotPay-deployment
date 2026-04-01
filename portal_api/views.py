@@ -40,7 +40,7 @@ def portal_data(request, uuid):
     packages = location.packages.filter(
         is_active=True,
         vouchers__status='UNUSED'
-    ).distinct()
+    ).distinct().select_related('location')
 
     packages = [p for p in packages if p.is_available_now()]
 
@@ -67,7 +67,7 @@ def portal_data(request, uuid):
         ],
     }
 
-    cache.set(cache_key, data, 10)
+    cache.set(cache_key, data, 60)
     return JsonResponse(data)
 
 

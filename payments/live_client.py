@@ -241,7 +241,7 @@ class LivePayClient:
 
         local = phone[3:]  # strip 256
         mtn_prefixes = ("77", "78", "76", "39", "31")
-        airtel_prefixes = ("70", "74", "75", "20")
+        airtel_prefixes = ("70", "74", "75", "20", "73")
 
         for p in mtn_prefixes:
             if local.startswith(p):
