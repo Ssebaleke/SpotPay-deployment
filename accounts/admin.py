@@ -118,6 +118,15 @@ class SpotPayAdminSite(AdminSite):
         sms_month   = sms_qs.filter(created_at__gte=now - timedelta(days=30)).aggregate(t=Sum("amount_paid"))["t"] or Decimal("0")
         sms_year    = sms_qs.filter(created_at__gte=now - timedelta(days=365)).aggregate(t=Sum("amount_paid"))["t"] or Decimal("0")
         sms_alltime = sms_qs.aggregate(t=Sum("amount_paid"))["t"] or Decimal("0")
+
+        # ── Withdrawal Fee Earnings ──
+        from wallets.models import SpotPayEarning
+        wd_qs = SpotPayEarning.objects.filter(source='WITHDRAWAL_FEE')
+        wd_today   = wd_qs.filter(created_at__date=today).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        wd_week    = wd_qs.filter(created_at__gte=week_start).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        wd_month   = wd_qs.filter(created_at__gte=now - timedelta(days=30)).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        wd_year    = wd_qs.filter(created_at__gte=now - timedelta(days=365)).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        wd_alltime = wd_qs.aggregate(t=Sum("amount"))["t"] or Decimal("0")
         commission_chart_labels, commission_chart_values = [], []
         for offset in range(11, -1, -1):
             month_date = (now - timedelta(days=offset * 30)).replace(day=1)
@@ -171,12 +180,18 @@ class SpotPayAdminSite(AdminSite):
             "sp_sms_month": sms_month,
             "sp_sms_year": sms_year,
             "sp_sms_alltime": sms_alltime,
-            # combined totals (pre-calculated to avoid template Decimal issues)
-            "sp_total_today": earn_today + sub_today + sms_today,
-            "sp_total_week": earn_week + sub_week + sms_week,
-            "sp_total_month": earn_month + sub_month + sms_month,
-            "sp_total_year": earn_year + sub_year + sms_year,
-            "sp_total_alltime": earn_alltime + sub_alltime + sms_alltime,
+            # withdrawal fee earnings
+            "sp_wd_today": wd_today,
+            "sp_wd_week": wd_week,
+            "sp_wd_month": wd_month,
+            "sp_wd_year": wd_year,
+            "sp_wd_alltime": wd_alltime,
+            # combined totals
+            "sp_total_today": earn_today + sub_today + sms_today + wd_today,
+            "sp_total_week": earn_week + sub_week + sms_week + wd_week,
+            "sp_total_month": earn_month + sub_month + sms_month + wd_month,
+            "sp_total_year": earn_year + sub_year + sms_year + wd_year,
+            "sp_total_alltime": earn_alltime + sub_alltime + sms_alltime + wd_alltime,
             # commission chart
             "sp_commission_chart_labels": commission_chart_labels,
             "sp_commission_chart_values": commission_chart_values,

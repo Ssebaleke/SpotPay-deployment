@@ -75,6 +75,14 @@ def handle_payment_success(payment):
                 reference=str(payment.uuid)
             )
 
+            # Credit SpotPay earnings
+            from wallets.models import SpotPayEarning
+            source = 'SUBSCRIPTION' if payment.purpose == 'SUBSCRIPTION' else 'COMMISSION'
+            SpotPayEarning.objects.get_or_create(
+                reference=f"EARN-{payment.uuid}",
+                defaults=dict(source=source, amount=spotpay_amount)
+            )
+
     if phone:
         send_voucher_sms(
             vendor=vendor,

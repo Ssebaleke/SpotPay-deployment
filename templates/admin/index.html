@@ -383,7 +383,7 @@ html, body {
 
 .earn-row {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 12px;
     margin-bottom: 4px;
 }
@@ -595,6 +595,11 @@ html, body {
                             <div class="earn-val">UGX {{ sp_sms_today }}</div>
                             <div class="earn-lbl">SMS Sales Today</div>
                         </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#e63946,#9b1b25)">
+                            <div class="earn-icon"><i class="bi bi-arrow-up-circle"></i></div>
+                            <div class="earn-val">UGX {{ sp_wd_today }}</div>
+                            <div class="earn-lbl">Withdrawal Fees Today</div>
+                        </div>
                         <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
                             <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
                             <div class="earn-val">UGX {{ sp_total_today }}</div>
@@ -619,6 +624,11 @@ html, body {
                             <div class="earn-icon"><i class="bi bi-chat-dots"></i></div>
                             <div class="earn-val">UGX {{ sp_sms_week }}</div>
                             <div class="earn-lbl">SMS Sales This Week</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#e63946,#9b1b25)">
+                            <div class="earn-icon"><i class="bi bi-arrow-up-circle"></i></div>
+                            <div class="earn-val">UGX {{ sp_wd_week }}</div>
+                            <div class="earn-lbl">Withdrawal Fees This Week</div>
                         </div>
                         <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
                             <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
@@ -645,6 +655,11 @@ html, body {
                             <div class="earn-val">UGX {{ sp_sms_month }}</div>
                             <div class="earn-lbl">SMS Sales This Month</div>
                         </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#e63946,#9b1b25)">
+                            <div class="earn-icon"><i class="bi bi-arrow-up-circle"></i></div>
+                            <div class="earn-val">UGX {{ sp_wd_month }}</div>
+                            <div class="earn-lbl">Withdrawal Fees This Month</div>
+                        </div>
                         <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
                             <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
                             <div class="earn-val">UGX {{ sp_total_month }}</div>
@@ -670,6 +685,11 @@ html, body {
                             <div class="earn-val">UGX {{ sp_sms_year }}</div>
                             <div class="earn-lbl">SMS Sales This Year</div>
                         </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#e63946,#9b1b25)">
+                            <div class="earn-icon"><i class="bi bi-arrow-up-circle"></i></div>
+                            <div class="earn-val">UGX {{ sp_wd_year }}</div>
+                            <div class="earn-lbl">Withdrawal Fees This Year</div>
+                        </div>
                         <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
                             <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>
                             <div class="earn-val">UGX {{ sp_total_year }}</div>
@@ -694,6 +714,11 @@ html, body {
                             <div class="earn-icon"><i class="bi bi-chat-dots"></i></div>
                             <div class="earn-val">UGX {{ sp_sms_alltime }}</div>
                             <div class="earn-lbl">Total SMS Sales</div>
+                        </div>
+                        <div class="earn-box" style="background:linear-gradient(135deg,#e63946,#9b1b25)">
+                            <div class="earn-icon"><i class="bi bi-arrow-up-circle"></i></div>
+                            <div class="earn-val">UGX {{ sp_wd_alltime }}</div>
+                            <div class="earn-lbl">Total Withdrawal Fees</div>
                         </div>
                         <div class="earn-box" style="background:linear-gradient(135deg,#f77f00,#a04800)">
                             <div class="earn-icon"><i class="bi bi-cash-stack"></i></div>

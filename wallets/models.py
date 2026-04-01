@@ -259,3 +259,27 @@ class WithdrawalRequest(models.Model):
                 f"{self.amount} ({self.status})"
             )
         return f"LEGACY WITHDRAWAL - {self.amount} ({self.status})"
+
+
+# =====================================================
+# 6. SPOTPAY EARNINGS (PLATFORM REVENUE TRACKER)
+# =====================================================
+
+class SpotPayEarning(models.Model):
+    SOURCES = (
+        ('COMMISSION', 'Transaction Commission'),
+        ('SUBSCRIPTION', 'Subscription Payment'),
+        ('SMS_PURCHASE', 'SMS Purchase'),
+        ('WITHDRAWAL_FEE', 'Withdrawal Fee'),
+    )
+
+    source = models.CharField(max_length=20, choices=SOURCES)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    reference = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_source_display()} | UGX {self.amount}"

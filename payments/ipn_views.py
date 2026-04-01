@@ -426,6 +426,12 @@ def live_ipn(request):
             if payment.purpose == "SMS_PURCHASE" and payment.vendor_id:
                 try:
                     credit_sms_wallet(vendor=payment.vendor, amount_paid=int(float(payment.amount)))
+                    # Credit SpotPay earnings from SMS purchase
+                    from wallets.models import SpotPayEarning
+                    SpotPayEarning.objects.get_or_create(
+                        reference=f"SMS-{payment.uuid}",
+                        defaults=dict(source='SMS_PURCHASE', amount=payment.amount)
+                    )
                 except Exception as exc:
                     payment.processor_message = f"SMS credit warning: {exc}"
                     payment.save(update_fields=["processor_message"])

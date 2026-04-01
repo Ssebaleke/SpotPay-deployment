@@ -148,11 +148,11 @@
                             <td><small>{{ w.created_at|date:"M d, H:i" }}</small></td>
                             <td class="fw-semibold">UGX {{ w.amount }}</td>
                             <td>
-                                {% if w.status == 'APPROVED' %}
+                                {% if w.status == 'approved' %}
                                     <span class="badge bg-success">Approved</span>
-                                {% elif w.status == 'PENDING' %}
+                                {% elif w.status == 'pending' %}
                                     <span class="badge bg-warning text-dark">Pending</span>
-                                {% elif w.status == 'PAID' %}
+                                {% elif w.status == 'paid' %}
                                     <span class="badge bg-primary">Paid</span>
                                 {% else %}
                                     <span class="badge bg-danger">Rejected</span>

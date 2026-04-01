@@ -318,6 +318,17 @@ def wallet_withdraw(request):
             messages.error(request, "Minimum withdrawal amount is UGX 10,000.")
             return redirect('wallet_withdraw')
 
+        # Calculate fees
+        from payments.models import PaymentSystemConfig
+        config = PaymentSystemConfig.get()
+        gateway_fee = (amount * config.withdrawal_gateway_fee_percentage / Decimal('100')).quantize(Decimal('1'))
+        spotpay_fee = (amount * config.withdrawal_spotpay_fee_percentage / Decimal('100')).quantize(Decimal('1'))
+        total_deduction = amount + gateway_fee + spotpay_fee
+
+        if total_deduction > wallet.balance:
+            messages.error(request, f"Insufficient balance. Withdrawal of UGX {amount:,.0f} + fees (UGX {gateway_fee + spotpay_fee:,.0f}) requires UGX {total_deduction:,.0f}.")
+            return redirect('wallet_withdraw')
+
         import logging
         import uuid as _uuid
         logger = logging.getLogger(__name__)
@@ -396,11 +407,11 @@ def wallet_withdraw(request):
         with transaction.atomic():
             locked_wallet = VendorWallet.objects.select_for_update().get(pk=wallet.pk)
 
-            if amount > locked_wallet.balance:
+            if total_deduction > locked_wallet.balance:
                 messages.error(request, "Insufficient wallet balance.")
                 return redirect('wallet_withdraw')
 
-            locked_wallet.balance -= amount
+            locked_wallet.balance -= total_deduction
             locked_wallet.save(update_fields=['balance', 'updated_at'])
 
             withdrawal = WithdrawalRequest.objects.create(
@@ -415,11 +426,20 @@ def wallet_withdraw(request):
 
             WalletTransaction.objects.create(
                 wallet=locked_wallet,
-                amount=amount,
+                amount=total_deduction,
                 transaction_type=WalletTransaction.DEBIT,
                 reason='WITHDRAWAL',
                 reference=f"WD-{withdrawal.reference}",
             )
+
+            # Credit SpotPay earnings from withdrawal fee
+            if spotpay_fee > 0:
+                from wallets.models import SpotPayEarning
+                SpotPayEarning.objects.create(
+                    source='WITHDRAWAL_FEE',
+                    amount=spotpay_fee,
+                    reference=f"WD-FEE-{withdrawal.reference}",
+                )
 
         request.session.pop('wallet_otp_verified', None)
 

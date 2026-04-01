@@ -61,6 +61,10 @@ class PaymentSystemConfigAdmin(admin.ModelAdmin):
             "description": "Set how much SpotPay takes from each sale depending on the location's subscription mode.",
             "fields": ("subscription_mode_percentage", "percentage_mode_percentage"),
         }),
+        ("Withdrawal Fees", {
+            "description": "Fees applied when a vendor withdraws from their wallet. Both are deducted from vendor wallet on top of the withdrawal amount.",
+            "fields": ("withdrawal_gateway_fee_percentage", "withdrawal_spotpay_fee_percentage"),
+        }),
         ("Timestamps", {
             "fields": ("created_at", "updated_at"),
         }),

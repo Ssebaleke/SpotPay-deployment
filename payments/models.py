@@ -83,6 +83,18 @@ class PaymentSystemConfig(models.Model):
         default=15,
         help_text="SpotPay commission % for PERCENTAGE MODE locations (e.g. 15)"
     )
+    withdrawal_gateway_fee_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="Gateway fee % charged by payment provider on withdrawals (e.g. 3)"
+    )
+    withdrawal_spotpay_fee_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        help_text="SpotPay fee % charged on vendor withdrawals (e.g. 2)"
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
