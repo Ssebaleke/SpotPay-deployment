@@ -14,7 +14,8 @@ touch /var/log/cron.log
 cat > /etc/cron.d/spotpay << 'EOF'
 0 6 * * * root /usr/local/bin/django-cron enforce_subscriptions >> /var/log/cron.log 2>&1
 */2 * * * * root /usr/local/bin/django-cron verify_kwa_payments >> /var/log/cron.log 2>&1
-*/2 * * * * root /usr/local/bin/django-cron verify_live_payments >> /var/log/cron.log 2>&1
+* * * * * root /usr/local/bin/django-cron verify_live_payments >> /var/log/cron.log 2>&1
+* * * * * root sleep 30 && /usr/local/bin/django-cron verify_live_payments >> /var/log/cron.log 2>&1
 */5 * * * * root /usr/local/bin/django-cron fix_missing_vouchers >> /var/log/cron.log 2>&1
 */5 * * * * root /usr/local/bin/django-cron retry_voucher_sms >> /var/log/cron.log 2>&1
 

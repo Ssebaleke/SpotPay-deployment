@@ -173,8 +173,13 @@ class Command(BaseCommand):
                         self.stdout.write(f"  ❌ Failed payment {p.uuid}")
 
                 if run_success_handler and payment_id:
-                    p = Payment.objects.get(id=payment_id)
-                    handle_payment_success(p)
+                    try:
+                        p = Payment.objects.get(id=payment_id)
+                        handle_payment_success(p)
+                        self.stdout.write(f"  🎉 Voucher issued for {p.uuid}")
+                    except Exception as exc:
+                        logger.error("LIVE handle_payment_success error for %s: %s", payment_id, exc)
+                        self.stdout.write(f"  ⚠️ handle_payment_success failed for {payment_id}: {exc}")
 
             except Exception as exc:
                 logger.error("LIVE VERIFY CMD error for %s: %s", payment.provider_reference, exc)
