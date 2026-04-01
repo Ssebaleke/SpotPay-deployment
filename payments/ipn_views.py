@@ -381,10 +381,10 @@ def live_ipn(request):
                 logger.warning("LIVEPAY IPN: invalid signature — rejecting")
                 return HttpResponse("Invalid signature", status=401)
 
-    # reference_id is our original reference (payment UUID without hyphens)
-    reference = data.get("reference_id") or data.get("transaction_id")
+    # reference is our original reference (payment UUID without hyphens)
+    reference = data.get("reference") or data.get("reference_id") or data.get("transaction_id")
     status = str(data.get("status", "")).lower()
-    is_success = status == "approved"
+    is_success = status in ("approved", "success")
     is_failed = status in ("failed", "cancelled")
 
     if not reference:
