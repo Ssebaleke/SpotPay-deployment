@@ -30,23 +30,4 @@ class Migration(migrations.Migration):
                 max_digits=5,
             ),
         ),
-        migrations.CreateModel(
-            name='SpotPayEarning',
-            fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('source', models.CharField(
-                    choices=[
-                        ('COMMISSION', 'Transaction Commission'),
-                        ('SUBSCRIPTION', 'Subscription Payment'),
-                        ('SMS_PURCHASE', 'SMS Purchase'),
-                        ('WITHDRAWAL_FEE', 'Withdrawal Fee'),
-                    ],
-                    max_length=20,
-                )),
-                ('amount', models.DecimalField(decimal_places=2, max_digits=12)),
-                ('reference', models.CharField(max_length=100, unique=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-            ],
-            options={'ordering': ['-created_at']},
-        ),
     ]
