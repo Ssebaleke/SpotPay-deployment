@@ -357,6 +357,9 @@ def live_ipn(request):
     if request.method != "POST":
         return HttpResponse("OK")
 
+    logger.warning("LIVEPAY IPN RAW BODY: %.800s", request.body.decode('utf-8', errors='replace'))
+    logger.warning("LIVEPAY IPN HEADERS: livepay-signature=%s", request.headers.get('livepay-signature', 'MISSING'))
+
     try:
         data = _json.loads(request.body.decode("utf-8", errors="replace"))
     except Exception:
