@@ -552,10 +552,27 @@ def vendor_dashboard(request):
         txn_qs = txn_qs.filter(status=status_filter)
     txn_qs = txn_qs.order_by("-initiated_at")
 
+    # Pre-extract failure reasons to avoid template dict lookup errors
+    def get_failure_reason(txn):
+        if txn.status != 'FAILED':
+            return ''
+        if txn.raw_callback_data and isinstance(txn.raw_callback_data, dict):
+            return (
+                txn.raw_callback_data.get('message') or
+                txn.raw_callback_data.get('description') or
+                txn.raw_callback_data.get('reason') or
+                txn.processor_message or ''
+            )
+        return txn.processor_message or ''
+
     from django.core.paginator import Paginator
     paginator = Paginator(txn_qs, 15)
     page_number = request.GET.get('page', 1)
     recent_transactions = paginator.get_page(page_number)
+
+    # Attach failure reason to each transaction
+    for txn in recent_transactions:
+        txn.failure_reason = get_failure_reason(txn)
 
     # -------------------------------------------------
     # SMS WALLET (REAL BALANCE)

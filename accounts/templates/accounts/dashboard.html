@@ -251,7 +251,7 @@
                             data-phone="{{ txn.phone|default:'N/A' }}"
                             data-package="{{ txn.package.name|default:'N/A' }}"
                             data-amount="{{ txn.currency }} {{ txn.amount }}"
-                            data-reason="{% with reason=txn.raw_callback_data.description|default:txn.raw_callback_data.message|default:txn.raw_callback_data.reason|default:txn.processor_message %}{{ reason|default:'No reason available'|escapejs }}{% endwith %}"
+                            data-reason="{{ txn.failure_reason|default:'No reason available'|escapejs }}"
                             {% endif %}>
                             <td>#{{ txn.id }}</td>
                             <td>{{ txn.phone|default:"N/A" }}</td>
