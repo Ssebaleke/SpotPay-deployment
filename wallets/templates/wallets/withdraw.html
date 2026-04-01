@@ -32,10 +32,10 @@
         <div class="input-group">
             <span class="input-group-text"><i class="bi bi-cash-stack"></i></span>
             <input type="number" class="form-control" name="amount" id="amount"
-                   placeholder="Enter amount" min="1" step="1"
+                   placeholder="Enter amount" min="10000" step="1"
                    max="{{ wallet.balance }}" required>
         </div>
-        <div class="form-text">Maximum: UGX {{ wallet.balance|intcomma }}</div>
+        <div class="form-text">Minimum: UGX 10,000 &nbsp;|&nbsp; Maximum: UGX {{ wallet.balance|intcomma }}</div>
         <div id="amount_error" class="d-none mt-1" style="color:#dc2626;font-size:0.8rem;">
             <i class="bi bi-exclamation-circle me-1"></i>
             Amount exceeds your available balance of UGX {{ wallet.balance|intcomma }}

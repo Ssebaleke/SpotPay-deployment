@@ -14,6 +14,7 @@ class PaymentProvider(models.Model):
         ("CARD", "Card / Gateway"),
         ("YOO", "Mobile Money (YooPay)"),
         ("KWA", "Mobile Money (KwaPay)"),
+        ("LIVE", "Mobile Money (LivePay)"),
     )
 
     ENVIRONMENTS = (
@@ -30,6 +31,11 @@ class PaymentProvider(models.Model):
     # for MakyPay: api_key = public_key, api_secret = secret_key
     api_key = models.CharField(max_length=500)
     api_secret = models.CharField(max_length=500, blank=True)
+    transaction_pin = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Transaction PIN (required for LivePay Send Money)"
+    )
 
     environment = models.CharField(
         max_length=10,

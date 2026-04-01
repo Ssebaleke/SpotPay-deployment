@@ -340,6 +340,114 @@ def kwa_verify(request, reference):
     return HttpResponse(f"status={status}", status=200)
 
 
+# ---------------------------------------------------------------------------
+# LivePay Webhook
+# ---------------------------------------------------------------------------
+
+@csrf_exempt
+def live_ipn(request):
+    """
+    POST /payments/webhook/live/ipn/
+    LivePay POSTs JSON to this URL when a transaction settles.
+    """
+    import json as _json
+    from payments.models import PaymentProvider
+    from payments.live_client import LivePayClient
+
+    if request.method != "POST":
+        return HttpResponse("OK")
+
+    try:
+        data = _json.loads(request.body.decode("utf-8", errors="replace"))
+    except Exception:
+        data = {}
+
+    logger.warning("LIVEPAY IPN: %s", data)
+
+    # Verify signature
+    provider = PaymentProvider.objects.filter(provider_type="LIVE", is_active=True).first()
+    if provider:
+        signature_header = request.headers.get("livepay-signature", "")
+        if signature_header:
+            valid = LivePayClient.verify_webhook_signature(
+                secret_key=provider.api_secret,
+                signature_header=signature_header,
+                payload=data,
+            )
+            if not valid:
+                logger.warning("LIVEPAY IPN: invalid signature — rejecting")
+                return HttpResponse("Invalid signature", status=401)
+
+    # reference_id is our original reference (payment UUID without hyphens)
+    reference = data.get("reference_id") or data.get("transaction_id")
+    status = str(data.get("status", "")).lower()
+    is_success = status == "approved"
+    is_failed = status in ("failed", "cancelled")
+
+    if not reference:
+        logger.warning("LIVEPAY IPN: no reference found — ignoring")
+        return HttpResponse("OK")
+
+    payment_id = None
+    run_success_handler = False
+
+    with transaction.atomic():
+        payment = (
+            Payment.objects.select_for_update().filter(provider_reference=reference).first()
+            or Payment.objects.select_for_update().filter(uuid=reference).first()
+        )
+
+        # Try matching UUID without hyphens
+        if not payment and len(reference) == 32:
+            formatted = f"{reference[:8]}-{reference[8:12]}-{reference[12:16]}-{reference[16:20]}-{reference[20:]}"
+            payment = Payment.objects.select_for_update().filter(uuid=formatted).first()
+
+        if not payment:
+            logger.warning("LIVEPAY IPN: no payment found for reference=%s", reference)
+            return HttpResponse("OK")
+
+        if payment.status == "SUCCESS":
+            return HttpResponse("OK")  # idempotent
+
+        payment.raw_callback_data = data
+
+        if is_success:
+            payment.mark_success(data)
+
+            if payment.purpose == "SUBSCRIPTION" and payment.location_id:
+                _handle_subscription_renewal(payment)
+
+            if payment.purpose == "SMS_PURCHASE" and payment.vendor_id:
+                try:
+                    credit_sms_wallet(vendor=payment.vendor, amount_paid=int(float(payment.amount)))
+                except Exception as exc:
+                    payment.processor_message = f"SMS credit warning: {exc}"
+                    payment.save(update_fields=["processor_message"])
+
+            if payment.vendor_id:
+                if payment.purpose in ("SMS_PURCHASE", "SUBSCRIPTION"):
+                    notify_vendor_receipt(payment)
+                else:
+                    notify_vendor_payment_received(payment)
+
+            payment_id = payment.id
+            run_success_handler = True
+
+        elif is_failed:
+            payment.mark_failed(data)
+        else:
+            payment.save(update_fields=["raw_callback_data"])
+
+    if run_success_handler and payment_id:
+        payment = Payment.objects.get(id=payment_id)
+        handle_payment_success(payment)
+
+    return HttpResponse(
+        _json.dumps({"status": "received", "message": "Webhook processed successfully"}),
+        content_type="application/json"
+    )
+
+
 @csrf_exempt
 def yoo_failure_notification(request):
     """

@@ -314,6 +314,10 @@ def wallet_withdraw(request):
             messages.error(request, "Amount must be greater than zero.")
             return redirect('wallet_withdraw')
 
+        if amount < 10000:
+            messages.error(request, "Minimum withdrawal amount is UGX 10,000.")
+            return redirect('wallet_withdraw')
+
         import logging
         import uuid as _uuid
         logger = logging.getLogger(__name__)
@@ -322,44 +326,72 @@ def wallet_withdraw(request):
         disbursement_success = False
         disbursement_error = None
 
-        # ── Step 1: Attempt KwaPay disbursement ──
+        # ── Step 1: Attempt disbursement via active provider ──
         try:
             from payments.models import PaymentProvider
-            from payments.kwa_client import KwaPayClient
 
-            kwa_provider = PaymentProvider.objects.filter(
-                provider_type='KWA', is_active=True
-            ).first()
+            # Try KwaPay first, then LivePay — whichever is active
+            provider = (
+                PaymentProvider.objects.filter(provider_type='KWA', is_active=True).first()
+                or PaymentProvider.objects.filter(provider_type='LIVE', is_active=True).first()
+            )
 
-            if kwa_provider:
-                client = KwaPayClient(
-                    primary_api=kwa_provider.api_key,
-                    secondary_api=kwa_provider.api_secret,
-                )
-                callback_url = f"{settings.SITE_URL}/payments/webhook/kwa/ipn/"
-                result = client.withdraw(
-                    amount=int(amount),
-                    phone=payout_phone,
-                    callback_url=callback_url,
-                )
-                logger.warning(f"KWA WITHDRAWAL RESULT: {result}")
+            if provider:
+                if provider.provider_type == 'KWA':
+                    from payments.kwa_client import KwaPayClient
+                    client = KwaPayClient(
+                        primary_api=provider.api_key,
+                        secondary_api=provider.api_secret,
+                    )
+                    callback_url = f"{settings.SITE_URL}/payments/webhook/kwa/ipn/"
+                    result = client.withdraw(
+                        amount=int(amount),
+                        phone=payout_phone,
+                        callback_url=callback_url,
+                    )
+                    logger.warning(f"KWA WITHDRAWAL RESULT: {result}")
+                    if KwaPayClient.is_failed(result):
+                        disbursement_error = result.get('message') or 'Disbursement failed'
+                    else:
+                        disbursement_success = True
 
-                if KwaPayClient.is_failed(result):
-                    disbursement_error = result.get('message') or 'Disbursement failed'
-                    logger.warning(f"KWA WITHDRAWAL FAILED: {disbursement_error}")
-                else:
-                    disbursement_success = True
+                elif provider.provider_type == 'LIVE':
+                    from payments.live_client import LivePayClient
+                    client = LivePayClient(
+                        public_key=provider.api_key,
+                        secret_key=provider.api_secret,
+                    )
+                    network = LivePayClient.detect_network(payout_phone)
+                    pin = provider.transaction_pin or ''
+                    if not pin:
+                        disbursement_error = "LivePay transaction PIN not configured"
+                    else:
+                        result = client.send(
+                            amount=int(amount),
+                            phone=payout_phone,
+                            network=network,
+                            pin=pin,
+                            reference=withdrawal_ref,
+                        )
+                        logger.warning(f"LIVEPAY SEND RESULT: {result}")
+                        if result.get('status') != 'success':
+                            disbursement_error = result.get('message') or 'Disbursement failed'
+                        else:
+                            disbursement_success = True
             else:
-                disbursement_error = "No KwaPay provider configured"
+                disbursement_error = "No disbursement provider configured"
 
         except Exception as e:
-            logger.warning(f"KWA WITHDRAWAL EXCEPTION: {e}")
+            logger.warning(f"WITHDRAWAL DISBURSEMENT EXCEPTION: {e}")
             disbursement_error = str(e)
 
-        # ── Step 2: Deduct wallet and record withdrawal ──
-        # If disbursement succeeded → STATUS_PAID
-        # If disbursement failed → STATUS_PENDING (admin pays manually)
-        withdrawal_status = WithdrawalRequest.STATUS_PAID if disbursement_success else WithdrawalRequest.STATUS_PENDING
+        # ── Step 2: Only deduct wallet and record if disbursement succeeded ──
+        # If disbursement failed — do NOT deduct, show error to vendor
+        if not disbursement_success:
+            messages.error(request, f"Withdrawal failed: {disbursement_error}. Your balance has not been deducted.")
+            return redirect('wallet_withdraw')
+
+        withdrawal_status = WithdrawalRequest.STATUS_PAID
 
         with transaction.atomic():
             locked_wallet = VendorWallet.objects.select_for_update().get(pk=wallet.pk)
@@ -391,15 +423,11 @@ def wallet_withdraw(request):
 
         request.session.pop('wallet_otp_verified', None)
 
-        if disbursement_success:
-            try:
-                notify_withdrawal_receipt(withdrawal)
-            except Exception:
-                pass
-            messages.success(request, "Withdrawal processed successfully. A receipt has been sent to your email.")
-        else:
-            logger.warning(f"Withdrawal {withdrawal_ref} queued as PENDING — disbursement error: {disbursement_error}")
-            messages.warning(request, "Your withdrawal request has been received and is being processed. You will be notified once payment is sent.")
+        try:
+            notify_withdrawal_receipt(withdrawal)
+        except Exception:
+            pass
+        messages.success(request, "Withdrawal processed successfully. A receipt has been sent to your email.")
 
         return redirect('wallet_dashboard')
 

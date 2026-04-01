@@ -36,7 +36,8 @@ class SpotPayAdminSite(AdminSite):
         success_count = success_qs.count()
 
         trend_labels, trend_values = [], []
-        for offset in range(6, -1, -1):
+        days_since_monday = today.weekday()
+        for offset in range(days_since_monday, -1, -1):
             day = today - timedelta(days=offset)
             total = Payment.objects.filter(
                 purpose="TRANSACTION", status="SUCCESS", completed_at__date=day
@@ -96,7 +97,8 @@ class SpotPayAdminSite(AdminSite):
 
         split_qs = PaymentSplit.objects.filter(payment__status="SUCCESS")
         earn_today    = commission_sum(split_qs.filter(created_at__date=today))
-        earn_week     = commission_sum(split_qs.filter(created_at__gte=now - timedelta(days=7)))
+        week_start    = now - timedelta(days=today.weekday())
+        earn_week     = commission_sum(split_qs.filter(created_at__gte=week_start))
         earn_month    = commission_sum(split_qs.filter(created_at__gte=now - timedelta(days=30)))
         earn_year     = commission_sum(split_qs.filter(created_at__gte=now - timedelta(days=365)))
         earn_alltime  = commission_sum(split_qs)
@@ -104,12 +106,18 @@ class SpotPayAdminSite(AdminSite):
         # ── Subscription revenue (SUBSCRIPTION payments) ──
         sub_qs = Payment.objects.filter(purpose="SUBSCRIPTION", status="SUCCESS")
         sub_today   = sub_qs.filter(completed_at__date=today).aggregate(t=Sum("amount"))["t"] or Decimal("0")
-        sub_week    = sub_qs.filter(completed_at__gte=now - timedelta(days=7)).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        sub_week    = sub_qs.filter(completed_at__gte=week_start).aggregate(t=Sum("amount"))["t"] or Decimal("0")
         sub_month   = sub_qs.filter(completed_at__gte=now - timedelta(days=30)).aggregate(t=Sum("amount"))["t"] or Decimal("0")
         sub_year    = sub_qs.filter(completed_at__gte=now - timedelta(days=365)).aggregate(t=Sum("amount"))["t"] or Decimal("0")
         sub_alltime = sub_qs.aggregate(t=Sum("amount"))["t"] or Decimal("0")
 
-        # ── Commission chart (last 12 months) ──
+        # ── SMS Earnings ──
+        sms_qs = SMSPurchase.objects.filter(status="SUCCESS")
+        sms_today   = sms_qs.filter(created_at__date=today).aggregate(t=Sum("amount_paid"))["t"] or Decimal("0")
+        sms_week    = sms_qs.filter(created_at__gte=week_start).aggregate(t=Sum("amount_paid"))["t"] or Decimal("0")
+        sms_month   = sms_qs.filter(created_at__gte=now - timedelta(days=30)).aggregate(t=Sum("amount_paid"))["t"] or Decimal("0")
+        sms_year    = sms_qs.filter(created_at__gte=now - timedelta(days=365)).aggregate(t=Sum("amount_paid"))["t"] or Decimal("0")
+        sms_alltime = sms_qs.aggregate(t=Sum("amount_paid"))["t"] or Decimal("0")
         commission_chart_labels, commission_chart_values = [], []
         for offset in range(11, -1, -1):
             month_date = (now - timedelta(days=offset * 30)).replace(day=1)
@@ -157,12 +165,18 @@ class SpotPayAdminSite(AdminSite):
             "sp_sub_month": sub_month,
             "sp_sub_year": sub_year,
             "sp_sub_alltime": sub_alltime,
+            # sms earnings
+            "sp_sms_today": sms_today,
+            "sp_sms_week": sms_week,
+            "sp_sms_month": sms_month,
+            "sp_sms_year": sms_year,
+            "sp_sms_alltime": sms_alltime,
             # combined totals (pre-calculated to avoid template Decimal issues)
-            "sp_total_today": earn_today + sub_today,
-            "sp_total_week": earn_week + sub_week,
-            "sp_total_month": earn_month + sub_month,
-            "sp_total_year": earn_year + sub_year,
-            "sp_total_alltime": earn_alltime + sub_alltime,
+            "sp_total_today": earn_today + sub_today + sms_today,
+            "sp_total_week": earn_week + sub_week + sms_week,
+            "sp_total_month": earn_month + sub_month + sms_month,
+            "sp_total_year": earn_year + sub_year + sms_year,
+            "sp_total_alltime": earn_alltime + sub_alltime + sms_alltime,
             # commission chart
             "sp_commission_chart_labels": commission_chart_labels,
             "sp_commission_chart_values": commission_chart_values,

@@ -1,8 +1,8 @@
 """
-management/commands/verify_kwa_payments.py
-==========================================
-Polls KwaPay check_status for all PENDING KwaPay payments
-older than 1 minute and completes them if SUCCESSFUL.
+management/commands/verify_live_payments.py
+============================================
+Polls LivePay transaction-status for all PENDING LivePay payments
+older than 1 minute and completes them if successful.
 
 Run every 2 minutes via scheduler.
 """
@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.db import transaction
 
 from payments.models import Payment, PaymentProvider
-from payments.kwa_client import KwaPayClient
+from payments.live_client import LivePayClient
 from payments.services.payment_success import handle_payment_success
 from sms.services.sms_topup import credit_sms_wallet
 from sms.services.notifications import notify_vendor_payment_received, notify_vendor_receipt
@@ -36,20 +36,19 @@ def _handle_subscription_renewal(payment):
 
 
 class Command(BaseCommand):
-    help = "Poll KwaPay for PENDING payments and complete them if SUCCESSFUL"
+    help = "Poll LivePay for PENDING payments and complete them if successful"
 
     def handle(self, *args, **options):
-        provider = PaymentProvider.objects.filter(provider_type="KWA", is_active=True).first()
+        provider = PaymentProvider.objects.filter(provider_type="LIVE", is_active=True).first()
         if not provider:
-            self.stdout.write("No active KwaPay provider — skipping")
+            self.stdout.write("No active LivePay provider — skipping")
             return
 
-        client = KwaPayClient(
-            primary_api=provider.api_key,
-            secondary_api=provider.api_secret,
+        client = LivePayClient(
+            public_key=provider.api_key,
+            secret_key=provider.api_secret,
         )
 
-        # Only check payments older than 1 min and younger than 30 minutes
         cutoff_min = timezone.now() - timedelta(minutes=1)
         cutoff_max = timezone.now() - timedelta(minutes=30)
 
@@ -60,8 +59,7 @@ class Command(BaseCommand):
             initiated_at__gte=cutoff_max,
         ).exclude(provider_reference=None)
 
-        # Auto-fail any PENDING KwaPay payments older than 30 minutes
-        # But check status first — if KwaPay says SUCCESSFUL, complete it
+        # Stale payments older than 30 minutes — check status first
         stale = Payment.objects.filter(
             status="PENDING",
             provider=provider,
@@ -71,7 +69,7 @@ class Command(BaseCommand):
         for payment in stale:
             try:
                 result = client.check_status(payment.provider_reference)
-                status = str(result.get("status", "")).upper()
+                status = LivePayClient.get_transaction_status(result)
 
                 payment_id = None
                 run_success_handler = False
@@ -83,14 +81,14 @@ class Command(BaseCommand):
 
                     p.raw_callback_data = result
 
-                    if status == "SUCCESSFUL":
+                    if status in ("SUCCESS", "COMPLETED"):
                         # Customer paid — complete normally
                         p.mark_success(result)
                         if p.purpose == "SUBSCRIPTION" and p.location_id:
                             _handle_subscription_renewal(p)
                         if p.purpose == "SMS_PURCHASE" and p.vendor_id:
                             try:
-                                credit_sms_wallet(vendor=p.vendor, amount_paid=int(p.amount))
+                                credit_sms_wallet(vendor=p.vendor, amount_paid=int(float(p.amount)))
                             except Exception as exc:
                                 p.processor_message = f"SMS credit warning: {exc}"
                                 p.save(update_fields=["processor_message"])
@@ -98,45 +96,42 @@ class Command(BaseCommand):
                         run_success_handler = True
                         self.stdout.write(f"  ✅ Stale payment recovered {p.uuid}")
 
-                    else:
-                        # FAILED — customer was never charged, just auto-fail
-                        if status == "FAILED":
-                            p.mark_failed({"reason": "Payment failed on provider side"})
-                            self.stdout.write(f"  ❌ Provider-failed payment {p.uuid}")
+                    elif status == "FAILED":
+                        # Customer was never charged — just auto-fail
+                        p.mark_failed({"reason": "Payment failed on provider side"})
+                        self.stdout.write(f"  ❌ Provider-failed payment {p.uuid}")
 
-                        else:
-                            # Still PENDING after 30 mins — auto-fail on our side
-                            # but flag for manual review — do NOT refund automatically
-                            # as the transaction may still be in-flight on the network
-                            p.mark_failed({"reason": "Payment not confirmed after 30 minutes"})
-                            p.processor_message = "MANUAL REVIEW REQUIRED — timed out while still PENDING on provider. Verify if customer was charged before refunding."
-                            p.save(update_fields=["processor_message"])
-                            self.stdout.write(f"  ⚠️ Timed-out PENDING payment flagged for manual review {p.uuid}")
+                    else:
+                        # Still PENDING/PROCESSING after 30 mins — flag for manual review
+                        # Do NOT refund automatically — transaction may still be in-flight
+                        p.mark_failed({"reason": "Payment not confirmed after 30 minutes"})
+                        p.processor_message = "MANUAL REVIEW REQUIRED — timed out while still PENDING on provider. Verify if customer was charged before refunding."
+                        p.save(update_fields=["processor_message"])
+                        self.stdout.write(f"  ⚠️ Timed-out PENDING payment flagged for manual review {p.uuid}")
 
                 if run_success_handler and payment_id:
                     p = Payment.objects.get(id=payment_id)
                     handle_payment_success(p)
 
             except Exception as exc:
-                logger.error("Stale payment check error for %s: %s", payment.provider_reference, exc)
+                logger.error("Stale LivePay payment check error for %s: %s", payment.provider_reference, exc)
 
-        self.stdout.write(f"Checking {pending.count()} pending KwaPay payments...")
+        self.stdout.write(f"Checking {pending.count()} pending LivePay payments...")
 
         for payment in pending:
             try:
                 result = client.check_status(payment.provider_reference)
-                status = str(result.get("status", "")).upper()
-                logger.warning("KWA VERIFY CMD: ref=%s status=%s", payment.provider_reference, status)
+                status = LivePayClient.get_transaction_status(result)
+                logger.warning("LIVE VERIFY CMD: ref=%s status=%s", payment.provider_reference, status)
 
-                # Auto-fail payments with empty/unknown status older than 10 minutes
-                if not status or status not in ("SUCCESSFUL", "FAILED", "PENDING"):
+                if not status or status not in ("SUCCESS", "COMPLETED", "FAILED", "PENDING", "PROCESSING"):
                     age_minutes = (timezone.now() - payment.initiated_at).total_seconds() / 60
                     if age_minutes >= 10:
                         with transaction.atomic():
                             p = Payment.objects.select_for_update().get(pk=payment.pk)
                             if p.status == "PENDING":
-                                p.mark_failed({"reason": "No status from KwaPay after timeout"})
-                                self.stdout.write(f"  ⏱ Timed-out payment {p.uuid} (no KwaPay status)")
+                                p.mark_failed({"reason": "No status from LivePay after timeout"})
+                                self.stdout.write(f"  ⏱ Timed-out payment {p.uuid} (no LivePay status)")
                     continue
 
                 payment_id = None
@@ -150,7 +145,7 @@ class Command(BaseCommand):
 
                     p.raw_callback_data = result
 
-                    if status == "SUCCESSFUL":
+                    if status in ("SUCCESS", "COMPLETED"):
                         p.mark_success(result)
 
                         if p.purpose == "SUBSCRIPTION" and p.location_id:
@@ -158,7 +153,7 @@ class Command(BaseCommand):
 
                         if p.purpose == "SMS_PURCHASE" and p.vendor_id:
                             try:
-                                credit_sms_wallet(vendor=p.vendor, amount_paid=int(p.amount))
+                                credit_sms_wallet(vendor=p.vendor, amount_paid=int(float(p.amount)))
                             except Exception as exc:
                                 p.processor_message = f"SMS credit warning: {exc}"
                                 p.save(update_fields=["processor_message"])
@@ -182,6 +177,6 @@ class Command(BaseCommand):
                     handle_payment_success(p)
 
             except Exception as exc:
-                logger.error("KWA VERIFY CMD error for %s: %s", payment.provider_reference, exc)
+                logger.error("LIVE VERIFY CMD error for %s: %s", payment.provider_reference, exc)
 
         self.stdout.write("Done.")

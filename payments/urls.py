@@ -20,6 +20,9 @@ urlpatterns = [
     # KwaPay IPN
     path("webhook/kwa/ipn/", ipn_views.kwa_ipn, name="kwa_ipn"),
 
+    # LivePay IPN
+    path("webhook/live/ipn/", ipn_views.live_ipn, name="live_ipn"),
+
     # KwaPay manual verify (polls check_status for stuck PENDING payments)
     path("kwa/verify/<str:reference>/", ipn_views.kwa_verify, name="kwa_verify"),
 

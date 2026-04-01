@@ -33,4 +33,8 @@ def load_provider_adapter(provider):
         from payments.adapters.kwa import KwaAdapter
         return KwaAdapter(provider)
 
+    if provider_type == "LIVE":
+        from payments.adapters.live import LiveAdapter
+        return LiveAdapter(provider)
+
     raise ValueError(f"Unsupported payment provider: {provider_type}")
