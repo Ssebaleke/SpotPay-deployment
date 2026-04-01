@@ -247,7 +247,12 @@
                     </thead>
                     <tbody>
                         {% for txn in recent_transactions %}
-                        <tr>
+                        <tr {% if txn.status == 'FAILED' %}style="cursor:pointer;" data-bs-toggle="modal" data-bs-target="#failReasonModal"
+                            data-phone="{{ txn.phone|default:'N/A' }}"
+                            data-package="{{ txn.package.name|default:'N/A' }}"
+                            data-amount="{{ txn.currency }} {{ txn.amount }}"
+                            data-reason="{% with reason=txn.raw_callback_data.description|default:txn.raw_callback_data.message|default:txn.raw_callback_data.reason|default:txn.processor_message %}{{ reason|default:'No reason available'|escapejs }}{% endwith %}"
+                            {% endif %}>
                             <td>#{{ txn.id }}</td>
                             <td>{{ txn.phone|default:"N/A" }}</td>
                             <td>{{ txn.package.name|default:"N/A" }}</td>
@@ -256,7 +261,7 @@
                             <td>
                                 {% if txn.status == 'SUCCESS' %}<span class="badge bg-success">Success</span>
                                 {% elif txn.status == 'PENDING' %}<span class="badge bg-warning text-dark">Pending</span>
-                                {% else %}<span class="badge bg-danger">Failed</span>{% endif %}
+                                {% else %}<span class="badge bg-danger">Failed <i class="bi bi-info-circle ms-1"></i></span>{% endif %}
                             </td>
                         </tr>
                         {% empty %}
@@ -331,6 +336,29 @@
           <span id="svBtnText"><i class="bi bi-send me-1"></i>Send Voucher</span>
           <span id="svBtnSpinner" class="d-none"><span class="spinner-border spinner-border-sm me-1"></span>Sending...</span>
         </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Fail Reason Modal -->
+<div class="modal fade" id="failReasonModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title"><i class="bi bi-exclamation-circle me-2"></i>Payment Failed</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2"><strong>Customer:</strong> <span id="frPhone"></span></div>
+        <div class="mb-2"><strong>Package:</strong> <span id="frPackage"></span></div>
+        <div class="mb-2"><strong>Amount:</strong> <span id="frAmount"></span></div>
+        <hr>
+        <div class="alert alert-danger mb-0">
+          <i class="bi bi-info-circle me-2"></i><span id="frReason"></span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
@@ -431,6 +459,15 @@
             });
         }
     }
+
+    // Fail Reason Modal
+    document.getElementById('failReasonModal').addEventListener('show.bs.modal', function(e) {
+        const row = e.relatedTarget;
+        document.getElementById('frPhone').textContent = row.dataset.phone;
+        document.getElementById('frPackage').textContent = row.dataset.package;
+        document.getElementById('frAmount').textContent = row.dataset.amount;
+        document.getElementById('frReason').textContent = row.dataset.reason;
+    });
 
     // Sell Voucher Modal
     document.getElementById('svSubmitBtn').addEventListener('click', function () {
