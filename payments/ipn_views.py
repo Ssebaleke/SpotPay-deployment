@@ -410,7 +410,10 @@ def live_ipn(request):
             return HttpResponse("OK")
 
         if payment.status == "SUCCESS":
+            logger.warning("LIVEPAY IPN: payment %s already SUCCESS — skipping", reference)
             return HttpResponse("OK")  # idempotent
+
+        logger.warning("LIVEPAY IPN: found payment %s status=%s is_success=%s", payment.uuid, payment.status, is_success)
 
         payment.raw_callback_data = data
 
@@ -442,8 +445,12 @@ def live_ipn(request):
             payment.save(update_fields=["raw_callback_data"])
 
     if run_success_handler and payment_id:
-        payment = Payment.objects.get(id=payment_id)
-        handle_payment_success(payment)
+        try:
+            payment = Payment.objects.get(id=payment_id)
+            handle_payment_success(payment)
+            logger.warning("LIVEPAY IPN: handle_payment_success completed for %s", payment_id)
+        except Exception as exc:
+            logger.error("LIVEPAY IPN: handle_payment_success failed for %s: %s", payment_id, exc)
 
     return HttpResponse(
         _json.dumps({"status": "received", "message": "Webhook processed successfully"}),
