@@ -84,13 +84,19 @@ def handle_payment_success(payment):
             )
 
     if phone:
-        send_voucher_sms(
-            vendor=vendor,
-            phone=phone,
-            voucher_code=voucher.code,
-            package_name=package.name,
-            payment=payment,
-            location=location,
-        )
+        try:
+            send_voucher_sms(
+                vendor=vendor,
+                phone=phone,
+                voucher_code=voucher.code,
+                package_name=package.name,
+                payment=payment,
+                location=location,
+            )
+        except Exception as sms_exc:
+            import logging
+            logging.getLogger(__name__).error(
+                "send_voucher_sms failed for payment %s: %s", payment.uuid, sms_exc
+            )
 
     # notify_vendor_receipt(payment)  # paused — Resend free tier limit
