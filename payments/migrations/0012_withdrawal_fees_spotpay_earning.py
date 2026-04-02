@@ -12,12 +12,12 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='paymentsystemconfig',
-            name='withdrawal_gateway_fee_percentage',
+            name='withdrawal_gateway_fee',
             field=models.DecimalField(
                 decimal_places=2,
-                default=Decimal('0.00'),
-                help_text='Gateway fee % charged by payment provider on withdrawals (e.g. 3)',
-                max_digits=5,
+                default=0,
+                help_text='Flat gateway fee charged by payment provider per withdrawal in UGX (e.g. 2000)',
+                max_digits=10,
             ),
         ),
         migrations.AddField(

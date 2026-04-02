@@ -3,6 +3,7 @@ from django.db import models
 class PortalTemplate(models.Model):
     LOGIN_TYPES = (
         ('PLAIN', 'Plain (username = password)'),
+        ('NONE', 'None (username only, blank password)'),
         ('CHAP', 'CHAP MD5 (username ≠ password)'),
         ('SEPARATE', 'Separate username & password'),
     )

@@ -83,11 +83,11 @@ class PaymentSystemConfig(models.Model):
         default=15,
         help_text="SpotPay commission % for PERCENTAGE MODE locations (e.g. 15)"
     )
-    withdrawal_gateway_fee_percentage = models.DecimalField(
-        max_digits=5,
+    withdrawal_gateway_fee = models.DecimalField(
+        max_digits=10,
         decimal_places=2,
         default=Decimal('0.00'),
-        help_text="Gateway fee % charged by payment provider on withdrawals (e.g. 3)"
+        help_text="Flat gateway fee charged by payment provider per withdrawal in UGX (e.g. 2000)"
     )
     withdrawal_spotpay_fee_percentage = models.DecimalField(
         max_digits=5,

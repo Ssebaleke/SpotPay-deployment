@@ -188,11 +188,12 @@
                         <label class="form-label fw-semibold">Voucher Login Type <span class="text-danger">*</span></label>
                         <select class="form-select" name="login_type" required>
                             <option value="PLAIN">Plain — username = password (Mikhmon default)</option>
+                            <option value="NONE">None — username only, no password</option>
                             <option value="CHAP">CHAP MD5 — username &ne; password (KaWifi style)</option>
                             <option value="SEPARATE">Separate username &amp; password fields</option>
                         </select>
                         <div class="mt-2" style="font-size:12px; color:var(--text-secondary);">
-                            <i class="bi bi-info-circle me-1"></i>Not sure? Choose <strong>Plain</strong> for new setups. Choose <strong>CHAP MD5</strong> if migrating from KaWifi.
+                            <i class="bi bi-info-circle me-1"></i>Not sure? Choose <strong>Plain</strong> for new setups. Choose <strong>None</strong> if your Mikhmon vouchers have blank passwords.
                         </div>
                     </div>
 

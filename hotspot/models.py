@@ -40,6 +40,7 @@ class HotspotLocation(models.Model):
 
     LOGIN_TYPES = [
         ('PLAIN', 'Plain — username = password (Mikhmon default)'),
+        ('NONE', 'None — username only, no password (blank password)'),
         ('CHAP', 'CHAP MD5 — username ≠ password (KaWifi style)'),
         ('SEPARATE', 'Separate username & password fields'),
     ]

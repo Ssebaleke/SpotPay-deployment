@@ -62,8 +62,8 @@ class PaymentSystemConfigAdmin(admin.ModelAdmin):
             "fields": ("subscription_mode_percentage", "percentage_mode_percentage"),
         }),
         ("Withdrawal Fees", {
-            "description": "Fees applied when a vendor withdraws from their wallet. Both are deducted from vendor wallet on top of the withdrawal amount.",
-            "fields": ("withdrawal_gateway_fee_percentage", "withdrawal_spotpay_fee_percentage"),
+            "description": "Fees applied when a vendor withdraws. Gateway fee is a flat UGX amount. SpotPay fee is a percentage of the withdrawal amount.",
+            "fields": ("withdrawal_gateway_fee", "withdrawal_spotpay_fee_percentage"),
         }),
         ("Timestamps", {
             "fields": ("created_at", "updated_at"),

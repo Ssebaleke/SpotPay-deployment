@@ -34,13 +34,23 @@ def credit_sms_wallet(*, vendor, amount_paid):
     wallet.save(update_fields=["balance_units", "balance_amount"])
 
     # 5. Record purchase (audit trail)
-    SMSPurchase.objects.create(
+    purchase = SMSPurchase.objects.create(
         vendor=vendor,
         amount_paid=amount_paid,
         sms_units_credited=sms_units,
         price_per_sms=pricing.price_per_sms,
         status="SUCCESS",
     )
+
+    # 6. Record SpotPay earnings from SMS sale
+    try:
+        from wallets.models import SpotPayEarning
+        SpotPayEarning.objects.get_or_create(
+            reference=f"SMS-EARN-{purchase.id}",
+            defaults=dict(source='SMS_PURCHASE', amount=amount_paid)
+        )
+    except Exception:
+        pass
 
     return {
         "sms_units": sms_units,
