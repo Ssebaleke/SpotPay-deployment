@@ -158,10 +158,6 @@ def delete_voucher_batch(request, id):
         messages.error(request, 'This batch contains used vouchers and cannot be deleted.')
         return redirect('voucher_list')
 
-    if batch.vouchers.filter(status='RESERVED').exists():
-        messages.error(request, 'This batch contains reserved vouchers (pending payments). Cannot delete until those payments are resolved.')
-        return redirect('voucher_list')
-
     with transaction.atomic():
         deleted_count, _ = batch.vouchers.all().delete()
 
