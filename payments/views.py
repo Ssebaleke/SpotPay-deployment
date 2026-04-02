@@ -172,6 +172,7 @@ def payment_status(request, reference):
             except Exception:
                 pass
         resp["voucher"] = voucher_code
+        resp["hotspot_dns"] = payment.location.hotspot_dns if payment.location_id else "hot.spot"
 
     return JsonResponse(resp)
 

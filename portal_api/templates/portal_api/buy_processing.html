@@ -36,10 +36,17 @@
             .then(r => r.json())
             .then(data => {
                 if (data.status === "SUCCESS") {
-                    document.getElementById("status-msg").textContent = "Payment confirmed! Connecting you...";
                     document.getElementById("spinner").style.borderTopColor = "#16a34a";
-                    // redirect to auto-login URL
-                    setTimeout(() => { window.location.href = successUrl; }, 800);
+                    const voucher = data.voucher || "";
+                    const hotspotDns = data.hotspot_dns || "hot.spot";
+                    const loginUrl = "http://" + hotspotDns + "/login?username=" + voucher + "&password=" + voucher;
+                    document.getElementById("status-msg").innerHTML =
+                        "<b style='color:#16a34a;font-size:16px;'>Payment confirmed!</b><br><br>" +
+                        "Your voucher code:<br><b style='font-size:22px;letter-spacing:2px;'>" + voucher + "</b><br><br>" +
+                        "<a href='" + loginUrl + "' style='display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;'>" +
+                        "Tap here to connect</a><br>" +
+                        "<small style='color:#888;margin-top:8px;display:block;'>If the button doesn't work, type the code above manually</small>";
+                    setTimeout(() => { window.location.href = loginUrl; }, 1500);
                 } else if (data.status === "FAILED" || data.status === "CANCELLED") {
                     document.getElementById("spinner").style.display = "none";
                     document.getElementById("status-msg").innerHTML =
