@@ -159,6 +159,8 @@ def delete_voucher_batch(request, id):
         return redirect('voucher_list')
 
     with transaction.atomic():
+        from payments.models import PaymentVoucher
+        PaymentVoucher.objects.filter(voucher__batch=batch).delete()
         deleted_count, _ = batch.vouchers.all().delete()
 
         VoucherBatchDeletionLog.objects.create(
