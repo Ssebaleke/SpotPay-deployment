@@ -86,20 +86,18 @@ def edit_location(request, location_id):
     )
 
     if request.method == "POST":
-        form = HotspotLocationForm(request.POST, instance=location)
-        
-        if form.is_valid():
-            location = form.save(commit=False)
-            location.save()
-            messages.success(request, f'Location "{location.site_name}" updated successfully.')
-            return redirect("locations_list")
-    else:
-        form = HotspotLocationForm(instance=location)
-
+        location.site_name = request.POST.get('site_name', location.site_name).strip()
+        location.location_type = request.POST.get('location_type', location.location_type)
+        location.town_city = request.POST.get('town_city', location.town_city).strip()
+        location.address = request.POST.get('address', location.address).strip()
+        location.login_type = request.POST.get('login_type', location.login_type)
+        location.save(update_fields=['site_name', 'location_type', 'town_city', 'address', 'login_type'])
+        messages.success(request, f'Location "{location.site_name}" updated successfully.')
+        return redirect("locations_list")
     return render(
         request,
         "hotspot/location_form.html",
-        {"location": location, "form": form}
+        {"location": location}
     )
 
 
@@ -129,6 +127,29 @@ def location_status(request, location_id):
         'location_uuid': str(location.uuid),
         'rejection_reason': location.rejection_reason or '',
     })
+
+
+@login_required
+def save_login_type(request, location_id):
+    try:
+        vendor = request.user.vendor
+    except:
+        return redirect('vendor_login')
+
+    location = get_object_or_404(HotspotLocation, id=location_id, vendor=vendor)
+
+    if request.method == 'POST':
+        login_type = request.POST.get('login_type', '').strip()
+        valid = [choice[0] for choice in HotspotLocation.LOGIN_TYPES]
+        if login_type in valid:
+            location.login_type = login_type
+            location.save(update_fields=['login_type'])
+            messages.success(request, f'Login type updated to "{location.get_login_type_display()}".')
+        else:
+            messages.error(request, 'Invalid login type.')
+
+    next_url = request.POST.get('next') or 'locations_list'
+    return redirect(next_url)
 
 
 # =====================================================

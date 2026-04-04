@@ -151,8 +151,18 @@ function autoLogin(voucherCode) {
     var form = document.login;
     if (!form) return;
     form.username.value = voucherCode;
-    form.password.value = (loginType === "NONE") ? "" : voucherCode;
-    form.submit();
+    if (loginType === "NONE") {
+        form.password.value = "";
+        form.submit();
+    } else if (loginType === "CHAP" && typeof doLogin === "function") {
+        // CHAP requires MD5 hash — delegate to MikroTik's doLogin()
+        form.password.value = voucherCode;
+        doLogin();
+    } else {
+        // PLAIN or SEPARATE
+        form.password.value = voucherCode;
+        form.submit();
+    }
 }
 
 function showModalError(msg) {

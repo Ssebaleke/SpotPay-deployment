@@ -83,13 +83,16 @@ def initiate_payment(*, location: HotspotLocation, package: Package, phone: str,
         payment.save(update_fields=["provider_reference", "processor_message"])
         reference = str(payment.uuid)
 
+    from django.conf import settings
+    site_url = getattr(settings, 'SITE_URL', '').rstrip('/')
+
     return {
         "success": True,
         "status": payment.status,
         "payment_uuid": str(payment.uuid),
         "reference": reference,
-        "status_url": f"/payments/status/{payment.uuid}/",
-        "success_url": f"/payments/success/{payment.uuid}/",
+        "status_url": f"{site_url}/payments/status/{payment.uuid}/",
+        "success_url": f"{site_url}/payments/success/{payment.uuid}/",
         "message": "Please approve the payment on your phone."
     }
 

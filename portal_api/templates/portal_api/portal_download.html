@@ -135,15 +135,35 @@
         </div>
     </div>
 
-    <!-- STEP 2: Manual ZIP download (fallback) -->
+    <!-- STEP 2: Login Type + Download -->
     <div class="setup-step">
         <div class="d-flex align-items-center gap-3 mb-3">
             <div class="step-number">2</div>
             <div>
-                <h6 class="mb-0">Or download ZIP manually</h6>
-                <small class="text-muted">For RouterOS 6.x or if the script fetch fails</small>
+                <h6 class="mb-0">Set voucher login type &amp; download portal files</h6>
+                <small class="text-muted">Must match how your MikroTik vouchers are configured</small>
             </div>
         </div>
+
+        <form method="POST" action="{% url 'save_login_type' location.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'portal_download_page' location.uuid %}">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Voucher Login Type</label>
+                <select class="form-select" name="login_type">
+                    <option value="PLAIN" {% if location.login_type == 'PLAIN' %}selected{% endif %}>Plain — username = password (Mikhmon default)</option>
+                    <option value="NONE" {% if location.login_type == 'NONE' %}selected{% endif %}>None — username only, no password</option>
+                    <option value="CHAP" {% if location.login_type == 'CHAP' %}selected{% endif %}>CHAP MD5 — username &ne; password (KaWifi style)</option>
+                    <option value="SEPARATE" {% if location.login_type == 'SEPARATE' %}selected{% endif %}>Separate username &amp; password fields</option>
+                </select>
+                <div class="mt-1" style="font-size:12px; color:var(--text-secondary);">
+                    <i class="bi bi-info-circle me-1"></i>Currently saved: <strong>{{ location.get_login_type_display }}</strong>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-outline-secondary btn-sm mb-3">
+                <i class="bi bi-save me-1"></i>Save Login Type
+            </button>
+        </form>
 
         <a href="{% url 'portal_zip_download' location.uuid %}"
            class="btn btn-primary w-100 py-3">

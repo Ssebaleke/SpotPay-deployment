@@ -79,6 +79,8 @@ class HotspotLocationAdmin(admin.ModelAdmin):
                 'uuid_display',
                 'portal_url_display',
                 'location_slug',
+                'hotspot_dns',
+                'login_type',
                 'max_concurrent_users',
                 'is_active',
             )
