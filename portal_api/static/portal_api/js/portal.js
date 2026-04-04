@@ -26,8 +26,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     const row = document.createElement("tr");
                     row.innerHTML = `
                         <td>${pkg.name}</td>
-                        <td>UGX ${pkg.price}</td>
-                        <td><button class="buy-btn" data-id="${pkg.id}" data-name="${pkg.name}" data-price="${pkg.price}">Buy</button></td>
+                        <td style="padding-right:10px;">UGX ${pkg.price}</td>
+                        <td style="width:60px;"><button class="buy-btn" data-id="${pkg.id}" data-name="${pkg.name}" data-price="${pkg.price}">Buy</button></td>
                     `;
                     tbody.appendChild(row);
                 });
