@@ -18,6 +18,10 @@ class SpotPayAdminSite(AdminSite):
     index_title = "System Overview"
     index_template = "admin/index.html"
 
+    def has_permission(self, request):
+        """Only superusers can access Django admin. Staff use the custom dashboard."""
+        return request.user.is_active and request.user.is_superuser
+
     def index(self, request, extra_context=None):
         from payments.models import Payment, PaymentSplit
         from hotspot.models import HotspotLocation

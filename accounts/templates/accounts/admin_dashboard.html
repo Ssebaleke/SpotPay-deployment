@@ -170,15 +170,14 @@
     </div>
     <div class="sb-menu">
         <a href="{% url 'admin_dashboard' %}" class="sb-link active"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a href="/admin/accounts/vendor/" class="sb-link"><i class="bi bi-people"></i> Vendors</a>
-        <a href="/admin/hotspot/hotspotlocation/" class="sb-link"><i class="bi bi-geo-alt"></i> Locations</a>
-        <a href="/admin/payments/payment/" class="sb-link"><i class="bi bi-cash-stack"></i> Payments</a>
-        <a href="/admin/vouchers/voucher/" class="sb-link"><i class="bi bi-ticket-perforated"></i> Vouchers</a>
-        <a href="/admin/wallets/withdrawalrequest/" class="sb-link"><i class="bi bi-wallet2"></i> Withdrawals</a>
-        <a href="/admin/packages/package/" class="sb-link"><i class="bi bi-box-seam"></i> Packages</a>
-        <a href="/admin/ads/ad/" class="sb-link"><i class="bi bi-megaphone"></i> Ads</a>
-        <hr class="sb-divider">
+        <a href="#vendors-section" class="sb-link"><i class="bi bi-people"></i> Vendors</a>
+        <a href="#locations-section" class="sb-link"><i class="bi bi-geo-alt"></i> Locations</a>
+        <a href="#withdrawals-section" class="sb-link"><i class="bi bi-wallet2"></i> Withdrawals</a>
+        {% if request.user.is_superuser %}
+        <a href="#staff-section" class="sb-link"><i class="bi bi-shield-person"></i> Staff Admins</a>
         <a href="/admin/" class="sb-link"><i class="bi bi-gear"></i> Django Admin</a>
+        {% endif %}
+        <hr class="sb-divider">
         <a href="{% url 'vendor_logout' %}" class="sb-link danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
     </div>
     <div class="sb-footer">
@@ -206,7 +205,6 @@
             </div>
             <div class="d-flex align-items-center gap-3">
                 <button class="theme-btn border-0" id="themeBtn"><i class="bi bi-moon-stars fs-5" id="themeIcon"></i></button>
-                <a href="/admin/" class="btn btn-sm btn-outline-primary">Django Admin</a>
                 <a href="{% url 'vendor_logout' %}" class="btn btn-sm btn-outline-danger">Logout</a>
             </div>
         </div>
@@ -397,7 +395,7 @@
         </div>
 
         <!-- Pending Withdrawals -->
-        <div class="col-lg-5">
+        <div class="col-lg-5" id="withdrawals-section">
             <div class="panel">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <div class="panel-title mb-0">Pending Withdrawals</div>
@@ -440,7 +438,7 @@
     </div>
 
     <!-- Vendor Management -->
-    <div class="panel mb-4">
+    <div class="panel mb-4" id="vendors-section">
         <div class="panel-title">Vendor Management</div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -488,7 +486,133 @@
         </div>
     </div>
 
-        <!-- Vendor Performance -->
+    <!-- Location Management -->
+    <div class="panel mb-4" id="locations-section">
+        <div class="panel-title">Location Management</div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Site Name</th><th>Vendor</th><th>Town</th><th>Type</th><th>Status</th><th class="text-end">Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for loc in all_locations_list %}
+                    <tr>
+                        <td class="fw-semibold">{{ loc.site_name }}</td>
+                        <td>{{ loc.vendor.company_name }}</td>
+                        <td>{{ loc.town_city }}</td>
+                        <td>{{ loc.get_location_type_display }}</td>
+                        <td>
+                            {% if loc.status == 'ACTIVE' %}<span class="badge bg-success">Active</span>
+                            {% elif loc.status == 'PENDING' %}<span class="badge bg-warning text-dark">Pending</span>
+                            {% elif loc.status == 'SUSPENDED' %}<span class="badge bg-secondary">Suspended</span>
+                            {% else %}<span class="badge bg-danger">Rejected</span>{% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="d-inline-flex gap-1">
+                                {% if loc.status == 'PENDING' %}
+                                <form method="post" action="{% url 'admin_approve_location' loc.id %}">{% csrf_token %}
+                                    <button class="btn btn-sm btn-success py-0 px-2" onclick="return confirm('Approve {{ loc.site_name }}?')">Approve</button>
+                                </form>
+                                <form method="post" action="{% url 'admin_reject_location' loc.id %}">{% csrf_token %}
+                                    <input type="hidden" name="reason" value="Does not meet requirements">
+                                    <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="return confirm('Reject {{ loc.site_name }}?')">Reject</button>
+                                </form>
+                                {% elif loc.status == 'ACTIVE' %}
+                                <form method="post" action="{% url 'admin_reject_location' loc.id %}">{% csrf_token %}
+                                    <input type="hidden" name="reason" value="Suspended by admin">
+                                    <button class="btn btn-sm btn-warning py-0 px-2" onclick="return confirm('Suspend {{ loc.site_name }}?')">Suspend</button>
+                                </form>
+                                {% elif loc.status == 'REJECTED' or loc.status == 'SUSPENDED' %}
+                                <form method="post" action="{% url 'admin_approve_location' loc.id %}">{% csrf_token %}
+                                    <button class="btn btn-sm btn-success py-0 px-2" onclick="return confirm('Reactivate {{ loc.site_name }}?')">Reactivate</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="text-center py-4 text-muted">No locations yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Staff Admin Management (Superuser only) -->
+    {% if request.user.is_superuser %}
+    <div class="panel mb-4" id="staff-section">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="panel-title mb-0">Staff Admin Management</div>
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createStaffModal">
+                <i class="bi bi-person-plus me-1"></i>Add Staff Admin
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>Username</th><th>Email</th><th>Status</th><th class="text-end">Action</th></tr>
+                </thead>
+                <tbody>
+                    {% for s in staff_list %}
+                    <tr>
+                        <td class="fw-semibold">{{ s.username }}</td>
+                        <td>{{ s.email|default:"-" }}</td>
+                        <td>
+                            {% if s.is_active %}<span class="badge bg-success">Active</span>
+                            {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
+                        </td>
+                        <td class="text-end">
+                            <form method="post" action="{% url 'admin_deactivate_staff' s.id %}">{% csrf_token %}
+                                <button class="btn btn-sm {% if s.is_active %}btn-warning{% else %}btn-success{% endif %} py-0 px-2"
+                                    onclick="return confirm('{% if s.is_active %}Deactivate{% else %}Activate{% endif %} {{ s.username }}?')">
+                                    {% if s.is_active %}Deactivate{% else %}Activate{% endif %}
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center py-3 text-muted">No staff admins yet</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Create Staff Modal -->
+    <div class="modal fade" id="createStaffModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Staff Admin</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post" action="{% url 'admin_create_staff' %}">
+                    {% csrf_token %}
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" name="username" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email <small class="text-muted">(optional)</small></label>
+                            <input type="email" name="email" class="form-control">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" name="password" class="form-control" required minlength="8">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Vendor Performance -->
     <div class="panel mb-4">
         <div class="panel-title">Vendor Performance Ranking</div>
         <div class="table-responsive">

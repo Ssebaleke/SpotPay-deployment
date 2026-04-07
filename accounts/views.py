@@ -232,6 +232,7 @@ def admin_dashboard(request):
     pending_vendors_list = Vendor.objects.filter(status='PENDING').select_related('user').order_by('created_at')
     all_vendors_list = Vendor.objects.select_related('user').order_by('-created_at')[:20]
     all_locations_list = HotspotLocation.objects.select_related('vendor').order_by('-created_at')[:20]
+    staff_list = User.objects.filter(is_staff=True, is_superuser=False).order_by('username')
 
     return render(request, 'accounts/admin_dashboard.html', {
         'period': period,
@@ -259,6 +260,7 @@ def admin_dashboard(request):
         'pending_vendors_list': pending_vendors_list,
         'all_vendors_list': all_vendors_list,
         'all_locations_list': all_locations_list,
+        'staff_list': staff_list,
     })
 
 
@@ -807,6 +809,73 @@ def pay_subscription(request):
         return redirect("vendor_dashboard")
 
     return render(request, "payments/pay_subscription.html")
+
+
+@login_required
+@user_passes_test(lambda user: user.is_superuser)
+def admin_create_staff(request):
+    if request.method != 'POST':
+        return redirect('admin_dashboard')
+    username = request.POST.get('username', '').strip()
+    email = request.POST.get('email', '').strip()
+    password = request.POST.get('password', '').strip()
+    if not username or not password:
+        messages.error(request, 'Username and password are required.')
+        return redirect('admin_dashboard')
+    if User.objects.filter(username=username).exists():
+        messages.error(request, f'Username "{username}" already exists.')
+        return redirect('admin_dashboard')
+    user = User.objects.create_user(username=username, email=email, password=password)
+    user.is_staff = True
+    user.is_active = True
+    user.save()
+    messages.success(request, f'Staff admin "{username}" created successfully.')
+    return redirect('admin_dashboard')
+
+
+@login_required
+@user_passes_test(lambda user: user.is_superuser)
+def admin_deactivate_staff(request, user_id):
+    if request.method != 'POST':
+        return redirect('admin_dashboard')
+    staff_user = User.objects.filter(id=user_id, is_staff=True, is_superuser=False).first()
+    if not staff_user:
+        messages.error(request, 'Staff user not found.')
+        return redirect('admin_dashboard')
+    staff_user.is_active = not staff_user.is_active
+    staff_user.save()
+    status = 'activated' if staff_user.is_active else 'deactivated'
+    messages.success(request, f'Staff admin "{staff_user.username}" {status}.')
+    return redirect('admin_dashboard')
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_approve_location(request, location_id):
+    if request.method != 'POST':
+        return redirect('admin_dashboard')
+    location = HotspotLocation.objects.filter(id=location_id).first()
+    if not location:
+        messages.error(request, 'Location not found.')
+        return redirect('admin_dashboard')
+    location.approve(request.user)
+    messages.success(request, f'{location.site_name} approved and activated.')
+    return redirect('admin_dashboard')
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_reject_location(request, location_id):
+    if request.method != 'POST':
+        return redirect('admin_dashboard')
+    location = HotspotLocation.objects.filter(id=location_id).first()
+    if not location:
+        messages.error(request, 'Location not found.')
+        return redirect('admin_dashboard')
+    reason = request.POST.get('reason', 'Rejected by admin')
+    location.reject(reason)
+    messages.success(request, f'{location.site_name} rejected.')
+    return redirect('admin_dashboard')
 
 
 @login_required
