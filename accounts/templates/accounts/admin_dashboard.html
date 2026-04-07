@@ -244,7 +244,7 @@
                 <div class="sc-sub">Period: {{ period }}</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/payments/payment/" class="sc-btn">Payments</a>
+                <a href="#vendors-section" class="sc-btn">Payments</a>
             </div>
         </div>
 
@@ -256,8 +256,8 @@
                 <div class="sc-sub">{{ pending_vendors }} pending</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/accounts/vendor/" class="sc-btn">All</a>
-                <a href="/admin/accounts/vendor/?status__exact=PENDING" class="sc-btn">Pending</a>
+                <a href="#vendors-section" class="sc-btn">All</a>
+                <a href="#vendors-section" class="sc-btn">Pending</a>
             </div>
         </div>
 
@@ -269,7 +269,7 @@
                 <div class="sc-sub">Needs action</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/accounts/vendor/?status__exact=PENDING" class="sc-btn">Review</a>
+                <a href="#vendors-section" class="sc-btn">Review</a>
             </div>
         </div>
 
@@ -281,8 +281,8 @@
                 <div class="sc-sub">Active / Total</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/hotspot/hotspotlocation/" class="sc-btn">All</a>
-                <a href="/admin/hotspot/hotspotlocation/?status__exact=PENDING" class="sc-btn">Pending</a>
+                <a href="#locations-section" class="sc-btn">All</a>
+                <a href="#locations-section" class="sc-btn">Pending</a>
             </div>
         </div>
 
@@ -295,7 +295,7 @@
             </div>
             <div class="sc-btns">
                 <a href="/sms/ugsms-balance/" class="sc-btn">Check</a>
-                <a href="/admin/sms/smspurchase/" class="sc-btn">Sales</a>
+                <a href="#" class="sc-btn">Sales</a>
             </div>
         </div>
 
@@ -307,7 +307,7 @@
                 <div class="sc-sub">{{ success_rate }}% rate</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/payments/payment/?status__exact=SUCCESS" class="sc-btn">View</a>
+                <a href="#vendors-section" class="sc-btn">View</a>
             </div>
         </div>
 
@@ -319,8 +319,8 @@
                 <div class="sc-sub">{{ pending_transactions }} pending</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/payments/payment/?status__exact=FAILED" class="sc-btn">Failed</a>
-                <a href="/admin/payments/payment/?status__exact=PENDING" class="sc-btn">Pending</a>
+                <a href="#vendors-section" class="sc-btn">Failed</a>
+                <a href="#vendors-section" class="sc-btn">Pending</a>
             </div>
         </div>
 
@@ -332,7 +332,7 @@
                 <div class="sc-sub">UGX {{ pending_withdrawals_total }}</div>
             </div>
             <div class="sc-btns">
-                <a href="/admin/wallets/withdrawalrequest/" class="sc-btn">Manage</a>
+                <a href="#withdrawals-section" class="sc-btn">Manage</a>
             </div>
         </div>
 
