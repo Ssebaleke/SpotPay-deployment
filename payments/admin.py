@@ -61,9 +61,13 @@ class PaymentSystemConfigAdmin(admin.ModelAdmin):
             "description": "Set how much SpotPay takes from each sale depending on the location's subscription mode.",
             "fields": ("subscription_mode_percentage", "percentage_mode_percentage"),
         }),
+        ("Subscription Fee", {
+            "description": "Monthly fee vendors pay per location to use SpotPay.",
+            "fields": ("subscription_fee",),
+        }),
         ("Withdrawal Fees", {
-            "description": "Fees applied when a vendor withdraws. Gateway fee is a flat UGX amount. SpotPay fee is a percentage of the withdrawal amount.",
-            "fields": ("withdrawal_gateway_fee", "withdrawal_spotpay_fee_percentage"),
+            "description": "Flat UGX fees deducted from vendor wallet on each withdrawal.",
+            "fields": ("withdrawal_gateway_fee", "withdrawal_spotpay_fee"),
         }),
         ("Timestamps", {
             "fields": ("created_at", "updated_at"),

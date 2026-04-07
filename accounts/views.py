@@ -780,13 +780,16 @@ def pay_subscription(request):
         if location_id:
             location = HotspotLocation.objects.filter(id=location_id, vendor=vendor).first()
 
+        from payments.models import PaymentSystemConfig
+        config = PaymentSystemConfig.get()
+
         payment = Payment.objects.create(
             payer_type="VENDOR",
             purpose="SUBSCRIPTION",
             vendor=vendor,
             location=location,
             phone=phone,
-            amount=Decimal("50000"),
+            amount=config.subscription_fee,
             provider=provider,
             currency="UGX",
         )

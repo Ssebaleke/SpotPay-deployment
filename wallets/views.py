@@ -322,7 +322,7 @@ def wallet_withdraw(request):
         from payments.models import PaymentSystemConfig
         config = PaymentSystemConfig.get()
         gateway_fee = config.withdrawal_gateway_fee
-        spotpay_fee = (amount * config.withdrawal_spotpay_fee_percentage / Decimal('100')).quantize(Decimal('1'))
+        spotpay_fee = config.withdrawal_spotpay_fee.quantize(Decimal('1'))
         total_deduction = amount + gateway_fee + spotpay_fee
 
         if total_deduction > wallet.balance:

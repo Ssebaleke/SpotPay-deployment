@@ -89,11 +89,17 @@ class PaymentSystemConfig(models.Model):
         default=Decimal('0.00'),
         help_text="Flat gateway fee charged by payment provider per withdrawal in UGX (e.g. 2000)"
     )
-    withdrawal_spotpay_fee_percentage = models.DecimalField(
-        max_digits=5,
+    withdrawal_spotpay_fee = models.DecimalField(
+        max_digits=10,
         decimal_places=2,
         default=Decimal('0.00'),
-        help_text="SpotPay fee % charged on vendor withdrawals (e.g. 2)"
+        help_text="Flat SpotPay fee charged per withdrawal in UGX (e.g. 500)"
+    )
+    subscription_fee = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('50000.00'),
+        help_text="Monthly subscription fee vendors pay per location in UGX (e.g. 50000)"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
