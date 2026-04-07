@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title id="title">WiFi Login</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="theme-color" content="#3B5998" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style-sliders.css">
+    <style>
+        .login {
+            width: 350px;
+            background-color: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            backdrop-filter: blur(25px);
+            box-shadow: 10px 10px 40px rgba(0,0,0,0.2), -10px -10px 40px rgba(0,0,0,0.2);
+        }
+        body {
+            background: url("WiFi-Offloading-01-1.png") no-repeat center center fixed;
+            background-size: cover;
+        }
+        .buy-btn {
+            background-color: #d9d9d9;
+            background-image: linear-gradient(#d9d9d9, #e6e6e6, #d9d9d9);
+            border: none;
+            border-radius: 3px;
+            color: #595959;
+            font-weight: bold;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 10px;
+            height: 28px;
+        }
+        /* Modal overlay */
+        #pay-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.75);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-box {
+            background: #1a1a1a;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 24px 20px;
+            width: 90%;
+            max-width: 300px;
+            text-align: center;
+            position: relative;
+            color: #f2f2f2;
+        }
+        .modal-box h3 { margin: 0 0 6px; font-size: 17px; color: #fff; }
+        .modal-box p  { margin: 0 0 12px; font-size: 13px; color: #ccc; }
+        .modal-close {
+            position: absolute;
+            top: 10px; right: 14px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #aaa;
+            background: none;
+            border: none;
+        }
+        .modal-input {
+            width: 100%;
+            padding: 10px;
+            border-radius: 3px;
+            border: none;
+            border-bottom: 1px solid #f2f2f2;
+            font-size: 15px;
+            margin-bottom: 12px;
+            box-sizing: border-box;
+            background: #FDFBFB;
+            color: #000;
+            text-align: center;
+        }
+        .spinner {
+            width: 34px; height: 34px;
+            border: 4px solid rgba(255,255,255,0.2);
+            border-top-color: #d9d9d9;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 14px auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .voucher-display {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: #fff;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+
+<!-- MIKROTIK CHAP -->
+$(if chap-id)
+<form name="sendin" action="$(link-login-only)" method="post">
+    <input type="hidden" name="username" />
+    <input type="hidden" name="password" />
+    <input type="hidden" name="dst" value="$(link-orig)" />
+    <input type="hidden" name="popup" value="true" />
+</form>
+<script src="md5.js"></script>
+<script>
+function doLogin() {
+    document.sendin.username.value = document.login.username.value;
+    document.sendin.password.value = hexMD5('$(chap-id)' + document.login.password.value + '$(chap-challenge)');
+    document.sendin.submit();
+    return false;
+}
+</script>
+$(endif)
+
+<div id="main" class="main login">
+
+    <div class="box">
+        <h5 class="brand"><span id="location-name">Wifi Access</span></h5>
+    </div>
+
+    <div class="slider">
+        <div class="slides" id="ads-slides"></div>
+    </div>
+
+    <div class="box"><br /></div>
+
+    <form name="login"
+          action="$(link-login-only)"
+          method="post"
+          $(if chap-id) onsubmit="return doLogin()" $(endif)>
+
+        <input type="hidden" name="dst" value="$(link-orig)" />
+        <input type="hidden" name="popup" value="true" />
+        <input class="username" name="username" type="text" placeholder="Voucher code" required />
+        <input class="password" name="password" type="hidden" />
+        <button class="button" type="submit">Login</button>
+    </form>
+
+    $(if trial == 'yes')
+    <div class="box">
+        <a href="$(link-login-only)?dst=$(link-orig-esc)&username=T-$(mac-esc)">Free 2 Minutes Trial</a>
+    </div>
+    $(endif)
+
+    $(if error)
+    <div class="notice">$(error)</div>
+    $(endif)
+
+    <table class="table" id="packages-table">
+        <caption>WiFi Packages</caption>
+        <tbody><tr><td colspan="3">Loading packages...</td></tr></tbody>
+    </table>
+
+    <div style="color:white;text-align:center;margin-top:10px;">
+        For a voucher call <a id="support-phone" href="#" style="color:white;">Loading...</a>
+    </div>
+
+</div>
+
+<!-- STATIC FALLBACK BUTTON: always visible, no JavaScript needed -->
+<div style="max-width:300px;margin:16px auto 0;text-align:center;">
+    <a href="{{API_BASE}}portal/{{LOCATION_UUID}}/buy/"
+       style="display:block;width:100%;padding:13px;background:#d9d9d9;background-image:linear-gradient(#d9d9d9,#e6e6e6,#d9d9d9);color:#595959;font-weight:bold;font-size:15px;text-decoration:none;border-radius:3px;box-sizing:border-box;">
+        💳 Pay via Browser
+    </a>
+    <div style="margin-top:6px;font-size:11px;color:#ccc;">Tap here if packages don't load above</div>
+</div>
+
+</div>
+
+<div class="box" style="color:#ffffff;text-align:center;margin-top:15px;">
+    <i>Copyright &copy; 2025 5G Street-Connect</i><br />
+    <i>Designed by <b>Artix-INC</b></i>
+</div>
+
+<!-- PAYMENT MODAL -->
+<div id="pay-modal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closePayModal()">&times;</button>
+
+        <!-- Step 1: Enter phone -->
+        <div id="modal-form-section">
+            <h3>Buy Internet</h3>
+            <p id="modal-pkg-name"></p>
+            <p style="font-weight:700;color:#d9d9d9;">UGX <span id="modal-pkg-price"></span></p>
+            <input type="hidden" id="modal-pkg-id" />
+            <input class="modal-input" type="tel" id="modal-phone" placeholder="07XXXXXXXX" />
+            <button class="button" onclick="submitPayment()">Pay Now</button>
+            <button class="button2" onclick="closePayModal()" style="margin-top:6px;">Cancel</button>
+        </div>
+
+        <!-- Step 2: Waiting -->
+        <div id="modal-waiting-section" style="display:none;">
+            <div class="spinner"></div>
+            <p id="modal-waiting-msg">Sending payment prompt...</p>
+            <button class="button2" onclick="closePayModal()">Cancel</button>
+        </div>
+
+        <!-- Step 3: Success -->
+        <div id="modal-success-section" style="display:none;">
+            <p style="font-size:28px;margin:0;">&#10003;</p>
+            <h3>Connected!</h3>
+            <p id="modal-success-msg">Payment confirmed!</p>
+            <div class="voucher-display" id="modal-voucher-code"></div>
+            <p style="font-size:11px;color:#aaa;">Save this code to reconnect</p>
+        </div>
+
+        <!-- Step 4: Error -->
+        <div id="modal-error-section" style="display:none;">
+            <p style="font-size:28px;margin:0;">&#10007;</p>
+            <p id="modal-error-msg">Payment failed.</p>
+            <button class="button" onclick="setModalState('form')">Try Again</button>
+            <button class="button2" onclick="closePayModal()" style="margin-top:6px;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.API_BASE      = "{{API_BASE}}";
+    window.LOCATION_UUID = "{{LOCATION_UUID}}";
+    window.SUPPORT_PHONE = "{{SUPPORT_PHONE}}";
+    window.LOGIN_TYPE    = "{{LOGIN_TYPE}}";
+</script>
+
+<script src="js/portal.js"></script>
+<script src="js/ads.js"></script>
+
+<script>
+var _slideIndex = 0;
+setInterval(function () {
+    var slides = document.querySelector('.slides');
+    var items  = document.querySelectorAll('.slide');
+    if (!slides || items.length === 0) return;
+    _slideIndex = (_slideIndex + 1) % items.length;
+    slides.style.transform = 'translateX(' + (-_slideIndex * 100) + '%)';
+}, 7000);
+</script>
+
+</body>
+</html>

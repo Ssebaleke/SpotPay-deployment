@@ -1,13 +1,25 @@
 import csv
+import random
+import string
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Count, Q
 from django.core.paginator import Paginator
+from django.http import HttpResponse
 
 from .models import Voucher, VoucherBatch, VoucherBatchDeletionLog
 from packages.models import Package
+
+
+def _generate_code(length=8):
+    """Generate a random alphanumeric voucher code like Mikhmon."""
+    chars = string.ascii_lowercase + string.digits
+    while True:
+        code = ''.join(random.choices(chars, k=length))
+        if not Voucher.objects.filter(code=code).exists():
+            return code
 
 
 @login_required
@@ -160,8 +172,13 @@ def delete_voucher_batch(request, id):
 
     with transaction.atomic():
         from payments.models import PaymentVoucher
+        from django.core.cache import cache
         PaymentVoucher.objects.filter(voucher__batch=batch).delete()
         deleted_count, _ = batch.vouchers.all().delete()
+
+        # Clear portal cache so package disappears immediately
+        if batch.package.location_id:
+            cache.delete(f'portal_data_{batch.package.location.uuid}')
 
         VoucherBatchDeletionLog.objects.create(
             batch_reference=batch.id,
@@ -223,6 +240,72 @@ def delete_voucher(request, id):
     voucher.delete()
     messages.success(request, "Voucher deleted successfully.")
     return redirect('voucher_list')
+
+
+@login_required
+def generate_vouchers(request):
+    if request.method != 'POST':
+        return redirect('voucher_list')
+
+    vendor = request.user.vendor
+    package_id = request.POST.get('package')
+    quantity = request.POST.get('quantity', '').strip()
+
+    if not package_id or not quantity:
+        messages.error(request, "Please select a package and enter quantity.")
+        return redirect('voucher_list')
+
+    try:
+        quantity = int(quantity)
+        if quantity < 1 or quantity > 500:
+            raise ValueError
+    except ValueError:
+        messages.error(request, "Quantity must be between 1 and 500.")
+        return redirect('voucher_list')
+
+    package = get_object_or_404(Package, id=package_id, location__vendor=vendor)
+
+    batch = VoucherBatch.objects.create(
+        package=package,
+        uploaded_by=request.user,
+        source_filename='generated',
+        total_uploaded=quantity,
+    )
+
+    codes = []
+    with transaction.atomic():
+        for _ in range(quantity):
+            code = _generate_code()
+            codes.append(Voucher(code=code, package=package, batch=batch))
+        Voucher.objects.bulk_create(codes)
+
+    messages.success(request, f"{quantity} vouchers generated successfully for {package.name}.")
+
+    # If download requested, return CSV
+    if request.POST.get('download') == '1':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="vouchers-{package.name}-{batch.id}.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['username', 'password'])
+        for v in Voucher.objects.filter(batch=batch):
+            writer.writerow([v.code, v.code])
+        return response
+
+    return redirect('voucher_list')
+
+
+@login_required
+def download_batch_csv(request, batch_id):
+    vendor = request.user.vendor
+    batch = get_object_or_404(VoucherBatch, id=batch_id, package__location__vendor=vendor)
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="vouchers-{batch.package.name}-{batch.id}.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['username', 'password'])
+    for v in Voucher.objects.filter(batch=batch).order_by('code'):
+        writer.writerow([v.code, v.code])
+    return response
 
 
 

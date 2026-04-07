@@ -815,3 +815,58 @@ def toggle_sms_notifications(request):
         status = 'enabled' if vendor.sms_notifications_enabled else 'disabled'
         messages.success(request, f'SMS notifications {status}.')
     return redirect('vendor_profile')
+
+
+@login_required
+def vendor_transactions(request):
+    if request.user.is_staff:
+        return redirect('admin_dashboard')
+    try:
+        vendor = request.user.vendor
+    except Vendor.DoesNotExist:
+        return redirect('vendor_login')
+
+    locations = vendor.locations.all()
+    vendor_payments = Payment.objects.filter(vendor=vendor, purpose="TRANSACTION")
+
+    location_filter = request.GET.get('location', '').strip()
+    search_q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+
+    if location_filter:
+        vendor_payments = vendor_payments.filter(location_id=location_filter)
+    if search_q:
+        vendor_payments = vendor_payments.filter(phone__icontains=search_q)
+    if status_filter:
+        vendor_payments = vendor_payments.filter(status=status_filter)
+
+    txn_qs = vendor_payments.select_related('package', 'location').order_by('-initiated_at')
+
+    def get_failure_reason(txn):
+        if txn.status != 'FAILED':
+            return ''
+        if txn.raw_callback_data and isinstance(txn.raw_callback_data, dict):
+            return (
+                txn.raw_callback_data.get('message') or
+                txn.raw_callback_data.get('description') or
+                txn.raw_callback_data.get('reason') or
+                txn.processor_message or ''
+            )
+        return txn.processor_message or ''
+
+    from django.core.paginator import Paginator
+    paginator = Paginator(txn_qs, 20)
+    page_number = request.GET.get('page', 1)
+    transactions = paginator.get_page(page_number)
+
+    for txn in transactions:
+        txn.failure_reason = get_failure_reason(txn)
+
+    return render(request, 'accounts/transactions.html', {
+        'vendor': vendor,
+        'transactions': transactions,
+        'search_q': search_q,
+        'status_filter': status_filter,
+        'location_filter': location_filter,
+        'vendor_locations': locations,
+    })
