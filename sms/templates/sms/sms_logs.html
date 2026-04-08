@@ -27,6 +27,9 @@
             <span class="badge bg-success">Sent</span>
           {% else %}
             <span class="badge bg-danger">Failed</span>
+            <form method="post" action="{% url 'sms:resend_sms' log.id %}" class="d-inline ms-1">{% csrf_token %}
+              <button type="submit" class="btn btn-xs btn-outline-primary py-0 px-1" style="font-size:11px;" onclick="return confirm('Resend this SMS?')">Resend</button>
+            </form>
           {% endif %}
         </div>
         <div class="fw-semibold">{{ log.phone }}</div>
@@ -75,6 +78,9 @@
                 <span class="badge bg-success">Sent</span>
               {% else %}
                 <span class="badge bg-danger">Failed</span>
+                <form method="post" action="{% url 'sms:resend_sms' log.id %}" class="d-inline ms-1">{% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="return confirm('Resend this SMS to {{ log.phone }}?')">Resend</button>
+                </form>
               {% endif %}
             </td>
             <td><small class="text-danger">{{ log.failure_reason|default:"—" }}</small></td>

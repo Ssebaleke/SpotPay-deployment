@@ -358,3 +358,39 @@ def sms_logs(request):
         'page_obj': page,
         'status_filter': status_filter,
     })
+
+
+@login_required
+def resend_sms(request, log_id):
+    if request.method != 'POST':
+        return redirect('sms:sms_logs')
+
+    try:
+        vendor = request.user.vendor
+    except Exception:
+        return redirect('vendor_login')
+
+    log = SMSLog.objects.filter(id=log_id, vendor=vendor, status='FAILED').first()
+    if not log:
+        messages.error(request, 'SMS log not found or already sent.')
+        return redirect('sms:sms_logs')
+
+    from sms.services.voucher_pay import send_voucher_sms
+    from payments.models import Payment
+
+    # Try to resend using the original message directly
+    success, result = send_sms(
+        vendor=vendor,
+        phone=log.phone,
+        message=log.message,
+        purpose='VOUCHER_ISSUED',
+        voucher_code=log.voucher_code,
+        payment=log.payment,
+    )
+
+    if success:
+        messages.success(request, f'SMS resent successfully to {log.phone}.')
+    else:
+        messages.error(request, f'Resend failed: {result}')
+
+    return redirect('sms:sms_logs')
