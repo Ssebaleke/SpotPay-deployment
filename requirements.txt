@@ -35,3 +35,4 @@ dj-database-url
 psycopg2-binary
 requests==2.31.0
 librouteros==3.2.1
+paramiko==3.4.0

@@ -3,6 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 from .models import HotspotLocation
 from .forms import HotspotLocationForm
@@ -267,10 +270,16 @@ def vpn_script(request, location_id):
 :put "SpotPay VPN setup complete. User={api_user} VPN-IP={vpn_client_ip}"
 """
 
-    # Mark as configured
+    # Auto-inject into Mikhmon and mark configured
     if not location.vpn_configured:
         location.vpn_configured = True
         location.save(update_fields=['vpn_configured'])
+        # Inject into Mikhmon config.php via SSH (non-blocking — log errors only)
+        try:
+            from hotspot.mikhmon_config import inject_mikhmon_session
+            inject_mikhmon_session(location)
+        except Exception as e:
+            logger.error(f"Mikhmon auto-config failed for location {location.id}: {e}")
 
     return HttpResponse(script, content_type='text/plain; charset=utf-8')
 
