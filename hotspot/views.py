@@ -170,17 +170,47 @@ def mikhmon_redirect(request, location_id):
         return redirect('vpn_setup', location_id=location_id)
 
     mikhmon_url = getattr(settings, 'MIKHMON_URL', '').rstrip('/')
-    mikhmon_user = getattr(settings, 'MIKHMON_USER', 'admin')
+    mikhmon_user = getattr(settings, 'MIKHMON_USER', 'mikhmon')
     mikhmon_pass = getattr(settings, 'MIKHMON_PASS', '')
 
     if not mikhmon_url:
         messages.error(request, 'Mikhmon is not configured on this server. Please contact support.')
         return redirect('voucher_generator')
 
-    from django.http import HttpResponseRedirect
-    return HttpResponseRedirect(
-        f"{mikhmon_url}/admin.php?id=connect&session={location.mikhmon_session}"
-    )
+    import requests as req
+    from django.http import HttpResponse
+
+    try:
+        # Step 1: POST login to Mikhmon V3 to get session cookie
+        login_resp = req.post(
+            f"{mikhmon_url}/admin.php?id=login",
+            data={'user': mikhmon_user, 'pass': mikhmon_pass, 'login': '1'},
+            allow_redirects=False,
+            timeout=10,
+        )
+        php_session = login_resp.cookies.get('PHPSESSID', '')
+
+        if not php_session:
+            # Try following redirect to get cookie
+            login_resp2 = req.post(
+                f"{mikhmon_url}/admin.php?id=login",
+                data={'user': mikhmon_user, 'pass': mikhmon_pass, 'login': '1'},
+                allow_redirects=True,
+                timeout=10,
+            )
+            php_session = login_resp2.cookies.get('PHPSESSID', '')
+
+        # Step 2: Redirect vendor to Mikhmon session page with the PHP session cookie
+        session_url = f"{mikhmon_url}/admin.php?id=connect&session={location.mikhmon_session}"
+        response = redirect(session_url)
+        if php_session:
+            response.set_cookie('PHPSESSID', php_session, domain='68.168.222.37')
+        return response
+
+    except Exception as e:
+        logger.error(f"Mikhmon redirect failed for location {location_id}: {e}")
+        messages.error(request, 'Could not connect to Mikhmon. Please try again.')
+        return redirect('voucher_generator')
 
 
 # =====================================================
