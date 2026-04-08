@@ -46,6 +46,7 @@ jobs:
             fi
             echo "SSL key valid — OK"
 
-            docker compose down
-            docker rmi spotpay-deployment-scheduler || true
+            docker compose down --remove-orphans --volumes || true
+            docker rm -f spotpay-deployment-redis-1 spotpay-deployment-web-1 spotpay-deployment-scheduler-1 spotpay-deployment-nginx-1 2>/dev/null || true
+            docker rmi spotpay-deployment-scheduler spotpay-deployment-web || true
             docker compose up -d --build
