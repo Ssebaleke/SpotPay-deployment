@@ -18,17 +18,13 @@
 <div class="row g-3">
     {% for location in locations %}
     <div class="col-lg-4 col-md-6">
-        <a href="{% url 'mikhmon_redirect' location.id %}"
-           class="text-decoration-none"
-           {% if not location.mikhmon_session %}
-               onclick="event.preventDefault(); showNotConfigured('{{ location.site_name|escapejs }}');"
-           {% endif %}>
+        <a href="{% url 'mikhmon_redirect' location.id %}" class="text-decoration-none">
             <div class="chart-container h-100" style="cursor:pointer; transition: transform .15s, box-shadow .15s;"
                  onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 28px var(--shadow-hover)';"
                  onmouseout="this.style.transform=''; this.style.boxShadow='';">
 
                 <div class="d-flex align-items-center gap-3 mb-3">
-                    <div class="stat-icon {% if location.mikhmon_session %}icon-sales{% else %}bg-secondary{% endif %}"
+                    <div class="stat-icon {% if location.mikhmon_session %}icon-sales{% else %}icon-location{% endif %}"
                          style="width:44px;height:44px;font-size:1.2rem;flex-shrink:0;">
                         <i class="bi bi-ticket-perforated"></i>
                     </div>
@@ -39,7 +35,7 @@
                     {% if location.mikhmon_session %}
                         <span class="badge bg-success flex-shrink-0">Ready</span>
                     {% else %}
-                        <span class="badge bg-secondary flex-shrink-0">Not Configured</span>
+                        <span class="badge bg-warning text-dark flex-shrink-0">Setup Required</span>
                     {% endif %}
                 </div>
 
@@ -52,8 +48,8 @@
                         <i class="bi bi-box-arrow-up-right me-1"></i>Open
                     </span>
                     {% else %}
-                    <span class="btn btn-secondary btn-sm" disabled>
-                        <i class="bi bi-lock me-1"></i>Contact Support
+                    <span class="btn btn-warning btn-sm">
+                        <i class="bi bi-gear me-1"></i>Setup VPN
                     </span>
                     {% endif %}
                 </div>
@@ -75,12 +71,4 @@
 </div>
 {% endif %}
 
-{% endblock %}
-
-{% block extra_js %}
-<script>
-function showNotConfigured(name) {
-    alert('Mikhmon was not configured for "' + name + '". Please contact support.');
-}
-</script>
 {% endblock %}
