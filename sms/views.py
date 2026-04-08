@@ -375,10 +375,16 @@ def resend_sms(request, log_id):
         messages.error(request, 'SMS log not found or already sent.')
         return redirect('sms:sms_logs')
 
-    from sms.services.voucher_pay import send_voucher_sms
-    from payments.models import Payment
+    # Check and deduct wallet balance first
+    with transaction.atomic():
+        wallet = VendorSMSWallet.objects.select_for_update().filter(vendor=vendor).first()
+        if not wallet or wallet.balance_units < 1:
+            messages.error(request, 'Insufficient SMS balance. Please top up.')
+            return redirect('sms:sms_logs')
+        wallet.balance_units -= 1
+        wallet.save(update_fields=['balance_units'])
 
-    # Try to resend using the original message directly
+    # Send using original message
     success, result = send_sms(
         vendor=vendor,
         phone=log.phone,
@@ -391,6 +397,10 @@ def resend_sms(request, log_id):
     if success:
         messages.success(request, f'SMS resent successfully to {log.phone}.')
     else:
+        # Refund the balance if send failed
+        VendorSMSWallet.objects.filter(vendor=vendor).update(
+            balance_units=django_models.F('balance_units') + 1
+        )
         messages.error(request, f'Resend failed: {result}')
 
     return redirect('sms:sms_logs')
