@@ -175,31 +175,10 @@ def mikhmon_redirect(request, location_id):
         messages.error(request, 'Mikhmon is not configured on this server. Please contact support.')
         return redirect('voucher_generator')
 
-    import secrets
-    token = secrets.token_hex(16)
-
-    # Create token file on VPS via SSH (one-time use, expires in 60s)
-    try:
-        import paramiko
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(
-            getattr(settings, 'VPS_SSH_HOST', ''),
-            username=getattr(settings, 'VPS_SSH_USER', 'root'),
-            password=getattr(settings, 'VPS_SSH_PASS', ''),
-            timeout=10
-        )
-        ssh.exec_command(f"touch /tmp/spotpay_token_{token}")
-        ssh.close()
-    except Exception as e:
-        logger.error(f"Token creation failed for location {location_id}: {e}")
-        messages.error(request, 'Could not connect to Mikhmon. Please try again.')
-        return redirect('voucher_generator')
-
-    # Redirect vendor to Mikhmon with token — auto-logs in and opens session
+    # Redirect vendor directly to their Mikhmon session dashboard
     from django.http import HttpResponseRedirect
     return HttpResponseRedirect(
-        f"{mikhmon_url}/?spotpay_token={token}&session={location.mikhmon_session}"
+        f"{mikhmon_url}/?{location.mikhmon_session}/dashboard"
     )
 
 
