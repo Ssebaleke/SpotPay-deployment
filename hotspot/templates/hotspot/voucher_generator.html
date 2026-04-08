@@ -43,15 +43,21 @@
                     <small class="text-muted">
                         <i class="bi bi-geo-alt me-1"></i>{{ location.address|truncatewords:6 }}
                     </small>
-                    {% if location.mikhmon_session %}
-                    <span class="btn btn-primary btn-sm">
-                        <i class="bi bi-box-arrow-up-right me-1"></i>Open
-                    </span>
-                    {% else %}
-                    <span class="btn btn-warning btn-sm">
-                        <i class="bi bi-gear me-1"></i>Setup VPN
-                    </span>
-                    {% endif %}                </div>
+                    <div class="d-flex gap-2">
+                        {% if location.mikhmon_session %}
+                        <span class="btn btn-primary btn-sm">
+                            <i class="bi bi-box-arrow-up-right me-1"></i>Open
+                        </span>
+                        {% else %}
+                        <span class="btn btn-warning btn-sm">
+                            <i class="bi bi-gear me-1"></i>Setup VPN
+                        </span>
+                        {% endif %}
+                        <a href="{% url 'vpn_setup' location.id %}" class="btn btn-outline-secondary btn-sm" title="VPN Settings" onclick="event.stopPropagation();">
+                            <i class="bi bi-gear"></i>
+                        </a>
+                    </div>
+                </div>
 
             </div>
         </a>
