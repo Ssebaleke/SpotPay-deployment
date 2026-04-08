@@ -259,13 +259,13 @@ def vpn_script(request, location_id):
 /ip service set api disabled=no port=8728
 
 # ── 3. Add WireGuard interface ──
-/interface wireguard add name={vpn_iface} listen-port={vpn_server_port} comment="SpotPay VPN"
+/interface wireguard add name={vpn_iface} listen-port=13231 comment="SpotPay VPN"
 
 # ── 4. Assign IP to WireGuard interface ──
 /ip address add address={vpn_client_ip}/24 interface={vpn_iface}
 
 # ── 5. Add VPS as WireGuard peer ──
-/interface wireguard peers add interface={vpn_iface} public-key="{vpn_public_key}" endpoint-address={vpn_server_ip} endpoint-port={vpn_server_port} allowed-address={vpn_server_peer_ip}/32 persistent-keepalive=25 comment="SpotPay VPS"
+/interface wireguard peers add interface={vpn_iface} public-key="{vpn_public_key}" endpoint-address={vpn_server_ip} endpoint-port={vpn_server_port} allowed-address={vpn_subnet}.0/24 persistent-keepalive=25 comment="SpotPay VPS"
 
 :put "SpotPay VPN setup complete. User={api_user} VPN-IP={vpn_client_ip}"
 """

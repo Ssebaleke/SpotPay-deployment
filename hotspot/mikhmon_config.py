@@ -43,9 +43,9 @@ def inject_mikhmon_session(location):
     dns_name = location.hotspot_dns or 'hot.spot'
 
     new_entry = (
-        f"'{session_name}' => "
+        f"$m_session['{session_name}'] = "
         f"'{session_name}<|<{vpn_ip}<|<{api_user}<|<{api_pass}"
-        f"<|<{hotspot_name}<|<{dns_name}<|<no',"
+        f"<|<{hotspot_name}<|<{dns_name}<|<no';"
     )
 
     try:
@@ -62,10 +62,9 @@ def inject_mikhmon_session(location):
             client.close()
             return False, f"Mikhmon config not found at {config_path}"
 
-        # Check if session already exists
+        # Check if session already exists — prevent duplicates
         if session_name in content:
             client.close()
-            # Already injected — just set the session name
             location.mikhmon_session = session_name
             location.save(update_fields=['mikhmon_session'])
             return True, None
@@ -77,16 +76,12 @@ def inject_mikhmon_session(location):
 
         updated = content.replace(');', f"    {new_entry}\n);", 1)
 
-        # Write back via heredoc
-        escaped = updated.replace("'", "'\\''")
-        write_cmd = f"cat > {config_path} << 'SPOTPAY_EOF'\n{updated}\nSPOTPAY_EOF"
-        stdin2, stdout2, stderr2 = client.exec_command(write_cmd)
-        stdout2.read()
-        write_err = stderr2.read().decode('utf-8', errors='ignore')
+        # Write back safely — use python to write to avoid heredoc issues with $ signs
+        sftp = client.open_sftp()
+        with sftp.open(config_path, 'w') as f:
+            f.write(updated)
+        sftp.close()
         client.close()
-
-        if write_err:
-            logger.warning(f"Mikhmon inject warning: {write_err}")
 
         # Save session name to location
         location.mikhmon_session = session_name
