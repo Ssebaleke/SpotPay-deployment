@@ -57,12 +57,15 @@ def inject_mikhmon_session(location):
             return out, err
 
         # Find config.php inside container
-        out, err = run(f"docker exec {MIKHMON_CONTAINER} find / -name 'config.php' 2>/dev/null | grep -i mikhmon | head -1")
-        config_path = out.strip()
-
+        out, err = run(f"docker exec {MIKHMON_CONTAINER} find / -name 'config.php' 2>/dev/null")
+        config_path = ''
+        for line in out.splitlines():
+            if 'mikhmon' in line.lower() or 'config/config' in line.lower():
+                config_path = line.strip()
+                break
         if not config_path:
-            # Fallback to known path
-            config_path = '/var/www/html/mikhmonv3-master/include/config.php'
+            # Use known path from container inspection
+            config_path = '/var/www/html/config/config.php'
 
         # Read current config from container
         out, err = run(f"docker exec {MIKHMON_CONTAINER} cat '{config_path}'")
