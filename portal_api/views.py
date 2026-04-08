@@ -492,6 +492,7 @@ def register_vpn(request):
     vpn_iface = getattr(settings, 'VPN_INTERFACE_NAME', 'wg0')
 
     if not ssh_host or not ssh_pass:
+        logger.error(f"register_vpn: VPS_SSH_HOST or VPS_SSH_PASS not set in environment")
         return JsonResponse({'status': 'error', 'message': 'VPS SSH not configured'}, status=500)
 
     try:
@@ -500,16 +501,21 @@ def register_vpn(request):
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         client.connect(ssh_host, username=ssh_user, password=ssh_pass, timeout=15)
 
+        def run(cmd):
+            _, stdout, stderr = client.exec_command(cmd)
+            out = stdout.read().decode('utf-8', errors='ignore').strip()
+            err = stderr.read().decode('utf-8', errors='ignore').strip()
+            return out, err
+
         # 1. Add WireGuard peer on VPS
-        wg_cmd = f"wg set {vpn_iface} peer '{public_key}' allowed-ips {assigned_ip}/32"
-        stdin, stdout, stderr = client.exec_command(wg_cmd)
-        stdout.read()
-        wg_err = stderr.read().decode('utf-8', errors='ignore').strip()
+        _, wg_err = run(f"wg set {vpn_iface} peer '{public_key}' allowed-ips {assigned_ip}/32")
         if wg_err:
             logger.warning(f"WireGuard peer add warning for location {location_id}: {wg_err}")
 
         # 2. Save WireGuard config permanently
-        client.exec_command(f"wg-quick save {vpn_iface}")
+        _, save_err = run(f"wg-quick save {vpn_iface}")
+        if save_err:
+            logger.warning(f"wg-quick save warning for location {location_id}: {save_err}")
 
         client.close()
 
