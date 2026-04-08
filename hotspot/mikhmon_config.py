@@ -38,11 +38,21 @@ def inject_mikhmon_session(location):
     hotspot_name = location.site_name
     dns_name     = location.hotspot_dns or 'hot.spot'
 
-    # Mikhmon V3 PHP format
+    # Mikhmon V3 $data array format
+    session_key = session_name.upper().replace('-', '_')
     new_entry = (
-        f"$m_session['{session_name}'] = "
-        f"'{session_name}<|<{vpn_ip}<|<{api_user}<|<{api_pass}"
-        f"<|<{hotspot_name}<|<{dns_name}<|<no';"
+        f"$data['{session_key}'] = array ("
+        f"'1'=>'{session_key}!{vpn_ip}',"
+        f"'{session_key}@|@{api_user}',"
+        f"'{session_key}#|#{api_pass}',"
+        f"'{session_key}%{hotspot_name}',"
+        f"'{session_key}^{dns_name}',"
+        f"'{session_key}&UGX',"
+        f"'{session_key}*10',"
+        f"'{session_key}(1',"
+        f"'{session_key})',"
+        f"'{session_key}=10',"
+        f"'{session_key}@!@disable');"
     )
 
     try:
@@ -77,9 +87,9 @@ def inject_mikhmon_session(location):
         content = out
 
         # Check if session already exists — prevent duplicates
-        if session_name in content:
+        if session_key in content:
             client.close()
-            location.mikhmon_session = session_name
+            location.mikhmon_session = session_key
             location.save(update_fields=['mikhmon_session'])
             return True, None
 
@@ -116,11 +126,11 @@ def inject_mikhmon_session(location):
 
         client.close()
 
-        # Save session name to location
-        location.mikhmon_session = session_name
+        # Save session key to location
+        location.mikhmon_session = session_key
         location.save(update_fields=['mikhmon_session'])
 
-        logger.info(f"Mikhmon session '{session_name}' injected for location {location.id}")
+        logger.info(f"Mikhmon V3 session '{session_key}' injected for location {location.id}")
         return True, None
 
     except Exception as e:
