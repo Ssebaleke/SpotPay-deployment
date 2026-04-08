@@ -170,47 +170,37 @@ def mikhmon_redirect(request, location_id):
         return redirect('vpn_setup', location_id=location_id)
 
     mikhmon_url = getattr(settings, 'MIKHMON_URL', '').rstrip('/')
-    mikhmon_user = getattr(settings, 'MIKHMON_USER', 'mikhmon')
-    mikhmon_pass = getattr(settings, 'MIKHMON_PASS', '')
 
     if not mikhmon_url:
         messages.error(request, 'Mikhmon is not configured on this server. Please contact support.')
         return redirect('voucher_generator')
 
-    import requests as req
-    from django.http import HttpResponse
+    import secrets
+    token = secrets.token_hex(16)
 
+    # Create token file on VPS via SSH (one-time use, expires in 60s)
     try:
-        # Step 1: POST login to Mikhmon V3 to get session cookie
-        login_resp = req.post(
-            f"{mikhmon_url}/admin.php?id=login",
-            data={'user': mikhmon_user, 'pass': mikhmon_pass, 'login': '1'},
-            allow_redirects=False,
-            timeout=10,
+        import paramiko
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(
+            getattr(settings, 'VPS_SSH_HOST', ''),
+            username=getattr(settings, 'VPS_SSH_USER', 'root'),
+            password=getattr(settings, 'VPS_SSH_PASS', ''),
+            timeout=10
         )
-        php_session = login_resp.cookies.get('PHPSESSID', '')
-
-        if not php_session:
-            # Try following redirect to get cookie
-            login_resp2 = req.post(
-                f"{mikhmon_url}/admin.php?id=login",
-                data={'user': mikhmon_user, 'pass': mikhmon_pass, 'login': '1'},
-                allow_redirects=True,
-                timeout=10,
-            )
-            php_session = login_resp2.cookies.get('PHPSESSID', '')
-
-        # Step 2: Redirect vendor to Mikhmon session page with the PHP session cookie
-        session_url = f"{mikhmon_url}/admin.php?id=connect&session={location.mikhmon_session}"
-        response = redirect(session_url)
-        if php_session:
-            response.set_cookie('PHPSESSID', php_session, domain='68.168.222.37')
-        return response
-
+        ssh.exec_command(f"touch /tmp/spotpay_token_{token}")
+        ssh.close()
     except Exception as e:
-        logger.error(f"Mikhmon redirect failed for location {location_id}: {e}")
+        logger.error(f"Token creation failed for location {location_id}: {e}")
         messages.error(request, 'Could not connect to Mikhmon. Please try again.')
         return redirect('voucher_generator')
+
+    # Redirect vendor to Mikhmon with token — auto-logs in and opens session
+    from django.http import HttpResponseRedirect
+    return HttpResponseRedirect(
+        f"{mikhmon_url}/?spotpay_token={token}&session={location.mikhmon_session}"
+    )
 
 
 # =====================================================
