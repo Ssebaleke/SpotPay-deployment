@@ -1,0 +1,86 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Voucher Generator - SpotPay{% endblock %}
+{% block page_title %}Voucher Generator{% endblock %}
+{% block page_subtitle %}Select a location to open its voucher manager{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-circle me-2"></i>{{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+{% endif %}
+
+{% if locations %}
+<div class="row g-3">
+    {% for location in locations %}
+    <div class="col-lg-4 col-md-6">
+        <a href="{% url 'mikhmon_redirect' location.id %}"
+           class="text-decoration-none"
+           {% if not location.mikhmon_session %}
+               onclick="event.preventDefault(); showNotConfigured('{{ location.site_name|escapejs }}');"
+           {% endif %}>
+            <div class="chart-container h-100" style="cursor:pointer; transition: transform .15s, box-shadow .15s;"
+                 onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 28px var(--shadow-hover)';"
+                 onmouseout="this.style.transform=''; this.style.boxShadow='';">
+
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div class="stat-icon {% if location.mikhmon_session %}icon-sales{% else %}bg-secondary{% endif %}"
+                         style="width:44px;height:44px;font-size:1.2rem;flex-shrink:0;">
+                        <i class="bi bi-ticket-perforated"></i>
+                    </div>
+                    <div class="flex-grow-1" style="min-width:0;">
+                        <h6 class="mb-0 text-truncate">{{ location.site_name }}</h6>
+                        <small class="text-muted">{{ location.get_location_type_display }} &mdash; {{ location.town_city }}</small>
+                    </div>
+                    {% if location.mikhmon_session %}
+                        <span class="badge bg-success flex-shrink-0">Ready</span>
+                    {% else %}
+                        <span class="badge bg-secondary flex-shrink-0">Not Configured</span>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between">
+                    <small class="text-muted">
+                        <i class="bi bi-geo-alt me-1"></i>{{ location.address|truncatewords:6 }}
+                    </small>
+                    {% if location.mikhmon_session %}
+                    <span class="btn btn-primary btn-sm">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Open
+                    </span>
+                    {% else %}
+                    <span class="btn btn-secondary btn-sm" disabled>
+                        <i class="bi bi-lock me-1"></i>Contact Support
+                    </span>
+                    {% endif %}
+                </div>
+
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="chart-container text-center py-5">
+    <div class="mb-3" style="font-size:3.5rem; opacity:0.25;"><i class="bi bi-ticket-perforated"></i></div>
+    <h5>No active locations</h5>
+    <p class="text-muted mb-4">You need at least one approved active location to use the voucher generator.</p>
+    <a href="{% url 'locations_list' %}" class="btn btn-primary">
+        <i class="bi bi-geo-alt me-2"></i>View Locations
+    </a>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showNotConfigured(name) {
+    alert('Mikhmon was not configured for "' + name + '". Please contact support.');
+}
+</script>
+{% endblock %}

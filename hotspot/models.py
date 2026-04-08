@@ -152,6 +152,31 @@ class HotspotLocation(models.Model):
         help_text="Django captive portal URL"
     )
 
+    mikhmon_session = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Mikhmon session name for this location (set by admin after VPN config)"
+    )
+
+    # ============================
+    # VPN / API CREDENTIALS
+    # ============================
+
+    vpn_api_user = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Auto-generated MikroTik API username (spotpay_XXXXXX)"
+    )
+    vpn_api_password = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Auto-generated MikroTik API password"
+    )
+    vpn_configured = models.BooleanField(
+        default=False,
+        help_text="Set to True once vendor has run the VPN setup script"
+    )
+
     max_concurrent_users = models.PositiveIntegerField(default=50)
     is_active = models.BooleanField(default=False)
 

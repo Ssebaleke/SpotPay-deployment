@@ -225,6 +225,22 @@ _site_url_http = SITE_URL.replace("https://", "http://")
 PORTAL_API_BASE_HTTP = os.getenv("PORTAL_API_BASE_HTTP", f"{_site_url_http}/api/portal").strip().rstrip("/")
 
 # ==================================================
+# MIKHMON
+# ==================================================
+MIKHMON_URL = os.getenv("MIKHMON_URL", "").strip().rstrip("/")
+MIKHMON_USER = os.getenv("MIKHMON_USER", "admin")
+MIKHMON_PASS = os.getenv("MIKHMON_PASS", "")
+
+# ==================================================
+# WIREGUARD VPN
+# ==================================================
+VPN_SERVER_IP = os.getenv("VPN_SERVER_IP", "").strip()
+VPN_SERVER_PORT = os.getenv("VPN_SERVER_PORT", "51820").strip()
+VPN_SERVER_PUBLIC_KEY = os.getenv("VPN_SERVER_PUBLIC_KEY", "").strip()
+VPN_INTERFACE_NAME = os.getenv("VPN_INTERFACE_NAME", "wg0").strip()
+VPN_SUBNET = os.getenv("VPN_SUBNET", "10.10.0").strip()
+
+# ==================================================
 # PROXY / HTTPS (safe defaults; won't break HTTP)
 # If you're behind nginx later, these help correct scheme/secure cookies
 # ==================================================

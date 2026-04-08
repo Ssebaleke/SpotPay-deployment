@@ -81,6 +81,10 @@ class HotspotLocationAdmin(admin.ModelAdmin):
                 'location_slug',
                 'hotspot_dns',
                 'login_type',
+                'mikhmon_session',
+                'vpn_api_user',
+                'vpn_api_password',
+                'vpn_configured',
                 'max_concurrent_users',
                 'is_active',
             )

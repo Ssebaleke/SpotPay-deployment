@@ -1,0 +1,155 @@
+{% extends 'accounts/base.html' %}
+{% block title %}VPN Setup - {{ location.site_name }}{% endblock %}
+{% block page_title %}VPN Setup{% endblock %}
+{% block page_subtitle %}{{ location.site_name }} — connect your MikroTik to SpotPay{% endblock %}
+
+{% block extra_css %}
+<style>
+    .script-box {
+        background: #0d1117;
+        color: #c9d1d9;
+        border-radius: 10px;
+        padding: 1.2rem;
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.7;
+        white-space: pre-wrap;
+        word-break: break-all;
+        border: 1px solid #30363d;
+        position: relative;
+    }
+    .copy-btn {
+        position: absolute;
+        top: 10px; right: 10px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid #30363d;
+        color: #c9d1d9;
+        border-radius: 6px;
+        padding: 4px 12px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+    .copy-btn.copied { color: #3fb950; border-color: #3fb950; }
+    .step-number {
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .setup-step {
+        background: var(--bg-secondary);
+        border-radius: 14px;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        margin-bottom: 1.2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-8">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <a href="{% url 'voucher_generator' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <div>
+            <h5 class="mb-0">{{ location.site_name }}</h5>
+            <small class="text-muted">{{ location.get_location_type_display }} &mdash; {{ location.town_city }}</small>
+        </div>
+        <span class="badge bg-warning text-dark ms-auto">VPN Not Configured</span>
+    </div>
+
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle me-2"></i>
+        Mikhmon has not been configured for this location yet. Run the script below on your MikroTik to connect it to SpotPay.
+        Once done, contact support to complete the setup.
+    </div>
+
+    <!-- Step 1 -->
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">1</div>
+            <div>
+                <h6 class="mb-0">Open MikroTik Terminal</h6>
+                <small class="text-muted">Open Winbox → New Terminal, or SSH into your router</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">2</div>
+            <div>
+                <h6 class="mb-0">Paste this command and press Enter</h6>
+                <small class="text-muted">This downloads the setup script from SpotPay and runs it automatically</small>
+            </div>
+        </div>
+
+        <div class="script-box" id="one-liner">{{ one_liner }}<button class="copy-btn" onclick="copyText('one-liner', this)"><i class="bi bi-clipboard me-1"></i>Copy</button></div>
+
+        <div class="alert alert-warning mt-3 mb-0 py-2 px-3" style="font-size:12px;">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Make sure your MikroTik has internet access before running this command.
+        </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">3</div>
+            <div>
+                <h6 class="mb-0">What the script does</h6>
+                <small class="text-muted">Automatically configured on your MikroTik</small>
+            </div>
+        </div>
+        <ul class="mb-0" style="font-size:13px; line-height:2;">
+            <li>Creates API user <code>{{ location.vpn_api_user }}</code> with full access</li>
+            <li>Enables MikroTik API on port <strong>8728</strong></li>
+            <li>Adds WireGuard VPN interface and connects to SpotPay VPS</li>
+            <li>Assigns a static VPN IP to this location</li>
+        </ul>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">4</div>
+            <div>
+                <h6 class="mb-0">Contact support to complete setup</h6>
+                <small class="text-muted">After running the script, notify support to activate Mikhmon for this location</small>
+            </div>
+        </div>
+        <div class="p-3 rounded" style="background:var(--bg-primary); font-size:13px;">
+            <div class="mb-1"><strong>Location:</strong> {{ location.site_name }}</div>
+            <div class="mb-1"><strong>API User:</strong> <code>{{ location.vpn_api_user }}</code></div>
+            <div><strong>Location ID:</strong> <code>{{ location.id }}</code></div>
+        </div>
+    </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyText(id, btn) {
+    var el = document.getElementById(id);
+    var text = el.innerText.replace('Copy', '').trim();
+    navigator.clipboard.writeText(text).then(function() {
+        btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+            btn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy';
+            btn.classList.remove('copied');
+        }, 2500);
+    });
+}
+</script>
+{% endblock %}
