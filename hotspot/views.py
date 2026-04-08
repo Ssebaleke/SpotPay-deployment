@@ -179,9 +179,7 @@ def mikhmon_redirect(request, location_id):
 
     from django.http import HttpResponseRedirect
     return HttpResponseRedirect(
-        f"{mikhmon_url}/index.php?admin&login"
-        f"&user={mikhmon_user}&pass={mikhmon_pass}"
-        f"&session={location.mikhmon_session}"
+        f"{mikhmon_url}/admin.php?id=connect&session={location.mikhmon_session}"
     )
 
 
