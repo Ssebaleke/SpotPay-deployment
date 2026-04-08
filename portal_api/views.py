@@ -50,6 +50,7 @@ def portal_data(request, uuid):
         "location": {
             "name": location.site_name,
         },
+        "subscription_active": location.has_active_subscription(),
         "packages": [
             {
                 "id": p.id,
@@ -57,14 +58,14 @@ def portal_data(request, uuid):
                 "price": p.price,
             }
             for p in packages
-        ],
+        ] if location.has_active_subscription() else [],
         "ads": [
             {
                 "type": ad.ad_type.lower(),
                 "url": request.build_absolute_uri(ad.file.url),
             }
             for ad in ads
-        ],
+        ] if location.has_active_subscription() else [],
     }
 
     cache.set(cache_key, data, 60)

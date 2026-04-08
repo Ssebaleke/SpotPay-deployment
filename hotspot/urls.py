@@ -11,8 +11,8 @@ urlpatterns = [
     path('locations/<int:location_id>/save-login-type/', views.save_login_type, name='save_login_type'),
     path('voucher-generator/', views.voucher_generator, name='voucher_generator'),
     path('voucher-generator/<int:location_id>/open/', views.mikhmon_redirect, name='mikhmon_redirect'),
-    path('locations/<int:location_id>/vpn-setup/', views.vpn_setup, name='vpn_setup'),
-    path('locations/<int:location_id>/vpn-script.rsc', views.vpn_script, name='vpn_script'),
+    path('<int:location_id>/vpn-setup/', views.vpn_setup, name='vpn_setup'),
+    path('<int:location_id>/vpn-script.rsc', views.vpn_script, name='vpn_script'),
     path('dns-setup/', views.dns_setup, name='dns_setup'),
     path('dns-setup/<int:location_id>/save/', views.save_dns, name='save_dns'),
 ]

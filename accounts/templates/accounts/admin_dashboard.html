@@ -1,3 +1,4 @@
+{% load humanize %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,174 +8,83 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <style>
-        :root {
-            --primary: #4361ee;
-            --sidebar-width: 220px;
-            --bg: #f5f7fb;
-            --card-bg: #ffffff;
-            --text: #212529;
-            --muted: #64748b;
-            --border: #e9ecef;
-            --shadow: rgba(0,0,0,0.06);
-        }
-        [data-theme="dark"] {
-            --bg: #0f1419;
-            --card-bg: #1a1f2e;
-            --text: #e8eaed;
-            --muted: #9ca3af;
-            --border: #2d3748;
-            --shadow: rgba(0,0,0,0.4);
-        }
-
-        * { box-sizing: border-box; }
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow-x: hidden; transition: background .3s, color .3s; }
-
-        /* Sidebar */
-        #sidebar {
-            width: var(--sidebar-width);
-            background: #111827;
-            position: fixed; top: 0; left: 0; height: 100vh;
-            z-index: 1050; display: flex; flex-direction: column;
-            transition: transform .3s;
-        }
-        .sb-header { padding: 1.2rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,.07); }
-        .sb-logo { width: 36px; height: 36px; background: var(--primary); border-radius: 9px; display: flex; align-items: center; justify-content: center; }
-        .sb-menu { flex: 1; padding: .5rem 0; overflow-y: auto; }
-        .sb-link { display: flex; align-items: center; gap: 10px; padding: .65rem 1.25rem; margin: .1rem .6rem; border-radius: 8px; color: #9ca3af; font-size: .875rem; text-decoration: none; transition: all .2s; }
-        .sb-link i { width: 18px; font-size: .95rem; }
-        .sb-link:hover, .sb-link.active { background: rgba(67,97,238,.18); color: #60a5fa; }
-        .sb-link.danger { color: #f87171; }
-        .sb-link.danger:hover { background: rgba(239,68,68,.1); color: #fca5a5; }
-        .sb-divider { border-color: rgba(255,255,255,.07); margin: .4rem .8rem; }
-        .sb-footer { padding: .9rem 1.1rem; border-top: 1px solid rgba(255,255,255,.07); }
-        .sb-avatar { width: 32px; height: 32px; background: rgba(67,97,238,.25); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-
-        /* Content */
-        #content { margin-left: var(--sidebar-width); padding: 20px; min-height: 100vh; }
-
-        /* Topbar */
-        .topbar { background: #0c1218; border-radius: 10px; padding: .85rem 1.4rem; margin-bottom: 1.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-        .topbar h5, .topbar .fw-semibold { color: #f1f5f9 !important; }
-        .topbar small, .topbar .text-muted { color: #94a3b8 !important; }
-        .topbar .theme-btn { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12) !important; color: #94a3b8; }
-        .topbar .theme-btn:hover { background: rgba(255,255,255,0.14); color: #f1f5f9; }
-
-        /* Stat Cards */
-        .cards-grid {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 12px;
-            margin-bottom: 1.25rem;
-        }
-        @media (max-width: 1200px) { .cards-grid { grid-template-columns: repeat(4, 1fr); } }
-        @media (max-width: 768px)  { .cards-grid { grid-template-columns: repeat(2, 1fr); } }
-
-        .stat-card {
-            border-radius: 12px;
-            padding: 1rem;
-            color: #fff;
-            box-shadow: 0 4px 14px rgba(0,0,0,.18);
-            transition: transform .2s, box-shadow .2s;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 140px;
-        }
-        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 22px rgba(0,0,0,.25); }
-        .sc-sales    { background: #1d4ed8; }
-        .sc-vendors  { background: #15803d; }
-        .sc-pending  { background: #b45309; }
-        .sc-locations{ background: #0369a1; }
-        .sc-txn      { background: #6d28d9; }
-        .sc-success  { background: #166534; }
-        .sc-failed   { background: #991b1b; }
-        .sc-withdraw { background: #9a3412; }
-
-        .sc-icon { font-size: 1.3rem; margin-bottom: .4rem; opacity: .9; }
-        .sc-value { font-size: 1.1rem; font-weight: 700; line-height: 1.2; }
-        .sc-label { font-size: .7rem; color: rgba(255,255,255,.8); margin-top: 2px; }
-        .sc-sub   { font-size: .65rem; color: rgba(255,255,255,.6); margin-top: 2px; }
-        .sc-btns  { display: flex; gap: 5px; flex-wrap: wrap; margin-top: .6rem; }
-        .sc-btn {
-            display: inline-block;
-            align-self: flex-start;
-            padding: .22rem .6rem;
-            border-radius: 5px;
-            font-size: .7rem;
-            font-weight: 600;
-            text-decoration: none;
-            background: rgba(255,255,255,0.18);
-            border: 1px solid rgba(255,255,255,0.35);
-            color: #fff !important;
-            cursor: pointer;
-            transition: background .15s;
-            white-space: nowrap;
-        }
-        .sc-btn:hover { background: rgba(255,255,255,0.32); color: #fff !important; }
-
-        /* Chart / Table containers */
-        .panel { background: var(--card-bg); border-radius: 12px; padding: 1.25rem; box-shadow: 0 4px 18px var(--shadow); height: 100%; }
-        .panel-title { font-size: .9rem; font-weight: 600; margin-bottom: 1rem; }
-
-        /* Period filter */
-        .period-bar { background: var(--card-bg); border-radius: 10px; padding: .75rem 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 2px 8px var(--shadow); }
-
-        /* Theme toggle */
-        .theme-btn { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: .4rem .55rem; cursor: pointer; color: var(--text); transition: all .2s; }
-        .theme-btn:hover { background: rgba(67,97,238,.1); border-color: var(--primary); }
-
-        /* Hamburger */
-        .hamburger { display: none; background: none; border: none; color: var(--text); font-size: 1.4rem; cursor: pointer; }
-
-        /* Dark overrides */
-        [data-theme="dark"] .panel, [data-theme="dark"] .topbar, [data-theme="dark"] .period-bar { background: var(--card-bg); }
-        [data-theme="dark"] .table { color: var(--text); --bs-table-bg: var(--card-bg); }
-        [data-theme="dark"] .table > :not(caption) > * > * { border-bottom-color: var(--border); }
-        [data-theme="dark"] .table-light, [data-theme="dark"] .table-light th { background-color: #161b22 !important; color: var(--text) !important; }
-        [data-theme="dark"] thead th { color: #f3f4f6 !important; }
-        [data-theme="dark"] td { color: var(--text) !important; }
-        [data-theme="dark"] .form-select { background-color: #0d1117; border-color: var(--border); color: var(--text); }
-        [data-theme="dark"] .btn-close { filter: invert(1); }
-        [data-theme="dark"] .alert-info { background: rgba(67,97,238,.1); border-color: rgba(67,97,238,.3); color: var(--text); }
-        [data-theme="dark"] .alert-success { background: rgba(25,135,84,.1); border-color: rgba(25,135,84,.3); color: var(--text); }
-        [data-theme="dark"] .alert-danger { background: rgba(220,53,69,.1); border-color: rgba(220,53,69,.3); color: var(--text); }
-        [data-theme="dark"] .text-muted { color: var(--muted) !important; }
-        [data-theme="dark"] hr { border-color: var(--border); opacity: 1; }
-        [data-theme="dark"] a { color: #60a5fa; }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            #sidebar { transform: translateX(-100%); }
-            #sidebar.open { transform: translateX(0); }
-            #overlay.open { display: block; }
-            #content { margin-left: 0; }
-            .hamburger { display: inline-block; }
-        }
-        #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1040; }
+        :root { --primary:#4361ee; --sidebar-width:220px; --bg:#f5f7fb; --card-bg:#ffffff; --text:#212529; --muted:#64748b; --border:#e9ecef; --shadow:rgba(0,0,0,0.06); }
+        [data-theme="dark"] { --bg:#0f1419; --card-bg:#1a1f2e; --text:#e8eaed; --muted:#9ca3af; --border:#2d3748; --shadow:rgba(0,0,0,0.4); }
+        * { box-sizing:border-box; }
+        body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); margin:0; overflow-x:hidden; transition:background .3s,color .3s; }
+        #sidebar { width:var(--sidebar-width); background:#111827; position:fixed; top:0; left:0; height:100vh; z-index:1050; display:flex; flex-direction:column; transition:transform .3s; }
+        .sb-header { padding:1.2rem 1.25rem; border-bottom:1px solid rgba(255,255,255,.07); }
+        .sb-logo { width:36px; height:36px; background:var(--primary); border-radius:9px; display:flex; align-items:center; justify-content:center; }
+        .sb-menu { flex:1; padding:.5rem 0; overflow-y:auto; }
+        .sb-link { display:flex; align-items:center; gap:10px; padding:.65rem 1.25rem; margin:.1rem .6rem; border-radius:8px; color:#9ca3af; font-size:.875rem; text-decoration:none; transition:all .2s; }
+        .sb-link i { width:18px; font-size:.95rem; }
+        .sb-link:hover,.sb-link.active { background:rgba(67,97,238,.18); color:#60a5fa; }
+        .sb-link.danger { color:#f87171; }
+        .sb-link.danger:hover { background:rgba(239,68,68,.1); color:#fca5a5; }
+        .sb-divider { border-color:rgba(255,255,255,.07); margin:.4rem .8rem; }
+        .sb-footer { padding:.9rem 1.1rem; border-top:1px solid rgba(255,255,255,.07); }
+        .sb-avatar { width:32px; height:32px; background:rgba(67,97,238,.25); border-radius:50%; display:flex; align-items:center; justify-content:center; }
+        #content { margin-left:var(--sidebar-width); padding:20px; min-height:100vh; }
+        .topbar { background:#0c1218; border-radius:10px; padding:.85rem 1.4rem; margin-bottom:1.5rem; box-shadow:0 2px 10px rgba(0,0,0,0.3); }
+        .topbar h5 { color:#f1f5f9 !important; }
+        .topbar small { color:#94a3b8 !important; }
+        .cards-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:1.25rem; }
+        @media(max-width:992px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
+        @media(max-width:576px){.cards-grid{grid-template-columns:repeat(2,1fr);}}
+        .stat-card { border-radius:14px; padding:18px 16px 14px; color:#fff; box-shadow:0 4px 18px rgba(0,0,0,.18); display:flex; flex-direction:column; justify-content:space-between; min-height:130px; transition:transform .2s; }
+        .stat-card:hover { transform:translateY(-4px); }
+        .card-today    { background:linear-gradient(135deg,#4361ee,#3a0ca3); }
+        .card-weekly   { background:linear-gradient(135deg,#f77f00,#a04800); }
+        .card-monthly  { background:linear-gradient(135deg,#e63946,#9b1b25); }
+        .card-vendors  { background:linear-gradient(135deg,#2dc653,#1a7a32); }
+        .card-locations{ background:linear-gradient(135deg,#4cc9f0,#1d81b8); }
+        .card-pending  { background:linear-gradient(135deg,#7b2ff7,#4a0e8f); }
+        .card-success  { background:linear-gradient(135deg,#2ec4b6,#0d6e67); }
+        .card-withdraw { background:linear-gradient(135deg,#e07a2f,#8c4010); }
+        .stat-card .stat-icon { width:40px;height:40px;background:rgba(255,255,255,.22);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:.6rem; }
+        .stat-card .stat-value { font-size:1.05rem;font-weight:700;line-height:1.2; }
+        .stat-card .stat-label { font-size:.7rem;color:rgba(255,255,255,.8);margin-bottom:.5rem; }
+        .stat-card .stat-action { display:inline-block;align-self:flex-start;padding:.22rem .6rem;border-radius:5px;font-size:.7rem;font-weight:600;text-decoration:none;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);color:#fff !important;transition:background .15s; }
+        .stat-card .stat-action:hover { background:rgba(255,255,255,0.32); }
+        .panel { background:var(--card-bg); border-radius:12px; padding:1.25rem; box-shadow:0 4px 18px var(--shadow); height:100%; }
+        .theme-btn { background:var(--card-bg); border:1px solid var(--border); border-radius:8px; padding:.4rem .55rem; cursor:pointer; color:var(--text); transition:all .2s; }
+        .hamburger { display:none; background:none; border:none; color:var(--text); font-size:1.4rem; cursor:pointer; }
+        [data-theme="dark"] .panel { background:var(--card-bg); }
+        [data-theme="dark"] .table { color:var(--text); --bs-table-bg:var(--card-bg); }
+        [data-theme="dark"] .table>:not(caption)>*>* { border-bottom-color:var(--border); }
+        [data-theme="dark"] .table-light,[data-theme="dark"] .table-light th { background-color:#161b22 !important; color:var(--text) !important; }
+        [data-theme="dark"] thead th { color:#f3f4f6 !important; }
+        [data-theme="dark"] td { color:var(--text) !important; }
+        [data-theme="dark"] .text-muted { color:var(--muted) !important; }
+        [data-theme="dark"] a { color:#60a5fa; }
+        [data-theme="dark"] .alert-success { background:rgba(25,135,84,.1); border-color:rgba(25,135,84,.3); color:var(--text); }
+        [data-theme="dark"] .alert-danger { background:rgba(220,53,69,.1); border-color:rgba(220,53,69,.3); color:var(--text); }
+        [data-theme="dark"] .alert-info { background:rgba(67,97,238,.1); border-color:rgba(67,97,238,.3); color:var(--text); }
+        @media(max-width:768px){#sidebar{transform:translateX(-100%);}#sidebar.open{transform:translateX(0);}#overlay.open{display:block;}#content{margin-left:0;}.hamburger{display:inline-block;}}
+        #overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1040; }
     </style>
 </head>
 <body>
-
 <div id="overlay" onclick="closeSidebar()"></div>
 
-<!-- Sidebar -->
 <nav id="sidebar">
     <div class="sb-header">
         <div class="d-flex align-items-center gap-2">
             <div class="sb-logo"><i class="bi bi-wifi text-white"></i></div>
             <div>
-                <div style="font-weight:700; color:#fff; font-size:.95rem;">SpotPay</div>
-                <div style="font-size:.72rem; color:#6b7280;">Admin Panel</div>
+                <div style="font-weight:700;color:#fff;font-size:.95rem;">SpotPay</div>
+                <div style="font-size:.72rem;color:#6b7280;">Admin Panel</div>
             </div>
         </div>
     </div>
     <div class="sb-menu">
         <a href="{% url 'admin_dashboard' %}" class="sb-link active"><i class="bi bi-speedometer2"></i> Dashboard</a>
-        <a href="#vendors-section" class="sb-link"><i class="bi bi-people"></i> Vendors</a>
-        <a href="#locations-section" class="sb-link"><i class="bi bi-geo-alt"></i> Locations</a>
-        <a href="#withdrawals-section" class="sb-link"><i class="bi bi-wallet2"></i> Withdrawals</a>
+        <a href="{% url 'admin_vendors' %}" class="sb-link"><i class="bi bi-people"></i> Vendors</a>
+        <a href="{% url 'admin_locations' %}" class="sb-link"><i class="bi bi-geo-alt"></i> Locations</a>
+        <a href="{% url 'admin_withdrawals' %}" class="sb-link"><i class="bi bi-wallet2"></i> Withdrawals</a>
+        <a href="{% url 'admin_vendor_performance' %}" class="sb-link"><i class="bi bi-bar-chart"></i> Performance</a>
         {% if request.user.is_superuser %}
-        <a href="#staff-section" class="sb-link"><i class="bi bi-shield-person"></i> Staff Admins</a>
+        <a href="{% url 'admin_staff' %}" class="sb-link"><i class="bi bi-shield-person"></i> Staff Admins</a>
         <a href="/admin/" class="sb-link"><i class="bi bi-gear"></i> Django Admin</a>
         {% endif %}
         <hr class="sb-divider">
@@ -182,18 +92,16 @@
     </div>
     <div class="sb-footer">
         <div class="d-flex align-items-center gap-2">
-            <div class="sb-avatar"><i class="bi bi-person-fill" style="color:#60a5fa; font-size:.85rem;"></i></div>
+            <div class="sb-avatar"><i class="bi bi-person-fill" style="color:#60a5fa;font-size:.85rem;"></i></div>
             <div>
-                <div style="font-size:.82rem; color:#e5e7eb; font-weight:500;">{{ request.user.username }}</div>
-                <div style="font-size:.72rem; color:#6b7280;">Administrator</div>
+                <div style="font-size:.82rem;color:#e5e7eb;font-weight:500;">{{ request.user.username }}</div>
+                <div style="font-size:.72rem;color:#6b7280;">Administrator</div>
             </div>
         </div>
     </div>
 </nav>
 
-<!-- Main -->
 <div id="content">
-    <!-- Topbar -->
     <div class="topbar">
         <div class="d-flex justify-content-between align-items-center">
             <div class="d-flex align-items-center gap-3">
@@ -218,167 +126,109 @@
         {% endfor %}
     {% endif %}
 
-    <!-- Period Filter -->
-    <div class="period-bar d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>
-            <strong style="font-size:.9rem;">Reporting Window</strong>
-            <small class="text-muted d-block" style="font-size:.75rem;">All metrics follow this filter</small>
-        </div>
-        <form method="get" class="d-flex align-items-center gap-2">
-            <select name="period" class="form-select form-select-sm" style="width:160px;" onchange="this.form.submit()">
-                <option value="7d"   {% if period == '7d'   %}selected{% endif %}>Last 7 days</option>
-                <option value="30d"  {% if period == '30d'  %}selected{% endif %}>Last 30 days</option>
-                <option value="90d"  {% if period == '90d'  %}selected{% endif %}>Last 90 days</option>
-                <option value="365d" {% if period == '365d' %}selected{% endif %}>Last 12 months</option>
-            </select>
-        </form>
-    </div>
-
+    <!-- Stat Cards -->
     <div class="cards-grid">
-
-        <div class="stat-card sc-sales">
+        <div class="stat-card card-today">
             <div>
-                <div class="sc-icon"><i class="bi bi-graph-up-arrow"></i></div>
-                <div class="sc-value">UGX {{ total_platform_sales }}</div>
-                <div class="sc-label">Platform Sales</div>
-                <div class="sc-sub">Period: {{ period }}</div>
+                <div class="stat-icon"><i class="bi bi-calendar-day"></i></div>
+                <div class="stat-value">UGX {{ today_revenue|intcomma }}</div>
+                <div class="stat-label">Today's Revenue</div>
             </div>
-            <div class="sc-btns">
-                <a href="#vendors-section" class="sc-btn">Payments</a>
-            </div>
+            <a href="{% url 'admin_vendor_performance' %}" class="stat-action">Details</a>
         </div>
-
-        <div class="stat-card sc-vendors">
+        <div class="stat-card card-weekly">
             <div>
-                <div class="sc-icon"><i class="bi bi-people"></i></div>
-                <div class="sc-value">{{ active_vendors }}/{{ total_vendors }}</div>
-                <div class="sc-label">Active Vendors</div>
-                <div class="sc-sub">{{ pending_vendors }} pending</div>
+                <div class="stat-icon"><i class="bi bi-calendar-week"></i></div>
+                <div class="stat-value">UGX {{ weekly_revenue|intcomma }}</div>
+                <div class="stat-label">This Week</div>
             </div>
-            <div class="sc-btns">
-                <a href="#vendors-section" class="sc-btn">All</a>
-                <a href="#vendors-section" class="sc-btn">Pending</a>
-            </div>
+            <a href="{% url 'admin_vendor_performance' %}" class="stat-action">Details</a>
         </div>
-
-        <div class="stat-card sc-pending">
+        <div class="stat-card card-monthly">
             <div>
-                <div class="sc-icon"><i class="bi bi-hourglass-split"></i></div>
-                <div class="sc-value">{{ pending_vendors }}</div>
-                <div class="sc-label">Awaiting Approval</div>
-                <div class="sc-sub">Needs action</div>
+                <div class="stat-icon"><i class="bi bi-calendar-month"></i></div>
+                <div class="stat-value">UGX {{ monthly_revenue_total|intcomma }}</div>
+                <div class="stat-label">This Month</div>
             </div>
-            <div class="sc-btns">
-                <a href="#vendors-section" class="sc-btn">Review</a>
-            </div>
+            <a href="{% url 'admin_vendor_performance' %}" class="stat-action">Details</a>
         </div>
-
-        <div class="stat-card sc-locations">
+        <div class="stat-card card-vendors">
             <div>
-                <div class="sc-icon"><i class="bi bi-geo-alt"></i></div>
-                <div class="sc-value">{{ active_locations }}/{{ total_locations }}</div>
-                <div class="sc-label">Locations</div>
-                <div class="sc-sub">Active / Total</div>
+                <div class="stat-icon"><i class="bi bi-people"></i></div>
+                <div class="stat-value">{{ active_vendors }}/{{ total_vendors }}</div>
+                <div class="stat-label">Active Vendors</div>
             </div>
-            <div class="sc-btns">
-                <a href="#locations-section" class="sc-btn">All</a>
-                <a href="#locations-section" class="sc-btn">Pending</a>
-            </div>
+            <a href="{% url 'admin_vendors' %}" class="stat-action">Manage</a>
         </div>
-
-        <div class="stat-card sc-txn">
+        <div class="stat-card card-locations">
             <div>
-                <div class="sc-icon"><i class="bi bi-chat-dots"></i></div>
-                <div class="sc-value">{{ ugsms_balance_units }} SMS</div>
-                <div class="sc-label">UGSMS Balance</div>
-                <div class="sc-sub">UGX {{ total_sms_revenue }} earned</div>
+                <div class="stat-icon"><i class="bi bi-geo-alt"></i></div>
+                <div class="stat-value">{{ active_locations }}/{{ total_locations }}</div>
+                <div class="stat-label">Active Locations</div>
             </div>
-            <div class="sc-btns">
-                <a href="/sms/ugsms-balance/" class="sc-btn">Check</a>
-                <a href="#" class="sc-btn">Sales</a>
-            </div>
+            <a href="{% url 'admin_locations' %}" class="stat-action">Manage</a>
         </div>
-
-        <div class="stat-card sc-success">
+        <div class="stat-card card-pending">
             <div>
-                <div class="sc-icon"><i class="bi bi-check-circle"></i></div>
-                <div class="sc-value">{{ successful_transactions }}</div>
-                <div class="sc-label">Successful</div>
-                <div class="sc-sub">{{ success_rate }}% rate</div>
+                <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+                <div class="stat-value">{{ pending_vendors }} / {{ pending_locations }}</div>
+                <div class="stat-label">Pending Approvals</div>
             </div>
-            <div class="sc-btns">
-                <a href="#vendors-section" class="sc-btn">View</a>
-            </div>
+            <a href="{% url 'admin_vendors' %}?status=PENDING" class="stat-action">Review</a>
         </div>
-
-        <div class="stat-card sc-failed">
+        <div class="stat-card card-success">
             <div>
-                <div class="sc-icon"><i class="bi bi-x-circle"></i></div>
-                <div class="sc-value">{{ failed_transactions }}</div>
-                <div class="sc-label">Failed / Pending</div>
-                <div class="sc-sub">{{ pending_transactions }} pending</div>
+                <div class="stat-icon"><i class="bi bi-check-circle"></i></div>
+                <div class="stat-value">{{ successful_transactions }}</div>
+                <div class="stat-label">Successful Txns</div>
             </div>
-            <div class="sc-btns">
-                <a href="#vendors-section" class="sc-btn">Failed</a>
-                <a href="#vendors-section" class="sc-btn">Pending</a>
-            </div>
+            <a href="{% url 'admin_vendor_performance' %}" class="stat-action">{{ success_rate }}% rate</a>
         </div>
-
-        <div class="stat-card sc-withdraw">
+        <div class="stat-card card-withdraw">
             <div>
-                <div class="sc-icon"><i class="bi bi-arrow-up-circle"></i></div>
-                <div class="sc-value">{{ pending_withdrawals_count }}</div>
-                <div class="sc-label">Withdrawals</div>
-                <div class="sc-sub">UGX {{ pending_withdrawals_total }}</div>
+                <div class="stat-icon"><i class="bi bi-arrow-up-circle"></i></div>
+                <div class="stat-value">{{ pending_withdrawals_count }}</div>
+                <div class="stat-label">Pending Withdrawals</div>
             </div>
-            <div class="sc-btns">
-                <a href="#withdrawals-section" class="sc-btn">Manage</a>
-            </div>
+            <a href="{% url 'admin_withdrawals' %}" class="stat-action">UGX {{ pending_withdrawals_total|intcomma }}</a>
         </div>
-
     </div>
 
-    <!-- Charts Row -->
+    <!-- Charts -->
     <div class="row g-3 mb-4">
-        <!-- 7-day trend -->
-        <div class="col-lg-8">
+        <div class="col-lg-6">
             <div class="panel">
-                <div class="panel-title">7-Day Revenue Trend</div>
-                <div style="height:260px;"><canvas id="trendChart"></canvas></div>
+                <h6 class="fw-semibold mb-3">This Week's Revenue</h6>
+                <div style="height:240px;"><canvas id="weeklyChart"></canvas></div>
             </div>
         </div>
-        <!-- Transaction doughnut -->
-        <div class="col-lg-4">
+        <div class="col-lg-6">
             <div class="panel">
-                <div class="panel-title">Transaction Breakdown</div>
-                <div style="height:200px;"><canvas id="txnDonut"></canvas></div>
-                <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
-                    <span style="font-size:.75rem; color:var(--muted);"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#10b981;margin-right:4px;"></span>Success ({{ successful_transactions }})</span>
-                    <span style="font-size:.75rem; color:var(--muted);"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-right:4px;"></span>Failed ({{ failed_transactions }})</span>
-                    <span style="font-size:.75rem; color:var(--muted);"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:4px;"></span>Pending ({{ pending_transactions }})</span>
-                </div>
+                <h6 class="fw-semibold mb-3">Last 30 Days Revenue</h6>
+                <div style="height:240px;"><canvas id="monthlyChart"></canvas></div>
             </div>
         </div>
     </div>
 
-    <!-- Tables Row -->
+    <!-- Recent Activity + Pending Withdrawals -->
     <div class="row g-3 mb-4">
-        <!-- Recent Activity -->
         <div class="col-lg-7">
             <div class="panel">
-                <div class="panel-title">Recent Vendor Activity</div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-semibold mb-0">Recent Activity</h6>
+                    <a href="{% url 'admin_vendor_performance' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
-                            <tr><th>Time</th><th>Vendor</th><th>Package</th><th>Amount</th><th>Status</th></tr>
+                            <tr><th>Time</th><th>Vendor</th><th>Amount</th><th>Status</th></tr>
                         </thead>
                         <tbody>
                             {% for tx in recent_vendor_activity %}
                             <tr>
                                 <td><small>{{ tx.initiated_at|date:"M d, H:i" }}</small></td>
                                 <td>{{ tx.vendor.company_name|default:"N/A" }}</td>
-                                <td>{{ tx.package.name|default:"N/A" }}</td>
-                                <td class="fw-semibold">{{ tx.currency }} {{ tx.amount }}</td>
+                                <td class="fw-semibold">{{ tx.currency }} {{ tx.amount|intcomma }}</td>
                                 <td>
                                     {% if tx.status == 'SUCCESS' %}<span class="badge bg-success">Success</span>
                                     {% elif tx.status == 'PENDING' %}<span class="badge bg-warning text-dark">Pending</span>
@@ -386,260 +236,45 @@
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="5" class="text-center py-4 text-muted">No activity yet</td></tr>
+                            <tr><td colspan="4" class="text-center py-4 text-muted">No activity yet</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
-
-        <!-- Pending Withdrawals -->
-        <div class="col-lg-5" id="withdrawals-section">
+        <div class="col-lg-5">
             <div class="panel">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="panel-title mb-0">Pending Withdrawals</div>
-                    <span class="badge bg-primary">{{ pending_withdrawals_count }}</span>
-                </div>
-                <div class="mb-3 p-3 rounded" style="background:rgba(249,115,22,.1); border:1px solid rgba(249,115,22,.2);">
-                    <small class="text-muted">Total Pending</small>
-                    <div class="fw-bold" style="color:#f97316;">UGX {{ pending_withdrawals_total }}</div>
+                    <h6 class="fw-semibold mb-0">Pending Withdrawals</h6>
+                    <a href="{% url 'admin_withdrawals' %}" class="btn btn-sm btn-outline-primary">View All</a>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle mb-0">
-                        <thead><tr><th>Vendor</th><th>Amount</th><th>Date</th><th class="text-end">Action</th></tr></thead>
+                        <thead><tr><th>Vendor</th><th>Amount</th><th class="text-end">Action</th></tr></thead>
                         <tbody>
                             {% for w in pending_withdrawals %}
                             <tr>
                                 <td>{{ w.wallet.vendor.company_name|default:"N/A" }}</td>
-                                <td>UGX {{ w.amount }}</td>
-                                <td><small>{{ w.created_at|date:"M d" }}</small></td>
+                                <td>UGX {{ w.amount|intcomma }}</td>
                                 <td class="text-end">
                                     <div class="d-inline-flex gap-1">
-                                        <form method="post" action="{% url 'admin_approve_withdrawal' w.id %}">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-success py-0 px-2" onclick="return confirm('Approve?')">✓</button>
+                                        <form method="post" action="{% url 'admin_approve_withdrawal' w.id %}">{% csrf_token %}
+                                            <button class="btn btn-sm btn-success py-0 px-2" onclick="return confirm('Approve?')">✓</button>
                                         </form>
-                                        <form method="post" action="{% url 'admin_reject_withdrawal' w.id %}">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="return confirm('Reject?')">✗</button>
+                                        <form method="post" action="{% url 'admin_reject_withdrawal' w.id %}">{% csrf_token %}
+                                            <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="return confirm('Reject?')">✗</button>
                                         </form>
                                     </div>
                                 </td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="4" class="text-center text-muted py-3">No pending withdrawals</td></tr>
+                            <tr><td colspan="3" class="text-center text-muted py-3">No pending withdrawals</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Vendor Management -->
-    <div class="panel mb-4" id="vendors-section">
-        <div class="panel-title">Vendor Management</div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr><th>Company</th><th>Contact</th><th>Email</th><th>Status</th><th class="text-end">Actions</th></tr>
-                </thead>
-                <tbody>
-                    {% for v in all_vendors_list %}
-                    <tr>
-                        <td class="fw-semibold">{{ v.company_name }}</td>
-                        <td>{{ v.contact_person }}</td>
-                        <td>{{ v.business_email }}</td>
-                        <td>
-                            {% if v.status == 'ACTIVE' %}<span class="badge bg-success">Active</span>
-                            {% elif v.status == 'PENDING' %}<span class="badge bg-warning text-dark">Pending</span>
-                            {% elif v.status == 'SUSPENDED' %}<span class="badge bg-secondary">Suspended</span>
-                            {% else %}<span class="badge bg-danger">Rejected</span>{% endif %}
-                        </td>
-                        <td class="text-end">
-                            <div class="d-inline-flex gap-1">
-                                {% if v.status == 'PENDING' %}
-                                <form method="post" action="{% url 'admin_approve_vendor' v.id %}">{% csrf_token %}
-                                    <button class="btn btn-sm btn-success py-0 px-2" onclick="return confirm('Approve {{ v.company_name }}?')">Approve</button>
-                                </form>
-                                <form method="post" action="{% url 'admin_reject_vendor' v.id %}">{% csrf_token %}
-                                    <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="return confirm('Reject {{ v.company_name }}?')">Reject</button>
-                                </form>
-                                {% elif v.status == 'ACTIVE' %}
-                                <form method="post" action="{% url 'admin_suspend_vendor' v.id %}">{% csrf_token %}
-                                    <button class="btn btn-sm btn-warning py-0 px-2" onclick="return confirm('Suspend {{ v.company_name }}? They will lose login access.')">Suspend</button>
-                                </form>
-                                {% elif v.status == 'SUSPENDED' %}
-                                <form method="post" action="{% url 'admin_unsuspend_vendor' v.id %}">{% csrf_token %}
-                                    <button class="btn btn-sm btn-success py-0 px-2" onclick="return confirm('Reactivate {{ v.company_name }}?')">Reactivate</button>
-                                </form>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="5" class="text-center py-4 text-muted">No vendors yet</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Location Management -->
-    <div class="panel mb-4" id="locations-section">
-        <div class="panel-title">Location Management</div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr><th>Site Name</th><th>Vendor</th><th>Town</th><th>Type</th><th>Status</th><th class="text-end">Actions</th></tr>
-                </thead>
-                <tbody>
-                    {% for loc in all_locations_list %}
-                    <tr>
-                        <td class="fw-semibold">{{ loc.site_name }}</td>
-                        <td>{{ loc.vendor.company_name }}</td>
-                        <td>{{ loc.town_city }}</td>
-                        <td>{{ loc.get_location_type_display }}</td>
-                        <td>
-                            {% if loc.status == 'ACTIVE' %}<span class="badge bg-success">Active</span>
-                            {% elif loc.status == 'PENDING' %}<span class="badge bg-warning text-dark">Pending</span>
-                            {% elif loc.status == 'SUSPENDED' %}<span class="badge bg-secondary">Suspended</span>
-                            {% else %}<span class="badge bg-danger">Rejected</span>{% endif %}
-                        </td>
-                        <td class="text-end">
-                            <div class="d-inline-flex gap-1">
-                                {% if loc.status == 'PENDING' %}
-                                <form method="post" action="{% url 'admin_approve_location' loc.id %}">{% csrf_token %}
-                                    <button class="btn btn-sm btn-success py-0 px-2" onclick="return confirm('Approve {{ loc.site_name }}?')">Approve</button>
-                                </form>
-                                <form method="post" action="{% url 'admin_reject_location' loc.id %}">{% csrf_token %}
-                                    <input type="hidden" name="reason" value="Does not meet requirements">
-                                    <button class="btn btn-sm btn-outline-danger py-0 px-2" onclick="return confirm('Reject {{ loc.site_name }}?')">Reject</button>
-                                </form>
-                                {% elif loc.status == 'ACTIVE' %}
-                                <form method="post" action="{% url 'admin_reject_location' loc.id %}">{% csrf_token %}
-                                    <input type="hidden" name="reason" value="Suspended by admin">
-                                    <button class="btn btn-sm btn-warning py-0 px-2" onclick="return confirm('Suspend {{ loc.site_name }}?')">Suspend</button>
-                                </form>
-                                {% elif loc.status == 'REJECTED' or loc.status == 'SUSPENDED' %}
-                                <form method="post" action="{% url 'admin_approve_location' loc.id %}">{% csrf_token %}
-                                    <button class="btn btn-sm btn-success py-0 px-2" onclick="return confirm('Reactivate {{ loc.site_name }}?')">Reactivate</button>
-                                </form>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="6" class="text-center py-4 text-muted">No locations yet</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Staff Admin Management (Superuser only) -->
-    {% if request.user.is_superuser %}
-    <div class="panel mb-4" id="staff-section">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="panel-title mb-0">Staff Admin Management</div>
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createStaffModal">
-                <i class="bi bi-person-plus me-1"></i>Add Staff Admin
-            </button>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr><th>Username</th><th>Email</th><th>Status</th><th class="text-end">Action</th></tr>
-                </thead>
-                <tbody>
-                    {% for s in staff_list %}
-                    <tr>
-                        <td class="fw-semibold">{{ s.username }}</td>
-                        <td>{{ s.email|default:"-" }}</td>
-                        <td>
-                            {% if s.is_active %}<span class="badge bg-success">Active</span>
-                            {% else %}<span class="badge bg-secondary">Inactive</span>{% endif %}
-                        </td>
-                        <td class="text-end">
-                            <form method="post" action="{% url 'admin_deactivate_staff' s.id %}">{% csrf_token %}
-                                <button class="btn btn-sm {% if s.is_active %}btn-warning{% else %}btn-success{% endif %} py-0 px-2"
-                                    onclick="return confirm('{% if s.is_active %}Deactivate{% else %}Activate{% endif %} {{ s.username }}?')">
-                                    {% if s.is_active %}Deactivate{% else %}Activate{% endif %}
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="4" class="text-center py-3 text-muted">No staff admins yet</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Create Staff Modal -->
-    <div class="modal fade" id="createStaffModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Create Staff Admin</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="post" action="{% url 'admin_create_staff' %}">
-                    {% csrf_token %}
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Username</label>
-                            <input type="text" name="username" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Email <small class="text-muted">(optional)</small></label>
-                            <input type="email" name="email" class="form-control">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Password</label>
-                            <input type="password" name="password" class="form-control" required minlength="8">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Vendor Performance -->
-    <div class="panel mb-4">
-        <div class="panel-title">Vendor Performance Ranking</div>
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr><th>#</th><th>Vendor</th><th>Total Sales</th><th>Transactions</th><th>Successful</th><th>Success Rate</th><th>Progress</th></tr>
-                </thead>
-                <tbody>
-                    {% for row in vendor_performance %}
-                    <tr>
-                        <td><span class="badge bg-primary">{{ forloop.counter }}</span></td>
-                        <td class="fw-semibold">{{ row.vendor__company_name|default:"N/A" }}</td>
-                        <td>UGX {{ row.total_sales }}</td>
-                        <td>{{ row.transaction_count }}</td>
-                        <td>{{ row.successful_count }}</td>
-                        <td>{{ row.success_rate }}%</td>
-                        <td style="min-width:100px;">
-                            <div class="progress" style="height:6px;">
-                                <div class="progress-bar bg-success" style="width:{{ row.success_rate }}%"></div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr><td colspan="7" class="text-center py-4 text-muted">No vendor data available</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
         </div>
     </div>
 
@@ -648,74 +283,42 @@
     </footer>
 </div>
 
-{{ admin_trend_labels|json_script:"atl" }}
-{{ admin_trend_values|json_script:"atv" }}
+{{ weekly_chart_labels|json_script:"wcl" }}
+{{ weekly_chart_values|json_script:"wcv" }}
+{{ monthly_chart_labels|json_script:"mcl" }}
+{{ monthly_chart_values|json_script:"mcv" }}
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Theme
     const html = document.documentElement;
     const saved = localStorage.getItem('theme') || 'light';
     html.setAttribute('data-theme', saved);
     const themeIcon = document.getElementById('themeIcon');
     themeIcon.className = saved === 'dark' ? 'bi bi-sun fs-5' : 'bi bi-moon-stars fs-5';
-
     document.getElementById('themeBtn').addEventListener('click', () => {
         const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         html.setAttribute('data-theme', next);
         localStorage.setItem('theme', next);
         themeIcon.className = next === 'dark' ? 'bi bi-sun fs-5' : 'bi bi-moon-stars fs-5';
     });
-
-    // Sidebar mobile
     function openSidebar() { document.getElementById('sidebar').classList.add('open'); document.getElementById('overlay').classList.add('open'); }
     function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('overlay').classList.remove('open'); }
 
-    // Trend chart
-    const trendLabels = JSON.parse(document.getElementById('atl').textContent);
-    const trendValues = JSON.parse(document.getElementById('atv').textContent);
-    new Chart(document.getElementById('trendChart'), {
-        type: 'line',
-        data: {
-            labels: trendLabels,
-            datasets: [{
-                label: 'Revenue (UGX)',
-                data: trendValues,
-                borderColor: '#4361ee',
-                backgroundColor: 'rgba(67,97,238,0.1)',
-                fill: true, tension: 0.35, pointRadius: 3, pointHoverRadius: 5
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + v.toLocaleString() } } }
-        }
+    const wcl = JSON.parse(document.getElementById('wcl').textContent);
+    const wcv = JSON.parse(document.getElementById('wcv').textContent);
+    new Chart(document.getElementById('weeklyChart'), {
+        type: 'bar',
+        data: { labels: wcl, datasets: [{ label: 'Revenue (UGX)', data: wcv, backgroundColor: 'rgba(67,97,238,0.7)', borderRadius: 6 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + v.toLocaleString() } } } }
     });
 
-    // Transaction doughnut
-    const txnSuccess = {{ successful_transactions }};
-    const txnFailed  = {{ failed_transactions }};
-    const txnPending = {{ pending_transactions }};
-    const allZero = txnSuccess === 0 && txnFailed === 0 && txnPending === 0;
-    new Chart(document.getElementById('txnDonut'), {
-        type: 'doughnut',
-        data: {
-            labels: ['Success', 'Failed', 'Pending'],
-            datasets: [{
-                data: allZero ? [1,1,1] : [txnSuccess, txnFailed, txnPending],
-                backgroundColor: allZero ? ['#e2e8f0','#e2e8f0','#e2e8f0'] : ['#10b981','#ef4444','#f59e0b'],
-                borderWidth: 2, borderColor: 'transparent', hoverOffset: 5
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false, cutout: '68%',
-            plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: ctx => allZero ? ' No data yet' : ` ${ctx.label}: ${ctx.parsed}` } }
-            }
-        }
+    const mcl = JSON.parse(document.getElementById('mcl').textContent);
+    const mcv = JSON.parse(document.getElementById('mcv').textContent);
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'line',
+        data: { labels: mcl, datasets: [{ label: 'Revenue (UGX)', data: mcv, borderColor: '#e63946', backgroundColor: 'rgba(230,57,70,0.1)', fill: true, tension: 0.35, pointRadius: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => 'UGX ' + v.toLocaleString() } } } }
     });
 </script>
 </body>

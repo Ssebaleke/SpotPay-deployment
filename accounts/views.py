@@ -229,6 +229,57 @@ def admin_dashboard(request):
         or 0
     )
 
+    today_date = timezone.localdate()
+    now = timezone.now()
+    week_start = now - timedelta(days=today_date.weekday())
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    success_qs_all = Payment.objects.filter(purpose="TRANSACTION", status="SUCCESS")
+    today_revenue = success_qs_all.filter(completed_at__date=today_date).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+    weekly_revenue = success_qs_all.filter(completed_at__gte=week_start).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+    monthly_revenue = success_qs_all.filter(completed_at__gte=month_start).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+
+    # Weekly chart data (Mon-Sun)
+    weekly_labels, weekly_values = [], []
+    days_since_monday = today_date.weekday()
+    for offset in range(days_since_monday, -1, -1):
+        day = today_date - timedelta(days=offset)
+        val = success_qs_all.filter(completed_at__date=day).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        weekly_labels.append(day.strftime("%a"))
+        weekly_values.append(float(val))
+
+    # Monthly chart data (last 30 days)
+    monthly_labels, monthly_values = [], []
+    for offset in range(29, -1, -1):
+        day = today_date - timedelta(days=offset)
+        val = success_qs_all.filter(completed_at__date=day).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        monthly_labels.append(day.strftime("%d %b"))
+        monthly_values.append(float(val))
+
+    today_date = timezone.localdate()
+    now2 = timezone.now()
+    week_start2 = now2 - timedelta(days=today_date.weekday())
+    month_start2 = now2.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+    success_qs_all = Payment.objects.filter(purpose="TRANSACTION", status="SUCCESS")
+    today_revenue = success_qs_all.filter(completed_at__date=today_date).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+    weekly_revenue = success_qs_all.filter(completed_at__gte=week_start2).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+    monthly_revenue_total = success_qs_all.filter(completed_at__gte=month_start2).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+
+    weekly_chart_labels, weekly_chart_values = [], []
+    for offset in range(today_date.weekday(), -1, -1):
+        day = today_date - timedelta(days=offset)
+        val = success_qs_all.filter(completed_at__date=day).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        weekly_chart_labels.append(day.strftime("%a"))
+        weekly_chart_values.append(float(val))
+
+    monthly_chart_labels, monthly_chart_values = [], []
+    for offset in range(29, -1, -1):
+        day = today_date - timedelta(days=offset)
+        val = success_qs_all.filter(completed_at__date=day).aggregate(t=Sum("amount"))["t"] or Decimal("0")
+        monthly_chart_labels.append(day.strftime("%d %b"))
+        monthly_chart_values.append(float(val))
+
     pending_vendors_list = Vendor.objects.filter(status='PENDING').select_related('user').order_by('created_at')
     all_vendors_list = Vendor.objects.select_related('user').order_by('-created_at')[:20]
     all_locations_list = HotspotLocation.objects.select_related('vendor').order_by('-created_at')[:20]
@@ -261,6 +312,14 @@ def admin_dashboard(request):
         'all_vendors_list': all_vendors_list,
         'all_locations_list': all_locations_list,
         'staff_list': staff_list,
+        'today_revenue': today_revenue,
+        'weekly_revenue': weekly_revenue,
+        'monthly_revenue_total': monthly_revenue_total,
+        'weekly_chart_labels': weekly_chart_labels,
+        'weekly_chart_values': weekly_chart_values,
+        'monthly_chart_labels': monthly_chart_labels,
+        'monthly_chart_values': monthly_chart_values,
+        'pending_locations': HotspotLocation.objects.filter(status='PENDING').count(),
     })
 
 
@@ -809,6 +868,106 @@ def pay_subscription(request):
         return redirect("vendor_dashboard")
 
     return render(request, "payments/pay_subscription.html")
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_vendors(request):
+    search_q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    qs = Vendor.objects.select_related('user').order_by('-created_at')
+    if search_q:
+        qs = qs.filter(Q(company_name__icontains=search_q) | Q(business_email__icontains=search_q))
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    from django.core.paginator import Paginator
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    return render(request, 'accounts/admin_vendors.html', {
+        'page_obj': page_obj, 'search_q': search_q, 'status_filter': status_filter
+    })
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_locations(request):
+    search_q = request.GET.get('q', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    qs = HotspotLocation.objects.select_related('vendor').order_by('-created_at')
+    if search_q:
+        qs = qs.filter(Q(site_name__icontains=search_q) | Q(town_city__icontains=search_q))
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    from django.core.paginator import Paginator
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    return render(request, 'accounts/admin_locations.html', {
+        'page_obj': page_obj, 'search_q': search_q, 'status_filter': status_filter
+    })
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_withdrawals(request):
+    from wallets.models import WithdrawalRequest
+    status_filter = request.GET.get('status', '').strip()
+    qs = WithdrawalRequest.objects.select_related('wallet', 'wallet__vendor').order_by('-created_at')
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+    from django.core.paginator import Paginator
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+    return render(request, 'accounts/admin_withdrawals.html', {
+        'page_obj': page_obj, 'status_filter': status_filter
+    })
+
+
+@login_required
+@user_passes_test(lambda user: user.is_staff)
+def admin_vendor_performance(request):
+    from django.db.models import Sum, Count
+    vendor_performance = list(
+        Payment.objects.filter(purpose='TRANSACTION').values(
+            'vendor_id', 'vendor__company_name'
+        ).annotate(
+            transaction_count=Count('id'),
+            successful_count=Count('id', filter=Q(status='SUCCESS')),
+            total_sales=Sum('amount', filter=Q(status='SUCCESS')),
+        ).order_by('-total_sales')[:50]
+    )
+    for item in vendor_performance:
+        tc = item.get('transaction_count') or 0
+        sc = item.get('successful_count') or 0
+        item['total_sales'] = item.get('total_sales') or 0
+        item['success_rate'] = round((sc / tc) * 100, 1) if tc > 0 else 0
+
+    location_performance = list(
+        Payment.objects.filter(purpose='TRANSACTION').values(
+            'location_id', 'location__site_name', 'vendor__company_name'
+        ).annotate(
+            transaction_count=Count('id'),
+            successful_count=Count('id', filter=Q(status='SUCCESS')),
+            total_sales=Sum('amount', filter=Q(status='SUCCESS')),
+        ).order_by('-total_sales')[:50]
+    )
+    for item in location_performance:
+        tc = item.get('transaction_count') or 0
+        sc = item.get('successful_count') or 0
+        item['total_sales'] = item.get('total_sales') or 0
+        item['success_rate'] = round((sc / tc) * 100, 1) if tc > 0 else 0
+
+    return render(request, 'accounts/admin_performance.html', {
+        'vendor_performance': vendor_performance,
+        'location_performance': location_performance,
+    })
+
+
+@login_required
+@user_passes_test(lambda user: user.is_superuser)
+def admin_staff(request):
+    from django.contrib.auth.models import User as AuthUser
+    staff_list = AuthUser.objects.filter(is_staff=True, is_superuser=False).order_by('username')
+    return render(request, 'accounts/admin_staff.html', {'staff_list': staff_list})
 
 
 @login_required

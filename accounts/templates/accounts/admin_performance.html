@@ -1,0 +1,135 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance - SpotPay Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        :root{--primary:#4361ee;--sidebar-width:220px;--bg:#f5f7fb;--card-bg:#ffffff;--text:#212529;--muted:#64748b;--border:#e9ecef;--shadow:rgba(0,0,0,0.06);}
+        [data-theme="dark"]{--bg:#0f1419;--card-bg:#1a1f2e;--text:#e8eaed;--muted:#9ca3af;--border:#2d3748;--shadow:rgba(0,0,0,0.4);}
+        *{box-sizing:border-box;}body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);margin:0;overflow-x:hidden;}
+        #sidebar{width:var(--sidebar-width);background:#111827;position:fixed;top:0;left:0;height:100vh;z-index:1050;display:flex;flex-direction:column;transition:transform .3s;}
+        .sb-header{padding:1.2rem 1.25rem;border-bottom:1px solid rgba(255,255,255,.07);}
+        .sb-logo{width:36px;height:36px;background:var(--primary);border-radius:9px;display:flex;align-items:center;justify-content:center;}
+        .sb-menu{flex:1;padding:.5rem 0;overflow-y:auto;}
+        .sb-link{display:flex;align-items:center;gap:10px;padding:.65rem 1.25rem;margin:.1rem .6rem;border-radius:8px;color:#9ca3af;font-size:.875rem;text-decoration:none;transition:all .2s;}
+        .sb-link i{width:18px;font-size:.95rem;}.sb-link:hover,.sb-link.active{background:rgba(67,97,238,.18);color:#60a5fa;}
+        .sb-link.danger{color:#f87171;}.sb-link.danger:hover{background:rgba(239,68,68,.1);color:#fca5a5;}
+        .sb-divider{border-color:rgba(255,255,255,.07);margin:.4rem .8rem;}
+        .sb-footer{padding:.9rem 1.1rem;border-top:1px solid rgba(255,255,255,.07);}
+        .sb-avatar{width:32px;height:32px;background:rgba(67,97,238,.25);border-radius:50%;display:flex;align-items:center;justify-content:center;}
+        #content{margin-left:var(--sidebar-width);padding:20px;min-height:100vh;}
+        .topbar{background:#0c1218;border-radius:10px;padding:.85rem 1.4rem;margin-bottom:1.5rem;box-shadow:0 2px 10px rgba(0,0,0,0.3);}
+        .topbar h5{color:#f1f5f9 !important;}.topbar small{color:#94a3b8 !important;}
+        .panel{background:var(--card-bg);border-radius:12px;padding:1.25rem;box-shadow:0 4px 18px var(--shadow);}
+        .theme-btn{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:.4rem .55rem;cursor:pointer;color:var(--text);}
+        .hamburger{display:none;background:none;border:none;color:var(--text);font-size:1.4rem;cursor:pointer;}
+        [data-theme="dark"] .panel{background:var(--card-bg);}[data-theme="dark"] .table{color:var(--text);--bs-table-bg:var(--card-bg);}
+        [data-theme="dark"] .table>:not(caption)>*>*{border-bottom-color:var(--border);}
+        [data-theme="dark"] .table-light,[data-theme="dark"] .table-light th{background-color:#161b22 !important;color:var(--text) !important;}
+        [data-theme="dark"] thead th{color:#f3f4f6 !important;}[data-theme="dark"] td{color:var(--text) !important;}
+        [data-theme="dark"] .text-muted{color:var(--muted) !important;}[data-theme="dark"] a{color:#60a5fa;}
+        [data-theme="dark"] .page-item .page-link{background-color:var(--card-bg);border-color:var(--border);color:var(--text);}
+        [data-theme="dark"] .page-item.active .page-link{background-color:var(--primary);border-color:var(--primary);}
+        @media(max-width:768px){#sidebar{transform:translateX(-100%);}#sidebar.open{transform:translateX(0);}#overlay.open{display:block;}#content{margin-left:0;}.hamburger{display:inline-block;}}
+        #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1040;}
+    </style>
+</head>
+<body>
+<div id="overlay" onclick="closeSidebar()"></div>
+<nav id="sidebar">
+    <div class="sb-header"><div class="d-flex align-items-center gap-2"><div class="sb-logo"><i class="bi bi-wifi text-white"></i></div><div><div style="font-weight:700;color:#fff;font-size:.95rem;">SpotPay</div><div style="font-size:.72rem;color:#6b7280;">Admin Panel</div></div></div></div>
+    <div class="sb-menu">
+        <a href="{% url 'admin_dashboard' %}" class="sb-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
+        <a href="{% url 'admin_vendors' %}" class="sb-link"><i class="bi bi-people"></i> Vendors</a>
+        <a href="{% url 'admin_locations' %}" class="sb-link"><i class="bi bi-geo-alt"></i> Locations</a>
+        <a href="{% url 'admin_withdrawals' %}" class="sb-link"><i class="bi bi-wallet2"></i> Withdrawals</a>
+        <a href="{% url 'admin_vendor_performance' %}" class="sb-link active"><i class="bi bi-bar-chart"></i> Performance</a>
+        {% if request.user.is_superuser %}<a href="{% url 'admin_staff' %}" class="sb-link"><i class="bi bi-shield-person"></i> Staff Admins</a><a href="/admin/" class="sb-link"><i class="bi bi-gear"></i> Django Admin</a>{% endif %}
+        <hr class="sb-divider">
+        <a href="{% url 'vendor_logout' %}" class="sb-link danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+    </div>
+    <div class="sb-footer"><div class="d-flex align-items-center gap-2"><div class="sb-avatar"><i class="bi bi-person-fill" style="color:#60a5fa;font-size:.85rem;"></i></div><div><div style="font-size:.82rem;color:#e5e7eb;font-weight:500;">{{ request.user.username }}</div><div style="font-size:.72rem;color:#6b7280;">Administrator</div></div></div></div>
+</nav>
+
+<div id="content">
+    <div class="topbar">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <button class="hamburger" onclick="openSidebar()"><i class="bi bi-list"></i></button>
+                <div><h5 class="mb-0 fw-semibold">Vendor Performance</h5><small class="text-muted">Rankings and location breakdown</small></div>
+            </div>
+            <button class="theme-btn border-0" id="themeBtn"><i class="bi bi-moon-stars fs-5" id="themeIcon"></i></button>
+        </div>
+    </div>
+
+    <!-- Vendor Performance Ranking -->
+    <div class="panel mb-4">
+        <h6 class="fw-semibold mb-3">Vendor Performance Ranking</h6>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>#</th><th>Vendor</th><th>Total Sales</th><th>Transactions</th><th>Successful</th><th>Success Rate</th><th>Progress</th></tr>
+                </thead>
+                <tbody>
+                    {% for row in vendor_performance %}
+                    <tr>
+                        <td><span class="badge bg-primary">{{ forloop.counter }}</span></td>
+                        <td class="fw-semibold">{{ row.vendor__company_name|default:"N/A" }}</td>
+                        <td>UGX {{ row.total_sales|intcomma }}</td>
+                        <td>{{ row.transaction_count }}</td>
+                        <td>{{ row.successful_count }}</td>
+                        <td>{{ row.success_rate }}%</td>
+                        <td style="min-width:100px;">
+                            <div class="progress" style="height:6px;">
+                                <div class="progress-bar bg-success" style="width:{{ row.success_rate }}%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-4 text-muted">No data available</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Location Performance -->
+    <div class="panel mb-4">
+        <h6 class="fw-semibold mb-3">Location Performance</h6>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr><th>#</th><th>Location</th><th>Vendor</th><th>Total Sales</th><th>Transactions</th><th>Successful</th><th>Success Rate</th></tr>
+                </thead>
+                <tbody>
+                    {% for row in location_performance %}
+                    <tr>
+                        <td><span class="badge bg-info">{{ forloop.counter }}</span></td>
+                        <td class="fw-semibold">{{ row.location__site_name|default:"N/A" }}</td>
+                        <td>{{ row.vendor__company_name|default:"N/A" }}</td>
+                        <td>UGX {{ row.total_sales|intcomma }}</td>
+                        <td>{{ row.transaction_count }}</td>
+                        <td>{{ row.successful_count }}</td>
+                        <td>{{ row.success_rate }}%</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="7" class="text-center py-4 text-muted">No data available</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const html=document.documentElement,saved=localStorage.getItem('theme')||'light';html.setAttribute('data-theme',saved);
+    const ti=document.getElementById('themeIcon');ti.className=saved==='dark'?'bi bi-sun fs-5':'bi bi-moon-stars fs-5';
+    document.getElementById('themeBtn').addEventListener('click',()=>{const n=html.getAttribute('data-theme')==='dark'?'light':'dark';html.setAttribute('data-theme',n);localStorage.setItem('theme',n);ti.className=n==='dark'?'bi bi-sun fs-5':'bi bi-moon-stars fs-5';});
+    function openSidebar(){document.getElementById('sidebar').classList.add('open');document.getElementById('overlay').classList.add('open');}
+    function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('overlay').classList.remove('open');}
+</script>
+</body>
+</html>
