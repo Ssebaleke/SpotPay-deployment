@@ -395,6 +395,9 @@ def resend_sms(request, log_id):
     )
 
     if success:
+        log.status = 'SENT'
+        log.failure_reason = None
+        log.save(update_fields=['status', 'failure_reason'])
         messages.success(request, f'SMS resent successfully to {log.phone}.')
     else:
         # Refund the balance if send failed
