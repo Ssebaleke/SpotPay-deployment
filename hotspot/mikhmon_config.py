@@ -83,12 +83,15 @@ def inject_mikhmon_session(location):
             location.save(update_fields=['mikhmon_session'])
             return True, None
 
-        # Inject before closing ); of the array
-        if ');' not in content:
+        # Inject after the security check block };  — NOT inside it
+        # The file starts with: <?php if(...){header("Location:./");};
+        # We inject $m_session right after };
+        if '};' not in content:
             client.close()
             return False, "Mikhmon config format not recognized"
 
-        updated = content.replace(');', f"    {new_entry}\n);", 1)
+        updated = content.replace('};', f'}};
+    {new_entry}', 1)
 
         # Write back into container using docker exec + python
         # Escape single quotes in content for shell safety
