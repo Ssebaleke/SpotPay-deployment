@@ -305,6 +305,29 @@ def vpn_script(request, location_id):
     return HttpResponse(script, content_type='text/plain; charset=utf-8')
 
 
+# =====================================================
+# RESET VPN — allows vendor to re-run setup after MikroTik reset
+# =====================================================
+
+@login_required
+def vpn_reset(request, location_id):
+    if request.user.is_staff:
+        return redirect('admin_dashboard')
+    try:
+        vendor = request.user.vendor
+    except:
+        return redirect('vendor_login')
+
+    location = get_object_or_404(HotspotLocation, id=location_id, vendor=vendor, status='ACTIVE')
+
+    if request.method == 'POST':
+        location.vpn_configured = False
+        location.save(update_fields=['vpn_configured'])
+        messages.success(request, f'VPN reset for "{location.site_name}". Run the setup script again on your MikroTik.')
+
+    return redirect('vpn_setup', location_id=location_id)
+
+
 @login_required
 def save_login_type(request, location_id):
     try:
