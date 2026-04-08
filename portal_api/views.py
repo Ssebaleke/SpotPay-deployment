@@ -4,6 +4,9 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+import logging
+
+logger = logging.getLogger(__name__)
 
 from pathlib import Path
 import zipfile
@@ -451,3 +454,82 @@ def portal_buy(request, uuid):
         )
         
         
+
+# =====================================================
+# REGISTER VPN — MikroTik callback after script runs
+# POST /api/register-vpn/
+# Body: location_id=<id>&public_key=<wg_pubkey>
+# =====================================================
+
+@csrf_exempt
+@require_POST
+def register_vpn(request):
+    """
+    Called by MikroTik after running the VPN setup script.
+    Receives the router's WireGuard public key, then:
+    1. Adds the peer to WireGuard on the VPS via SSH
+    2. Saves wg config permanently (wg-quick save)
+    3. Injects location into Mikhmon config.php
+    4. Marks location as fully configured
+    """
+    location_id = request.POST.get('location_id', '').strip()
+    public_key = request.POST.get('public_key', '').strip()
+
+    if not location_id or not public_key:
+        return JsonResponse({'status': 'error', 'message': 'location_id and public_key required'}, status=400)
+
+    try:
+        location = HotspotLocation.objects.get(id=location_id, status='ACTIVE')
+    except HotspotLocation.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Location not found'}, status=404)
+
+    vpn_subnet = getattr(settings, 'VPN_SUBNET', '10.8.0')
+    assigned_ip = f"{vpn_subnet}.{location.id + 1}"
+
+    ssh_host = getattr(settings, 'VPS_SSH_HOST', '')
+    ssh_user = getattr(settings, 'VPS_SSH_USER', 'root')
+    ssh_pass = getattr(settings, 'VPS_SSH_PASS', '')
+    vpn_iface = getattr(settings, 'VPN_INTERFACE_NAME', 'wg0')
+
+    if not ssh_host or not ssh_pass:
+        return JsonResponse({'status': 'error', 'message': 'VPS SSH not configured'}, status=500)
+
+    try:
+        import paramiko
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(ssh_host, username=ssh_user, password=ssh_pass, timeout=15)
+
+        # 1. Add WireGuard peer on VPS
+        wg_cmd = f"wg set {vpn_iface} peer '{public_key}' allowed-ips {assigned_ip}/32"
+        stdin, stdout, stderr = client.exec_command(wg_cmd)
+        stdout.read()
+        wg_err = stderr.read().decode('utf-8', errors='ignore').strip()
+        if wg_err:
+            logger.warning(f"WireGuard peer add warning for location {location_id}: {wg_err}")
+
+        # 2. Save WireGuard config permanently
+        client.exec_command(f"wg-quick save {vpn_iface}")
+
+        client.close()
+
+        # 3. Inject into Mikhmon config.php
+        from hotspot.mikhmon_config import inject_mikhmon_session
+        ok, err = inject_mikhmon_session(location)
+        if not ok:
+            logger.error(f"Mikhmon inject failed for location {location_id}: {err}")
+
+        # 4. Save public key and mark fully configured
+        location.vpn_configured = True
+        location.save(update_fields=['vpn_configured'])
+
+        logger.info(f"VPN registered for location {location_id} — IP {assigned_ip}")
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Location {location.site_name} is now LIVE.',
+            'vpn_ip': assigned_ip,
+        })
+
+    except Exception as e:
+        logger.error(f"register_vpn failed for location {location_id}: {e}")
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
