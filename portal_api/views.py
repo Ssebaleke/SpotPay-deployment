@@ -475,9 +475,8 @@ def register_vpn(request):
     location_id = request.POST.get('location_id', '').strip()
     public_key = request.POST.get('public_key', '').strip()
 
-    # RouterOS http-data doesn't URL-encode + signs — restore them
-    import urllib.parse
-    public_key = urllib.parse.unquote_plus(public_key)
+    # RouterOS sends + signs as spaces in form POST — restore them
+    public_key = public_key.replace(' ', '+')
 
     if not location_id or not public_key:
         return JsonResponse({'status': 'error', 'message': 'location_id and public_key required'}, status=400)

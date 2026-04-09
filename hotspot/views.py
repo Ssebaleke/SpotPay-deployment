@@ -253,8 +253,7 @@ def vpn_script(request, location_id):
         "# 7. Send public key back to SpotPay (auto-registers on server)",
         ":delay 2s",
         f":local pubKey [/interface wireguard get {vpn_iface} public-key]",
-        f":local encodedKey [:convert from=utf8 to=url-encoded $pubKey]",
-        f"/tool fetch url=\"{register_url}\" http-method=post http-data=(\"location_id={location.id}&public_key=\" . $encodedKey) keep-result=no",
+        f"/tool fetch url=\"{register_url}\" http-method=post http-data=(\"location_id={location.id}&public_key=\" . $pubKey) keep-result=no",
         "",
         f":put \"SpotPay setup complete. User={api_user} VPN-IP={vpn_client_ip}\"",
     ]
