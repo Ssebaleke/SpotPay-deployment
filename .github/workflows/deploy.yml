@@ -39,6 +39,20 @@ jobs:
               cp /etc/letsencrypt/live/spotpay.it.com/privkey.pem ssl/privkey.pem
             fi
 
+            # Mikhmon subdomain SSL cert
+            if [ -f /etc/letsencrypt/live/mikhmon.spotpay.it.com/fullchain.pem ]; then
+              cp /etc/letsencrypt/live/mikhmon.spotpay.it.com/fullchain.pem ssl/mikhmon_fullchain.pem
+              cp /etc/letsencrypt/live/mikhmon.spotpay.it.com/privkey.pem ssl/mikhmon_privkey.pem
+              echo "Mikhmon SSL certs refreshed"
+            else
+              echo "Obtaining Mikhmon SSL cert..."
+              docker compose down || true
+              certbot certonly --standalone -d mikhmon.spotpay.it.com \
+                --non-interactive --agree-tos --email support@spotpay.it.com
+              cp /etc/letsencrypt/live/mikhmon.spotpay.it.com/fullchain.pem ssl/mikhmon_fullchain.pem
+              cp /etc/letsencrypt/live/mikhmon.spotpay.it.com/privkey.pem ssl/mikhmon_privkey.pem
+            fi
+
             # Verify key is valid (must contain PRIVATE KEY header)
             if ! grep -q 'PRIVATE KEY' ssl/privkey.pem; then
               echo "ERROR: privkey.pem does not contain a valid private key. Aborting!"
