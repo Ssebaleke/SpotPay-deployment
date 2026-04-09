@@ -50,9 +50,9 @@ def inject_mikhmon_session(location):
     hotspot_name = location.site_name
     dns_name     = location.hotspot_dns or 'hot.spot'
 
-    # V3 $data array format
+    # V3 $data array format — matches live config exactly
     new_entry = (
-        "\n$data['{k}'] = array ("
+        "$data['{k}'] = array ("
         "'1'=>'{k}!{ip}',"
         "'{k}@|@{u}',"
         "'{k}#|#{p}',"
