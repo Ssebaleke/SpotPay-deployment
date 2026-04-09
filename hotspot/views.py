@@ -1,9 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseRedirect
 from django.conf import settings
 import logging
+import secrets
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +25,9 @@ def locations_list(request):
     except:
         messages.error(request, 'You are not registered as a vendor.')
         return redirect('vendor_login')
-    
-    locations = vendor.locations.all().order_by('-created_at')
 
-    return render(request, 'hotspot/locations.html', {
-        'locations': locations,
-        'vendor': vendor
-    })
+    locations = vendor.locations.all().order_by('-created_at')
+    return render(request, 'hotspot/locations.html', {'locations': locations, 'vendor': vendor})
 
 
 # =====================================================
@@ -39,27 +36,18 @@ def locations_list(request):
 
 @login_required
 def add_location(request):
-    # Staff users cannot add locations
     if request.user.is_staff:
         messages.warning(request, 'Staff users cannot add locations.')
         return redirect('locations_list')
-    
+
     if request.method == 'POST':
         form = HotspotLocationForm(request.POST)
-
         if form.is_valid():
             location = form.save(commit=False)
             location.vendor = request.user.vendor
-
             location.hotspot_dns = request.POST.get('hotspot_dns', '').strip() or 'hot.spot'
-
             location.save()
-
-            messages.success(
-                request,
-                f'Location "{location.site_name}" submitted for approval.'
-            )
-
+            messages.success(request, f'Location "{location.site_name}" submitted for approval.')
         return redirect('locations_list')
 
     return redirect('locations_list')
@@ -71,24 +59,19 @@ def add_location(request):
 
 @login_required
 def edit_location(request, location_id):
-    # Staff users cannot edit locations
     if request.user.is_staff:
         messages.warning(request, 'Staff users cannot edit locations.')
         return redirect('locations_list')
-    
+
     try:
         vendor = request.user.vendor
     except:
         messages.error(request, 'You are not registered as a vendor.')
         return redirect('vendor_login')
 
-    location = get_object_or_404(
-        HotspotLocation,
-        id=location_id,
-        vendor=vendor
-    )
+    location = get_object_or_404(HotspotLocation, id=location_id, vendor=vendor)
 
-    if request.method == "POST":
+    if request.method == 'POST':
         location.site_name = request.POST.get('site_name', location.site_name).strip()
         location.location_type = request.POST.get('location_type', location.location_type)
         location.town_city = request.POST.get('town_city', location.town_city).strip()
@@ -96,12 +79,9 @@ def edit_location(request, location_id):
         location.login_type = request.POST.get('login_type', location.login_type)
         location.save(update_fields=['site_name', 'location_type', 'town_city', 'address', 'login_type'])
         messages.success(request, f'Location "{location.site_name}" updated successfully.')
-        return redirect("locations_list")
-    return render(
-        request,
-        "hotspot/location_form.html",
-        {"location": location}
-    )
+        return redirect('locations_list')
+
+    return render(request, 'hotspot/location_form.html', {'location': location})
 
 
 # =====================================================
@@ -117,12 +97,7 @@ def location_status(request, location_id):
     except:
         return JsonResponse({'error': 'Not a vendor'}, status=403)
 
-    location = get_object_or_404(
-        HotspotLocation,
-        id=location_id,
-        vendor=vendor
-    )
-
+    location = get_object_or_404(HotspotLocation, id=location_id, vendor=vendor)
     return JsonResponse({
         'status': location.status,
         'status_display': location.get_status_display(),
@@ -133,7 +108,7 @@ def location_status(request, location_id):
 
 
 # =====================================================
-# VOUCHER GENERATOR — location picker
+# VOUCHER GENERATOR
 # =====================================================
 
 @login_required
@@ -144,15 +119,13 @@ def voucher_generator(request):
         vendor = request.user.vendor
     except:
         return redirect('vendor_login')
+
     locations = vendor.locations.filter(status='ACTIVE').order_by('site_name')
-    return render(request, 'hotspot/voucher_generator.html', {
-        'vendor': vendor,
-        'locations': locations,
-    })
+    return render(request, 'hotspot/voucher_generator.html', {'vendor': vendor, 'locations': locations})
 
 
 # =====================================================
-# MIKHMON REDIRECT — per location
+# MIKHMON REDIRECT
 # =====================================================
 
 @login_required
@@ -170,15 +143,12 @@ def mikhmon_redirect(request, location_id):
         return redirect('vpn_setup', location_id=location_id)
 
     mikhmon_url = getattr(settings, 'MIKHMON_URL', '').rstrip('/')
-
     if not mikhmon_url:
-        messages.error(request, 'Mikhmon is not configured on this server. Please contact support.')
+        messages.error(request, 'Mikhmon is not configured. Please contact support.')
         return redirect('voucher_generator')
 
-    import secrets
     token = secrets.token_hex(16)
 
-    # Create one-time token file on VPS (Mikhmon V3 reads this for auto-login)
     try:
         import paramiko
         ssh = paramiko.SSHClient()
@@ -196,14 +166,13 @@ def mikhmon_redirect(request, location_id):
         messages.error(request, 'Could not connect to Mikhmon. Please try again.')
         return redirect('voucher_generator')
 
-    from django.http import HttpResponseRedirect
     return HttpResponseRedirect(
         f"{mikhmon_url}/?spotpay_token={token}&session={location.mikhmon_session}"
     )
 
 
 # =====================================================
-# VPN SETUP PAGE — shown when mikhmon_session is empty
+# VPN SETUP PAGE
 # =====================================================
 
 @login_required
@@ -217,7 +186,6 @@ def vpn_setup(request, location_id):
 
     location = get_object_or_404(HotspotLocation, id=location_id, vendor=vendor, status='ACTIVE')
 
-    # Generate credentials once and save
     if not location.vpn_api_user:
         import random, string
         suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
@@ -240,13 +208,10 @@ def vpn_setup(request, location_id):
 
 
 # =====================================================
-# VPN SCRIPT — serves the .rsc file to MikroTik
+# VPN SCRIPT — served to MikroTik
 # =====================================================
 
 def vpn_script(request, location_id):
-    """Public endpoint — MikroTik fetches this directly via /tool fetch."""
-    from django.http import HttpResponse
-
     location = get_object_or_404(HotspotLocation, id=location_id, status='ACTIVE')
 
     if not location.vpn_api_user:
@@ -263,35 +228,38 @@ def vpn_script(request, location_id):
     register_url    = f"{settings.SITE_URL}/api/register-vpn/"
 
     lines = [
-        f"# SpotPay VPN Setup Script",
+        "# SpotPay VPN Setup Script",
         f"# Location: {location.site_name}",
-        f"# Generated by SpotPay — safe to re-run",
-        f"",
-        f"# 1. Create SpotPay API user (skip if exists)",
+        "# Generated by SpotPay - safe to re-run after MikroTik reset",
+        "",
+        "# 1. Create SpotPay API user (skip if exists)",
         f":if ([:len [/user find where name=\"{api_user}\"]] = 0) do={{/user add name={api_user} password={api_pass} group=full comment=\"SpotPay API User\"}}",
-        f"",
-        f"# 2. Enable API on port 8728",
-        f"/ip service set api disabled=no port=8728",
-        f"",
-        f"# 3. Add WireGuard interface (skip if exists)",
+        "",
+        "# 2. Enable API on port 8728",
+        "/ip service set api disabled=no port=8728",
+        "",
+        "# 3. Allow API access from VPN subnet (firewall)",
+        f":if ([:len [/ip firewall filter find where chain=input protocol=tcp dst-port=8728 comment=\"SpotPay API\"]] = 0) do={{/ip firewall filter add chain=input action=accept protocol=tcp dst-port=8728 src-address={vpn_subnet}.0/24 comment=\"SpotPay API\" place-before=0}}",
+        "",
+        "# 4. Add WireGuard interface (skip if exists)",
         f":if ([:len [/interface wireguard find where name=\"{vpn_iface}\"]] = 0) do={{/interface wireguard add name={vpn_iface} listen-port=13231 comment=\"SpotPay VPN\"}}",
-        f"",
-        f"# 4. Assign VPN IP (skip if exists)",
+        "",
+        "# 5. Assign VPN IP (skip if exists)",
         f":if ([:len [/ip address find where address=\"{vpn_client_ip}/24\" and interface=\"{vpn_iface}\"]] = 0) do={{/ip address add address={vpn_client_ip}/24 interface={vpn_iface}}}",
-        f"",
-        f"# 5. Add VPS as peer (skip if exists)",
+        "",
+        "# 6. Add VPS as WireGuard peer (skip if exists)",
         f":if ([:len [/interface wireguard peers find where public-key=\"{vpn_public_key}\"]] = 0) do={{/interface wireguard peers add interface={vpn_iface} public-key=\"{vpn_public_key}\" endpoint-address={vpn_server_ip} endpoint-port={vpn_server_port} allowed-address={vpn_subnet}.0/24 persistent-keepalive=25 comment=\"SpotPay VPS\"}}",
-        f"",
-        f"# 6. Send public key back to SpotPay (fully automatic)",
-        f":delay 2s",
+        "",
+        "# 7. Send public key back to SpotPay (auto-registers on server)",
+        ":delay 2s",
         f":local pubKey [/interface wireguard get {vpn_iface} public-key]",
-        f"/tool fetch url=\"{register_url}\" http-method=post http-data=(\"location_id={location.id}&public_key=\" . $pubKey) keep-result=no",
-        f"",
+        f":local encodedKey [:convert from=utf8 to=url-encoded $pubKey]",
+        f"/tool fetch url=\"{register_url}\" http-method=post http-data=(\"location_id={location.id}&public_key=\" . $encodedKey) keep-result=no",
+        "",
         f":put \"SpotPay setup complete. User={api_user} VPN-IP={vpn_client_ip}\"",
     ]
     script = "\n".join(lines)
 
-    # Mark as configured and trigger Mikhmon injection
     if not location.vpn_configured:
         location.vpn_configured = True
         location.save(update_fields=['vpn_configured'])
@@ -305,7 +273,7 @@ def vpn_script(request, location_id):
 
 
 # =====================================================
-# RESET VPN — allows vendor to re-run setup after MikroTik reset
+# VPN RESET
 # =====================================================
 
 @login_required
@@ -326,6 +294,10 @@ def vpn_reset(request, location_id):
 
     return redirect('vpn_setup', location_id=location_id)
 
+
+# =====================================================
+# SAVE LOGIN TYPE
+# =====================================================
 
 @login_required
 def save_login_type(request, location_id):
@@ -365,7 +337,6 @@ def dns_setup(request):
         return redirect('vendor_login')
 
     locations = vendor.locations.filter(status='ACTIVE').order_by('-created_at')
-
     return render(request, 'hotspot/dns_setup.html', {
         'locations': locations,
         'vendor': vendor,
@@ -374,7 +345,7 @@ def dns_setup(request):
 
 
 # =====================================================
-# SAVE DNS (POST per location)
+# SAVE DNS
 # =====================================================
 
 @login_required
