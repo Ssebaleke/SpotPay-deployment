@@ -85,12 +85,22 @@ def inject_mikhmon_session(location):
 
         content = out
 
-        # Already injected
+        # Already injected — update IP if it changed, then return
         if session_key in content:
+            # Find current IP in config and update if different
+            import re
+            pattern = r"(\$data\['" + re.escape(session_key) + r"'\] = array \('1'=>'" + re.escape(session_key) + r"!)([\.\d]+)('"
+            match = re.search(pattern, content)
+            if match and match.group(2) != vpn_ip:
+                updated = re.sub(pattern, lambda m: m.group(1) + vpn_ip + m.group(3), content)
+                sftp = client.open_sftp()
+                with sftp.open(CONFIG_PATH, 'w') as f:
+                    f.write(updated)
+                sftp.close()
+                logger.info("Mikhmon V3 session '{}' IP updated {} -> {}".format(session_key, match.group(2), vpn_ip))
             client.close()
             location.mikhmon_session = session_key
             location.save(update_fields=['mikhmon_session'])
-            logger.info("Mikhmon V3 session '{}' already exists for location {}".format(session_key, location.id))
             return True, None
 
         if '};' not in content:
