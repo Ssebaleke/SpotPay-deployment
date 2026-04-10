@@ -142,7 +142,6 @@ def vpn_setup(request, location_id):
         return redirect('vendor_login')
     location = get_object_or_404(HotspotLocation, id=location_id, vendor=vendor, status='ACTIVE')
 
-    # Generate API credentials once
     if not location.vpn_api_user:
         import random, string
         suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
@@ -150,7 +149,6 @@ def vpn_setup(request, location_id):
         location.vpn_api_password = suffix
         location.save(update_fields=['vpn_api_user', 'vpn_api_password'])
 
-    # Pre-generate OpenVPN config for v6 fallback
     if not location.ovpn_client_config:
         try:
             from hotspot.openvpn_config import generate_ovpn_config
@@ -183,84 +181,127 @@ def ovpn_download(request, location_id):
 
 def vpn_script(request, location_id):
     """
-    Universal VPN setup script — auto-detects ROS v6/v7.
-    Follows 5 MikroTik syntax rules:
-    1. allowed-addresses (plural)
-    2. :local variable before /tool fetch
-    3. 10.8.0.0/16 firewall with place-before=0
-    4. verNum = [:pick version 0 1] for version detection
-    5. Clean-run :if [:len find] = 0 checks
+    Universal VPN script — strict 100-char line limit, backslash breaks,
+    global braces, find where clauses, allowed-addresses plural.
     """
     location = get_object_or_404(HotspotLocation, id=location_id, status='ACTIVE')
 
     if not location.vpn_api_user:
-        return HttpResponse('# Error: VPN not initialized for this location', content_type='text/plain')
+        return HttpResponse('# Error: VPN not initialized', content_type='text/plain')
 
-    api_user       = location.vpn_api_user
-    api_pass       = location.vpn_api_password
-    register_url   = f"{settings.SITE_URL}/api/register-vpn/"
-    ovpn_url       = f"{settings.SITE_URL}/locations/{location_id}/ovpn-download/"
-    vps_ip         = getattr(settings, 'VPN_SERVER_IP', '')
-    vps_port       = getattr(settings, 'VPN_SERVER_PORT', '443')
-    wg_pubkey      = getattr(settings, 'VPN_SERVER_PUBLIC_KEY', '')
-    wg_iface       = getattr(settings, 'VPN_INTERFACE_NAME', 'wg0')
-    vpn_subnet     = getattr(settings, 'VPN_SUBNET', '10.8.0')
-    wg_client_ip   = f"{vpn_subnet}.{location.id + 1}"
-    ovpn_client_ip = f"10.9.0.{location.id + 1}"
+    u          = location.vpn_api_user
+    p          = location.vpn_api_password
+    reg_url    = f"{settings.SITE_URL}/api/register-vpn/"
+    ovpn_url   = f"{settings.SITE_URL}/locations/{location_id}/ovpn-download/"
+    vps_ip     = getattr(settings, 'VPN_SERVER_IP', '')
+    vps_port   = getattr(settings, 'VPN_SERVER_PORT', '443')
+    wg_key     = getattr(settings, 'VPN_SERVER_PUBLIC_KEY', '')
+    wg_iface   = getattr(settings, 'VPN_INTERFACE_NAME', 'wg0')
+    subnet     = getattr(settings, 'VPN_SUBNET', '10.8.0')
+    wg_ip      = f"{subnet}.{location.id + 1}"
+    ovpn_ip    = f"10.9.0.{location.id + 1}"
+    loc_id     = location.id
 
-    script = f"""# SpotPay Universal VPN Setup Script
-# Location: {location.site_name} | Auto-detects ROS v6 / v7
+    script = f"""{{
+# SpotPay Universal VPN Setup Script
+# Location: {location.site_name}
+# Auto-detects ROS v6 (OpenVPN) and v7 (WireGuard)
 
-# Rule 4: Version detection using verNum
 :local verNum [:pick [/system resource get version] 0 1]
 
-# Rule 5: Create API user (clean-run safe)
-:if ([:len [/user find where name="{api_user}"]] = 0) do={{
-    /user add name={api_user} password={api_pass} group=full comment="SpotPay API User"
+:if ([:len [/user find where name="{u}"]] = 0) do={{
+    /user add \\
+        name="{u}" \\
+        password="{p}" \\
+        group=full \\
+        comment="SpotPay API User"
 }}
 
-# Enable API on port 8728
 /ip service set api disabled=no port=8728
 
-# Rule 3: Firewall — allow 10.8.0.0/16 with place-before=0
-:if ([:len [/ip firewall filter find where comment="SpotPay API"]] = 0) do={{
-    /ip firewall filter add chain=input action=accept protocol=tcp dst-port=8728 src-address=10.8.0.0/16 comment="SpotPay API" place-before=0
+:if ([:len [/ip firewall filter \\
+    find where comment="SpotPay API"]] = 0) do={{
+    /ip firewall filter add \\
+        chain=input \\
+        action=accept \\
+        protocol=tcp \\
+        dst-port=8728 \\
+        src-address=10.8.0.0/16 \\
+        comment="SpotPay API" \\
+        place-before=0
 }}
 
-# Rule 4: Version branch
 :if ($verNum = "7") do={{
 
-    # ROS v7 - WireGuard
-    :if ([:len [/interface wireguard find where name="{wg_iface}"]] = 0) do={{
-        /interface wireguard add name={wg_iface} listen-port=13231 comment="SpotPay VPN"
+    :if ([:len [/interface wireguard \\
+        find where name="{wg_iface}"]] = 0) do={{
+        /interface wireguard add \\
+            name="{wg_iface}" \\
+            listen-port=13231 \\
+            comment="SpotPay VPN"
     }}
-    :if ([:len [/ip address find where address="{wg_client_ip}/24" and interface="{wg_iface}"]] = 0) do={{
-        /ip address add address={wg_client_ip}/24 interface={wg_iface}
+    :if ([:len [/ip address \\
+        find where address="{wg_ip}/24"]] = 0) do={{
+        /ip address add \\
+            address="{wg_ip}/24" \\
+            interface="{wg_iface}"
     }}
-    :if ([:len [/interface wireguard peers find where comment="SpotPay VPS"]] = 0) do={{
-        /interface wireguard peers add interface={wg_iface} public-key="{wg_pubkey}" endpoint-address={vps_ip} endpoint-port={vps_port} allowed-addresses={vpn_subnet}.0/24 persistent-keepalive=25 comment="SpotPay VPS"
+    :if ([:len [/interface wireguard peers \\
+        find where comment="SpotPay VPS"]] = 0) do={{
+        /interface wireguard peers add \\
+            interface="{wg_iface}" \\
+            public-key="{wg_key}" \\
+            endpoint-address={vps_ip} \\
+            endpoint-port={vps_port} \\
+            allowed-addresses={subnet}.0/24 \\
+            persistent-keepalive=25 \\
+            comment="SpotPay VPS"
     }}
     :delay 2s
-    # Rule 2: local variable before fetch
-    :local pk [/interface wireguard get {wg_iface} public-key]
-    /tool fetch url="{register_url}" http-method=post http-data=("location_id={location.id}&public_key=" . $pk) keep-result=no
-    :put "SpotPay setup complete (ROS v7). User={api_user} VPN-IP={wg_client_ip}"
+    :local pk [/interface wireguard \\
+        get [find where name="{wg_iface}"] public-key]
+    /tool fetch \\
+        url="{reg_url}" \\
+        http-method=post \\
+        http-data=("location_id={loc_id}&public_key=" . $pk) \\
+        keep-result=no
+    :put "SpotPay done (ROS v7). User={u} VPN-IP={wg_ip}"
 
 }} else={{
 
-    # ROS v6 - OpenVPN
-    # Rule 2: local variable before fetch
     :local ovpnUrl "{ovpn_url}"
-    /tool fetch url=$ovpnUrl dst-path="spotpay.ovpn" mode=https
-    /certificate import file-name=spotpay.ovpn passphrase=""
-    :delay 2s
-    :if ([:len [/interface ovpn-client find where name="spotpay-vpn"]] = 0) do={{
-        /interface ovpn-client add name=spotpay-vpn connect-to={vps_ip} port=1194 mode=ip user={api_user} certificate=spotpay.ovpn_0 auth=sha1 cipher=aes256 add-default-route=no comment="SpotPay VPN"
+    /tool fetch \\
+        url=$ovpnUrl \\
+        dst-path="spotpay.ovpn" \\
+        mode=https
+    /certificate import \\
+        file-name=spotpay.ovpn \\
+        passphrase=""
+    :delay 5s
+    :if ([:len [/interface ovpn-client \\
+        find where name="spotpay-vpn"]] = 0) do={{
+        /interface ovpn-client add \\
+            name="spotpay-vpn" \\
+            connect-to={vps_ip} \\
+            port=1194 \\
+            mode=ip \\
+            user="{u}" \\
+            certificate=spotpay.ovpn_0 \\
+            auth=sha1 \\
+            cipher=aes256 \\
+            add-default-route=no \\
+            comment="SpotPay VPN"
     }}
     :delay 3s
-    :local ovpnIp "{ovpn_client_ip}"
-    /tool fetch url="{register_url}" http-method=post http-data=("location_id={location.id}&public_key=ovpn&vpn_ip=" . $ovpnIp) keep-result=no
-    :put "SpotPay setup complete (ROS v6). User={api_user} VPN-IP={ovpn_client_ip}"
+    :local ovpnIp "{ovpn_ip}"
+    /tool fetch \\
+        url="{reg_url}" \\
+        http-method=post \\
+        http-data=("location_id={loc_id}&public_key=ovpn&vpn_ip=" \\
+            . $ovpnIp) \\
+        keep-result=no
+    :put "SpotPay done (ROS v6). User={u} VPN-IP={ovpn_ip}"
+}}
 }}
 """
 
@@ -288,7 +329,7 @@ def vpn_reset(request, location_id):
     if request.method == 'POST':
         location.vpn_configured = False
         location.save(update_fields=['vpn_configured'])
-        messages.success(request, f'VPN reset for "{location.site_name}". Run the setup script again on your MikroTik.')
+        messages.success(request, f'VPN reset for "{location.site_name}". Run the setup script again.')
     return redirect('vpn_setup', location_id=location_id)
 
 
