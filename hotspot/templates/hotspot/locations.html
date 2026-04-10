@@ -94,6 +94,11 @@
                 <a href="{% url 'edit_location' location.id %}" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-pencil me-1"></i>Edit
                 </a>
+                {% if location.status == "ACTIVE" %}
+                <a href="{% url 'vpn_setup' location.id %}" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-shield-lock me-1"></i>VPN
+                </a>
+                {% endif %}
                 {% if location.status == "ACTIVE" and location.has_active_subscription %}
                 <a href="{% url 'portal_download_page' location.uuid %}" class="btn btn-primary btn-sm flex-grow-1">
                     <i class="bi bi-download me-1"></i>Get Portal Files

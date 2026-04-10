@@ -62,12 +62,9 @@
             <h5 class="mb-0">{{ location.site_name }}</h5>
             <small class="text-muted">{{ location.get_location_type_display }} &mdash; {{ location.town_city }}</small>
         </div>
-        <span class="badge bg-warning text-dark ms-auto">VPN Not Configured</span>
-    </div>
-
-    <div class="alert alert-info mb-4">
-        <i class="bi bi-info-circle me-2"></i>
-        Run the command below on your MikroTik terminal. SpotPay will automatically configure everything — no further steps needed.
+        <span class="badge {% if location.vpn_configured %}bg-success{% else %}bg-warning text-dark{% endif %} ms-auto">
+            {% if location.vpn_configured %}VPN Configured{% else %}VPN Not Configured{% endif %}
+        </span>
     </div>
 
     {% if location.vpn_configured %}
@@ -82,9 +79,14 @@
     </div>
     {% endif %}
 
+    <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle me-2"></i>
+        Run the command below on your MikroTik terminal. The script automatically detects your RouterOS version and configures the right VPN — works on both <strong>ROS v6</strong> and <strong>ROS v7</strong>.
+    </div>
+
     <!-- Step 1 -->
     <div class="setup-step">
-        <div class="d-flex align-items-center gap-3 mb-3">
+        <div class="d-flex align-items-center gap-3">
             <div class="step-number">1</div>
             <div>
                 <h6 class="mb-0">Open MikroTik Terminal</h6>
@@ -121,12 +123,38 @@
             </div>
         </div>
         <ul class="mb-0" style="font-size:13px; line-height:2;">
-            <li>Creates API user <code>{{ location.vpn_api_user }}</code> with full access on your router</li>
+            <li>Creates API user <code>{{ location.vpn_api_user }}</code> with full access</li>
             <li>Enables MikroTik API on port <strong>8728</strong></li>
-            <li>Connects your router to SpotPay via WireGuard VPN</li>
+            <li><strong>ROS v7:</strong> Connects via WireGuard VPN</li>
+            <li><strong>ROS v6:</strong> Connects via OpenVPN</li>
             <li>Registers your router on Mikhmon automatically</li>
             <li>You can start generating vouchers immediately after</li>
         </ul>
+    </div>
+
+    <!-- API Credentials -->
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number"><i class="bi bi-key fs-6"></i></div>
+            <div>
+                <h6 class="mb-0">MikroTik API Credentials</h6>
+                <small class="text-muted">Auto-generated credentials used by SpotPay to connect to your router</small>
+            </div>
+        </div>
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary);">Username</label>
+                <div class="script-box position-relative mt-1" style="padding: .6rem 1rem; font-size:13px;" id="cred-user">{{ location.vpn_api_user }}<button class="copy-btn" onclick="copyText('cred-user', this)"><i class="bi bi-clipboard me-1"></i>Copy</button></div>
+            </div>
+            <div class="col-sm-6">
+                <label style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary);">Password</label>
+                <div class="script-box position-relative mt-1" style="padding: .6rem 1rem; font-size:13px;" id="cred-pass">{{ location.vpn_api_password }}<button class="copy-btn" onclick="copyText('cred-pass', this)"><i class="bi bi-clipboard me-1"></i>Copy</button></div>
+            </div>
+        </div>
+        <div class="alert alert-warning mt-3 mb-0 py-2 px-3" style="font-size:12px;">
+            <i class="bi bi-shield-lock me-1"></i>
+            Keep these credentials private. They give full access to your MikroTik router.
+        </div>
     </div>
 
 </div>

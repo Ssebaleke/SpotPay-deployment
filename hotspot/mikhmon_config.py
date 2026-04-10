@@ -1,21 +1,22 @@
 """
 mikhmon_config.py
-Injects a new location into Mikhmon V3 config.php on the host filesystem.
-Mikhmon V3 runs directly via PHP on port 8081 at /root/mikhmon-v3/
+Injects a location into Mikhmon V3 config.php on the VPS host.
 
-V3 config format (from live config):
-$data['SESSION_KEY'] = array (
-    '1'=>'SESSION_KEY!vpn_ip',
-    'SESSION_KEY@|@api_user',
-    'SESSION_KEY#|#api_pass',
-    'SESSION_KEY%site_name',
-    'SESSION_KEY^dns',
-    'SESSION_KEY&UGX',
-    'SESSION_KEY*10',
-    'SESSION_KEY(1',
-    'SESSION_KEY)',
-    'SESSION_KEY=10',
-    'SESSION_KEY@!@disable');
+Mikhmon V3 runs at /root/mikhmon-v3/ via: php -S 0.0.0.0:8081
+Config: /root/mikhmon-v3/include/config.php
+
+readcfg.php reads array by numeric keys 1-11:
+  [1]  ip           explode('!', ...)[1]
+  [2]  api_user     explode('@|@', ...)[1]
+  [3]  api_pass     explode('#|#', ...)[1]
+  [4]  hotspot_name explode('%', ...)[1]
+  [5]  dns          explode('^', ...)[1]
+  [6]  currency     explode('&', ...)[1]
+  [7]  auto_reload  explode('*', ...)[1]
+  [8]  iface        explode('(', ...)[1]
+  [9]  infolp       explode(')', ...)[1]
+  [10] idle_timeout explode('=', ...)[1]
+  [11] live_report  explode('@!@', ...)[1]
 """
 import logging
 from django.conf import settings
@@ -27,7 +28,7 @@ CONFIG_PATH = '/root/mikhmon-v3/include/config.php'
 
 def inject_mikhmon_session(location):
     """
-    SSH into VPS and inject location into Mikhmon V3 config.php on the host.
+    SSH into VPS and inject location into Mikhmon V3 config.php.
     Returns (True, None) on success or (False, error_str) on failure.
     """
     try:
@@ -38,32 +39,33 @@ def inject_mikhmon_session(location):
     host     = getattr(settings, 'VPS_SSH_HOST', '')
     user     = getattr(settings, 'VPS_SSH_USER', 'root')
     password = getattr(settings, 'VPS_SSH_PASS', '')
+    config_path = getattr(settings, 'MIKHMON_CONFIG_PATH', '/root/mikhmon-v3/include/config.php')
 
     if not host or not password:
         return False, "VPS SSH credentials not configured"
 
     session_key  = location.location_slug.upper().replace('-', '_')
     vpn_subnet   = getattr(settings, 'VPN_SUBNET', '10.8.0')
-    vpn_ip       = "{}.{}".format(vpn_subnet, location.id + 1)
+    vpn_ip       = getattr(location, '_ovpn_ip_override', None) or "{}.{}".format(vpn_subnet, location.id + 1)
     api_user     = location.vpn_api_user
     api_pass     = location.vpn_api_password
     hotspot_name = location.site_name
     dns_name     = location.hotspot_dns or 'hot.spot'
 
-    # V3 $data array format — matches live config exactly
+    # Keys 1-11 match readcfg.php numeric index reads exactly
     new_entry = (
         "$data['{k}'] = array ("
         "'1'=>'{k}!{ip}',"
-        "'{k}@|@{u}',"
-        "'{k}#|#{p}',"
-        "'{k}%{name}',"
-        "'{k}^{dns}',"
-        "'{k}&UGX',"
-        "'{k}*10',"
-        "'{k}(1',"
-        "'{k})',"
-        "'{k}=10',"
-        "'{k}@!@disable');"
+        "'2'=>'{k}@|@{u}',"
+        "'3'=>'{k}#|#{p}',"
+        "'4'=>'{k}%{name}',"
+        "'5'=>'{k}^{dns}',"
+        "'6'=>'{k}&UGX',"
+        "'7'=>'{k}*10',"
+        "'8'=>'{k}(1',"
+        "'9'=>'{k})',"
+        "'10'=>'{k}=10',"
+        "'11'=>'{k}@!@disable');"
     ).format(k=session_key, ip=vpn_ip, u=api_user, p=api_pass, name=hotspot_name, dns=dns_name)
 
     try:
@@ -77,41 +79,43 @@ def inject_mikhmon_session(location):
             err = stderr.read().decode('utf-8', errors='ignore').strip()
             return out, err
 
-        # Read current config directly from host
-        out, err = run("cat '{}'".format(CONFIG_PATH))
+        out, err = run("cat '{}'".format(config_path))
         if not out:
             client.close()
-            return False, "Could not read V3 config at {}".format(CONFIG_PATH)
+            return False, "Could not read V3 config at {}".format(config_path)
 
         content = out
+        import re
 
-        # Already injected — update IP if it changed, then return
-        if session_key in content:
-            # Find current IP in config and update if different
-            import re
-            pattern = r"(\$data\['" + re.escape(session_key) + r"'\] = array \('1'=>'" + re.escape(session_key) + r"!)([\.\d]+)('"
+        # Already injected — update IP if changed
+        if "$data['{}']".format(session_key) in content:
+            pattern = (
+                r"(\$data\['" + re.escape(session_key) +
+                r"'\] = array \('1'=>'" + re.escape(session_key) +
+                r"!)([\.\d]+)(')"
+            )
             match = re.search(pattern, content)
             if match and match.group(2) != vpn_ip:
                 updated = re.sub(pattern, lambda m: m.group(1) + vpn_ip + m.group(3), content)
                 sftp = client.open_sftp()
-                with sftp.open(CONFIG_PATH, 'w') as f:
+                with sftp.open(config_path, 'w') as f:
                     f.write(updated)
                 sftp.close()
-                logger.info("Mikhmon V3 session '{}' IP updated {} -> {}".format(session_key, match.group(2), vpn_ip))
+                logger.info("Mikhmon V3 session '{}' IP updated {} -> {}".format(
+                    session_key, match.group(2), vpn_ip))
             client.close()
             location.mikhmon_session = session_key
             location.save(update_fields=['mikhmon_session'])
             return True, None
 
-        if '};' not in content:
-            client.close()
-            return False, "Mikhmon V3 config format not recognized — missing '};'"
+        # Insert before $data['mikhmon'] auth line which is always last
+        if "$data['mikhmon']" in content:
+            updated = content.replace("$data['mikhmon']", new_entry + "\n$data['mikhmon']", 1)
+        else:
+            updated = content.rstrip() + "\n" + new_entry + "\n"
 
-        updated = content.replace('};', '};\n' + new_entry, 1)
-
-        # Write via SFTP directly to host file
         sftp = client.open_sftp()
-        with sftp.open(CONFIG_PATH, 'w') as f:
+        with sftp.open(config_path, 'w') as f:
             f.write(updated)
         sftp.close()
         client.close()

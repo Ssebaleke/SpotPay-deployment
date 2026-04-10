@@ -176,6 +176,16 @@ class HotspotLocation(models.Model):
         default=False,
         help_text="Set to True once vendor has run the VPN setup script"
     )
+    ovpn_client_config = models.TextField(
+        blank=True,
+        help_text="Generated OpenVPN client config (.ovpn) for ROS v6"
+    )
+    ros_version = models.CharField(
+        max_length=5,
+        choices=[('v6', 'RouterOS v6'), ('v7', 'RouterOS v7')],
+        default='v7',
+        help_text="MikroTik RouterOS version — determines VPN type (WireGuard v7, OpenVPN v6)"
+    )
 
     max_concurrent_users = models.PositiveIntegerField(default=50)
     is_active = models.BooleanField(default=False)

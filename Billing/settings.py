@@ -246,7 +246,7 @@ VPN_SUBNET = os.getenv("VPN_SUBNET", "10.10.0").strip()
 VPS_SSH_HOST = os.getenv("VPS_SSH_HOST", "").strip()
 VPS_SSH_USER = os.getenv("VPS_SSH_USER", "root").strip()
 VPS_SSH_PASS = os.getenv("VPS_SSH_PASS", "").strip()
-MIKHMON_CONFIG_PATH = os.getenv("MIKHMON_CONFIG_PATH", "/root/mikhmon-v3/include/config/config.php").strip()
+MIKHMON_CONFIG_PATH = os.getenv("MIKHMON_CONFIG_PATH", "/root/mikhmon-v3/include/config.php").strip()
 
 # ==================================================
 # PROXY / HTTPS (safe defaults; won't break HTTP)

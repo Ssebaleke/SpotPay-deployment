@@ -14,6 +14,10 @@ urlpatterns = [
     path('<int:location_id>/vpn-setup/', views.vpn_setup, name='vpn_setup'),
     path('<int:location_id>/vpn-script.rsc', views.vpn_script, name='vpn_script'),
     path('<int:location_id>/vpn-reset/', views.vpn_reset, name='vpn_reset'),
+    path('<int:location_id>/ovpn-download/', views.ovpn_download, name='ovpn_download'),
+    path('<int:location_id>/ovpn-ca/', views.ovpn_ca, name='ovpn_ca'),
+    path('<int:location_id>/ovpn-cert/', views.ovpn_cert, name='ovpn_cert'),
+    path('<int:location_id>/ovpn-key/', views.ovpn_key, name='ovpn_key'),
     path('dns-setup/', views.dns_setup, name='dns_setup'),
     path('dns-setup/<int:location_id>/save/', views.save_dns, name='save_dns'),
 ]

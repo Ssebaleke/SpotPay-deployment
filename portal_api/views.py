@@ -486,53 +486,65 @@ def register_vpn(request):
     except HotspotLocation.DoesNotExist:
         return JsonResponse({'status': 'error', 'message': 'Location not found'}, status=404)
 
-    vpn_subnet = getattr(settings, 'VPN_SUBNET', '10.8.0')
-    assigned_ip = f"{vpn_subnet}.{location.id + 1}"
+    is_ovpn = (public_key == 'ovpn')
+    vpn_subnet  = getattr(settings, 'VPN_SUBNET', '10.8.0')
+    # v6 OpenVPN uses 10.9.0.x subnet, v7 WireGuard uses VPN_SUBNET
+    if is_ovpn:
+        assigned_ip = f"10.9.0.{location.id + 1}"
+    else:
+        assigned_ip = f"{vpn_subnet}.{location.id + 1}"
 
-    ssh_host = getattr(settings, 'VPS_SSH_HOST', '')
-    ssh_user = getattr(settings, 'VPS_SSH_USER', 'root')
-    ssh_pass = getattr(settings, 'VPS_SSH_PASS', '')
+    ssh_host  = getattr(settings, 'VPS_SSH_HOST', '')
+    ssh_user  = getattr(settings, 'VPS_SSH_USER', 'root')
+    ssh_pass  = getattr(settings, 'VPS_SSH_PASS', '')
     vpn_iface = getattr(settings, 'VPN_INTERFACE_NAME', 'wg0')
 
     if not ssh_host or not ssh_pass:
-        logger.error(f"register_vpn: VPS_SSH_HOST or VPS_SSH_PASS not set in environment")
+        logger.error("register_vpn: VPS_SSH_HOST or VPS_SSH_PASS not set in environment")
         return JsonResponse({'status': 'error', 'message': 'VPS SSH not configured'}, status=500)
 
     try:
-        import paramiko
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(ssh_host, username=ssh_user, password=ssh_pass, timeout=15)
+        if not is_ovpn:
+            # --- ROS v7: add WireGuard peer on VPS ---
+            import paramiko
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(ssh_host, username=ssh_user, password=ssh_pass, timeout=15)
 
-        def run(cmd):
-            _, stdout, stderr = client.exec_command(cmd)
-            out = stdout.read().decode('utf-8', errors='ignore').strip()
-            err = stderr.read().decode('utf-8', errors='ignore').strip()
-            return out, err
+            def run(cmd):
+                _, stdout, stderr = client.exec_command(cmd)
+                out = stdout.read().decode('utf-8', errors='ignore').strip()
+                err = stderr.read().decode('utf-8', errors='ignore').strip()
+                return out, err
 
-        # 1. Add WireGuard peer on VPS
-        _, wg_err = run(f"wg set {vpn_iface} peer '{public_key}' allowed-ips {assigned_ip}/32")
-        if wg_err:
-            logger.warning(f"WireGuard peer add warning for location {location_id}: {wg_err}")
+            _, wg_err = run(f"wg set {vpn_iface} peer '{public_key}' allowed-ips {assigned_ip}/32")
+            if wg_err:
+                logger.warning(f"WireGuard peer add warning for location {location_id}: {wg_err}")
 
-        # 2. Save WireGuard config permanently
-        _, save_err = run(f"wg-quick save {vpn_iface}")
-        if save_err:
-            logger.warning(f"wg-quick save warning for location {location_id}: {save_err}")
+            _, save_err = run(f"wg-quick save {vpn_iface}")
+            if save_err:
+                logger.warning(f"wg-quick save warning for location {location_id}: {save_err}")
 
-        client.close()
+            client.close()
+        # else: ROS v6 OpenVPN — VPS doesn't need peer config, tunnel is client-initiated
 
-        # 3. Inject into Mikhmon config.php
+        # Inject into Mikhmon config.php (both v6 and v7)
+        # For v6, temporarily override the VPN IP used in Mikhmon to the ovpn subnet
+        if is_ovpn:
+            location._ovpn_ip_override = assigned_ip
+
         from hotspot.mikhmon_config import inject_mikhmon_session
         ok, err = inject_mikhmon_session(location)
         if not ok:
             logger.error(f"Mikhmon inject failed for location {location_id}: {err}")
 
-        # 4. Save public key and mark fully configured
+        if is_ovpn:
+            del location._ovpn_ip_override
+
         location.vpn_configured = True
         location.save(update_fields=['vpn_configured'])
 
-        logger.info(f"VPN registered for location {location_id} — IP {assigned_ip}")
+        logger.info(f"VPN registered for location {location_id} ({'OpenVPN v6' if is_ovpn else 'WireGuard v7'}) — IP {assigned_ip}")
         return JsonResponse({
             'status': 'success',
             'message': f'Location {location.site_name} is now LIVE.',
