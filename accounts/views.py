@@ -230,33 +230,6 @@ def admin_dashboard(request):
     )
 
     today_date = timezone.localdate()
-    now = timezone.now()
-    week_start = now - timedelta(days=today_date.weekday())
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-    success_qs_all = Payment.objects.filter(purpose="TRANSACTION", status="SUCCESS")
-    today_revenue = success_qs_all.filter(completed_at__date=today_date).aggregate(t=Sum("amount"))["t"] or Decimal("0")
-    weekly_revenue = success_qs_all.filter(completed_at__gte=week_start).aggregate(t=Sum("amount"))["t"] or Decimal("0")
-    monthly_revenue = success_qs_all.filter(completed_at__gte=month_start).aggregate(t=Sum("amount"))["t"] or Decimal("0")
-
-    # Weekly chart data (Mon-Sun)
-    weekly_labels, weekly_values = [], []
-    days_since_monday = today_date.weekday()
-    for offset in range(days_since_monday, -1, -1):
-        day = today_date - timedelta(days=offset)
-        val = success_qs_all.filter(completed_at__date=day).aggregate(t=Sum("amount"))["t"] or Decimal("0")
-        weekly_labels.append(day.strftime("%a"))
-        weekly_values.append(float(val))
-
-    # Monthly chart data (last 30 days)
-    monthly_labels, monthly_values = [], []
-    for offset in range(29, -1, -1):
-        day = today_date - timedelta(days=offset)
-        val = success_qs_all.filter(completed_at__date=day).aggregate(t=Sum("amount"))["t"] or Decimal("0")
-        monthly_labels.append(day.strftime("%d %b"))
-        monthly_values.append(float(val))
-
-    today_date = timezone.localdate()
     now2 = timezone.now()
     week_start2 = now2 - timedelta(days=today_date.weekday())
     month_start2 = now2.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -1072,6 +1045,11 @@ def vendor_transactions(request):
         vendor_payments = vendor_payments.filter(status=status_filter)
 
     txn_qs = vendor_payments.select_related('package', 'location').order_by('-initiated_at')
+
+    # By default hide all FAILED transactions to avoid scaring vendors
+    # Vendor can explicitly filter to see them
+    if not status_filter:
+        txn_qs = txn_qs.exclude(status='FAILED')
 
     def get_failure_reason(txn):
         if txn.status != 'FAILED':

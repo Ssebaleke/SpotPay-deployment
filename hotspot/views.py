@@ -167,6 +167,10 @@ def vpn_setup(request, location_id):
         'location': location,
         'one_liner': one_liner,
         'script_url': script_url,
+        'wg_ip': f"{getattr(settings, 'VPN_SUBNET', '10.8.0')}.{location.id + 1}",
+        'wg_pubkey': getattr(settings, 'VPN_SERVER_PUBLIC_KEY', ''),
+        'vps_ip': getattr(settings, 'VPN_SERVER_IP', ''),
+        'vps_port': getattr(settings, 'VPN_SERVER_PORT', '443'),
     })
 
 
@@ -265,6 +269,68 @@ def vpn_script(request, location_id):
             logger.error(f"Mikhmon auto-config failed for location {location.id}: {e}")
 
     return HttpResponse(script, content_type='text/plain; charset=utf-8')
+
+
+@login_required
+def vpn_manual_register(request, location_id):
+    """Vendor submits their WireGuard public key after manual configuration."""
+    if request.user.is_staff:
+        return redirect('admin_dashboard')
+    try:
+        vendor = request.user.vendor
+    except:
+        return redirect('vendor_login')
+
+    location = get_object_or_404(HotspotLocation, id=location_id, vendor=vendor, status='ACTIVE')
+
+    if request.method == 'POST':
+        public_key = request.POST.get('public_key', '').strip()
+        if not public_key:
+            messages.error(request, 'Please paste your WireGuard public key.')
+            return redirect('vpn_setup', location_id=location_id)
+
+        # Restore + signs (spaces from form)
+        public_key = public_key.replace(' ', '+')
+
+        vpn_subnet  = getattr(settings, 'VPN_SUBNET', '10.8.0')
+        assigned_ip = f"{vpn_subnet}.{location.id + 1}"
+        ssh_host    = getattr(settings, 'VPS_SSH_HOST', '')
+        ssh_user    = getattr(settings, 'VPS_SSH_USER', 'root')
+        ssh_pass    = getattr(settings, 'VPS_SSH_PASS', '')
+        vpn_iface   = getattr(settings, 'VPN_INTERFACE_NAME', 'wg0')
+
+        try:
+            import paramiko
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(ssh_host, username=ssh_user, password=ssh_pass, timeout=15)
+
+            def run(cmd):
+                _, stdout, stderr = ssh.exec_command(cmd)
+                stdout.read()
+
+            # Add WireGuard peer on VPS
+            run(f"wg set {vpn_iface} peer '{public_key}' allowed-ips {assigned_ip}/32")
+            run(f"wg-quick save {vpn_iface}")
+            ssh.close()
+
+            # Inject into Mikhmon
+            from hotspot.mikhmon_config import inject_mikhmon_session
+            inject_mikhmon_session(location)
+
+            # Mark configured
+            location.vpn_configured = True
+            location.save(update_fields=['vpn_configured'])
+
+            messages.success(request, f'Setup complete! Your router is now connected. Tap Open to access Mikhmon.')
+            return redirect('voucher_generator')
+
+        except Exception as e:
+            logger.error(f"Manual VPN register failed for location {location_id}: {e}")
+            messages.error(request, f'Registration failed: {e}')
+            return redirect('vpn_setup', location_id=location_id)
+
+    return redirect('vpn_setup', location_id=location_id)
 
 
 @login_required

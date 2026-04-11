@@ -5,47 +5,46 @@
 
 {% block extra_css %}
 <style>
-    .script-box {
+    .cmd-box {
         background: #0d1117;
         color: #c9d1d9;
         border-radius: 10px;
-        padding: 1.2rem;
+        padding: 1rem 1.2rem;
         font-family: 'Courier New', monospace;
         font-size: 13px;
-        line-height: 1.7;
-        white-space: pre-wrap;
-        word-break: break-all;
+        line-height: 1.6;
         border: 1px solid #30363d;
         position: relative;
+        word-break: break-all;
     }
     .copy-btn {
         position: absolute;
-        top: 10px; right: 10px;
+        top: 8px; right: 8px;
         background: rgba(255,255,255,0.08);
         border: 1px solid #30363d;
         color: #c9d1d9;
         border-radius: 6px;
-        padding: 4px 12px;
-        font-size: 12px;
+        padding: 3px 10px;
+        font-size: 11px;
         cursor: pointer;
     }
     .copy-btn.copied { color: #3fb950; border-color: #3fb950; }
     .step-number {
-        width: 32px; height: 32px;
+        width: 30px; height: 30px;
         border-radius: 50%;
         background: var(--primary);
         color: #fff;
         font-weight: 700;
-        font-size: 14px;
+        font-size: 13px;
         display: flex; align-items: center; justify-content: center;
         flex-shrink: 0;
     }
     .setup-step {
         background: var(--bg-secondary);
         border-radius: 14px;
-        padding: 1.5rem;
+        padding: 1.2rem 1.5rem;
         border: 1px solid var(--border-color);
-        margin-bottom: 1.2rem;
+        margin-bottom: 1rem;
     }
 </style>
 {% endblock %}
@@ -62,99 +61,118 @@
             <h5 class="mb-0">{{ location.site_name }}</h5>
             <small class="text-muted">{{ location.get_location_type_display }} &mdash; {{ location.town_city }}</small>
         </div>
-        <span class="badge {% if location.vpn_configured %}bg-success{% else %}bg-warning text-dark{% endif %} ms-auto">
-            {% if location.vpn_configured %}VPN Configured{% else %}VPN Not Configured{% endif %}
-        </span>
+        <span class="badge bg-warning text-dark ms-auto">VPN Not Configured</span>
     </div>
 
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-3">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+
     {% if location.vpn_configured %}
-    <div class="alert alert-warning mb-4 d-flex justify-content-between align-items-center">
-        <div><i class="bi bi-exclamation-triangle me-2"></i>Did you reset your MikroTik? Run the script again to reconnect.</div>
+    <div class="alert alert-warning mb-3 d-flex justify-content-between align-items-center">
+        <div><i class="bi bi-exclamation-triangle me-2"></i>MikroTik was reset? Re-run the commands below.</div>
         <form method="POST" action="{% url 'vpn_reset' location.id %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-warning btn-sm ms-3">
-                <i class="bi bi-arrow-clockwise me-1"></i>Re-run Setup
+            <button type="submit" class="btn btn-warning btn-sm">
+                <i class="bi bi-arrow-clockwise me-1"></i>Reset
             </button>
         </form>
     </div>
     {% endif %}
 
-    <div class="alert alert-info mb-4">
+    <div class="alert alert-info mb-4" style="font-size:13px;">
         <i class="bi bi-info-circle me-2"></i>
-        Run the command below on your MikroTik terminal. The script automatically detects your RouterOS version and configures the right VPN — works on both <strong>ROS v6</strong> and <strong>ROS v7</strong>.
+        Open <strong>Winbox &rarr; New Terminal</strong> and run each command below one by one.
+        Then come back here and submit your WireGuard public key to complete the setup.
     </div>
 
-    <!-- Step 1 -->
+    <!-- Commands -->
     <div class="setup-step">
-        <div class="d-flex align-items-center gap-3">
+        <div class="d-flex align-items-center gap-3 mb-3">
             <div class="step-number">1</div>
-            <div>
-                <h6 class="mb-0">Open MikroTik Terminal</h6>
-                <small class="text-muted">Open Winbox &rarr; New Terminal, or SSH into your router</small>
-            </div>
+            <h6 class="mb-0">Create SpotPay API user</h6>
         </div>
+        <div class="cmd-box" id="cmd1">/user add name="{{ location.vpn_api_user }}" password="{{ location.vpn_api_password }}" group=full comment="SpotPay"<button class="copy-btn" onclick="copyCmd('cmd1',this)">Copy</button></div>
     </div>
 
-    <!-- Step 2 -->
     <div class="setup-step">
         <div class="d-flex align-items-center gap-3 mb-3">
             <div class="step-number">2</div>
-            <div>
-                <h6 class="mb-0">Paste this command and press Enter</h6>
-                <small class="text-muted">Downloads and runs the SpotPay setup script automatically</small>
-            </div>
+            <h6 class="mb-0">Enable API on port 8728</h6>
         </div>
-
-        <div class="script-box" id="one-liner">{{ one_liner }}<button class="copy-btn" onclick="copyText('one-liner', this)"><i class="bi bi-clipboard me-1"></i>Copy</button></div>
-
-        <div class="alert alert-warning mt-3 mb-0 py-2 px-3" style="font-size:12px;">
-            <i class="bi bi-exclamation-triangle me-1"></i>
-            Make sure your MikroTik has internet access before running this command.
-        </div>
+        <div class="cmd-box" id="cmd2">/ip service set api disabled=no port=8728<button class="copy-btn" onclick="copyCmd('cmd2',this)">Copy</button></div>
     </div>
 
-    <!-- Step 3 -->
     <div class="setup-step">
         <div class="d-flex align-items-center gap-3 mb-3">
             <div class="step-number">3</div>
-            <div>
-                <h6 class="mb-0">What happens automatically</h6>
-                <small class="text-muted">SpotPay handles everything after you run the command</small>
-            </div>
+            <h6 class="mb-0">Add firewall rule to allow SpotPay API</h6>
         </div>
-        <ul class="mb-0" style="font-size:13px; line-height:2;">
-            <li>Creates API user <code>{{ location.vpn_api_user }}</code> with full access</li>
-            <li>Enables MikroTik API on port <strong>8728</strong></li>
-            <li><strong>ROS v7:</strong> Connects via WireGuard VPN</li>
-            <li><strong>ROS v6:</strong> Connects via OpenVPN</li>
-            <li>Registers your router on Mikhmon automatically</li>
-            <li>You can start generating vouchers immediately after</li>
-        </ul>
+        <div class="cmd-box" id="cmd3">/ip firewall filter add chain=input action=accept protocol=tcp dst-port=8728 src-address=10.8.0.0/16 comment="SpotPay API" place-before=0<button class="copy-btn" onclick="copyCmd('cmd3',this)">Copy</button></div>
     </div>
 
-    <!-- API Credentials -->
     <div class="setup-step">
         <div class="d-flex align-items-center gap-3 mb-3">
-            <div class="step-number"><i class="bi bi-key fs-6"></i></div>
+            <div class="step-number">4</div>
+            <h6 class="mb-0">Add WireGuard interface</h6>
+        </div>
+        <div class="cmd-box" id="cmd4">/interface wireguard add name=wg0 listen-port=13231 comment="SpotPay VPN"<button class="copy-btn" onclick="copyCmd('cmd4',this)">Copy</button></div>
+    </div>
+
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">5</div>
+            <h6 class="mb-0">Assign VPN IP address</h6>
+        </div>
+        <div class="cmd-box" id="cmd5">/ip address add address={{ wg_ip }}/24 interface=wg0<button class="copy-btn" onclick="copyCmd('cmd5',this)">Copy</button></div>
+    </div>
+
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">6</div>
+            <h6 class="mb-0">Add SpotPay VPS as WireGuard peer</h6>
+        </div>
+        <div class="cmd-box" id="cmd6">/interface wireguard peers add interface=wg0 public-key="{{ wg_pubkey }}" endpoint-address={{ vps_ip }} endpoint-port={{ vps_port }} allowed-addresses=10.8.0.0/24 persistent-keepalive=25 comment="SpotPay VPS"<button class="copy-btn" onclick="copyCmd('cmd6',this)">Copy</button></div>
+    </div>
+
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">7</div>
+            <h6 class="mb-0">Get your WireGuard public key</h6>
+            <small class="text-muted">Run this and copy the result</small>
+        </div>
+        <div class="cmd-box" id="cmd7">/interface wireguard get wg0 public-key<button class="copy-btn" onclick="copyCmd('cmd7',this)">Copy</button></div>
+    </div>
+
+    <!-- Submit public key -->
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">8</div>
             <div>
-                <h6 class="mb-0">MikroTik API Credentials</h6>
-                <small class="text-muted">Auto-generated credentials used by SpotPay to connect to your router</small>
+                <h6 class="mb-0">Paste your public key here to complete setup</h6>
+                <small class="text-muted">SpotPay will register your router and open Mikhmon automatically</small>
             </div>
         </div>
-        <div class="row g-3">
-            <div class="col-sm-6">
-                <label style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary);">Username</label>
-                <div class="script-box position-relative mt-1" style="padding: .6rem 1rem; font-size:13px;" id="cred-user">{{ location.vpn_api_user }}<button class="copy-btn" onclick="copyText('cred-user', this)"><i class="bi bi-clipboard me-1"></i>Copy</button></div>
+        <form method="POST" action="{% url 'vpn_manual_register' location.id %}">
+            {% csrf_token %}
+            <div class="input-group">
+                <input type="text" class="form-control font-monospace"
+                       name="public_key"
+                       placeholder="Paste WireGuard public key here e.g. abc123...XR4="
+                       required>
+                <button type="submit" class="btn btn-success px-4">
+                    <i class="bi bi-check-circle me-1"></i>Complete Setup
+                </button>
             </div>
-            <div class="col-sm-6">
-                <label style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--text-secondary);">Password</label>
-                <div class="script-box position-relative mt-1" style="padding: .6rem 1rem; font-size:13px;" id="cred-pass">{{ location.vpn_api_password }}<button class="copy-btn" onclick="copyText('cred-pass', this)"><i class="bi bi-clipboard me-1"></i>Copy</button></div>
-            </div>
-        </div>
-        <div class="alert alert-warning mt-3 mb-0 py-2 px-3" style="font-size:12px;">
-            <i class="bi bi-shield-lock me-1"></i>
-            Keep these credentials private. They give full access to your MikroTik router.
-        </div>
+            <small class="text-muted mt-1 d-block">
+                The key looks like: <code>abc123.../xyz==</code> — copy it from step 7 above.
+            </small>
+        </form>
     </div>
 
 </div>
@@ -163,16 +181,15 @@
 
 {% block extra_js %}
 <script>
-function copyText(id, btn) {
-    var el = document.getElementById(id);
-    var text = el.innerText.replace('Copy', '').trim();
+function copyCmd(id, btn) {
+    var text = document.getElementById(id).innerText.replace('Copy','').trim();
     navigator.clipboard.writeText(text).then(function() {
-        btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied!';
+        btn.textContent = 'Copied!';
         btn.classList.add('copied');
         setTimeout(function() {
-            btn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy';
+            btn.textContent = 'Copy';
             btn.classList.remove('copied');
-        }, 2500);
+        }, 2000);
     });
 }
 </script>

@@ -14,10 +14,10 @@
             </div>
             <div class="col-7 col-sm-4 col-md-3">
                 <select name="status" class="form-select form-select-sm">
-                    <option value="">All Status</option>
+                    <option value="">All (excl. normal failures)</option>
                     <option value="SUCCESS" {% if status_filter == 'SUCCESS' %}selected{% endif %}>Success</option>
                     <option value="PENDING" {% if status_filter == 'PENDING' %}selected{% endif %}>Pending</option>
-                    <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed</option>
+                    <option value="FAILED" {% if status_filter == 'FAILED' %}selected{% endif %}>Failed (all)</option>
                 </select>
             </div>
             <div class="col-7 col-sm-4 col-md-3">
