@@ -233,7 +233,7 @@ def vpn_script(request, location_id):
         ':if ([:len [/interface wireguard find name="wg0"]] = 0) do={/interface wireguard add name="wg0" listen-port=13231 comment="SpotPay VPN"}',
         ':if ([:len [/ip address find address=($wgIP . "/24")]] = 0) do={/ip address add address=($wgIP . "/24") interface="wg0"}',
         ':if ([:len [/interface wireguard peers find comment="SpotPay VPS"]] = 0) do={',
-        '/interface wireguard peers add interface="wg0" public-key=$wgKey endpoint-address=$vpsIP endpoint-port=443 allowed-addresses=10.8.0.0/24 persistent-keepalive=25 comment="SpotPay VPS"',
+        '/interface wireguard peers add interface="wg0" public-key=$wgKey endpoint-address=$vpsIP endpoint-port=443 allowed-address=10.8.0.0/24 persistent-keepalive=25 comment="SpotPay VPS"',
         '}',
         ':delay 2s',
         ':local pk [/interface wireguard get [find name="wg0"] public-key]',

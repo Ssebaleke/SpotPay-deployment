@@ -137,7 +137,7 @@
             <div class="step-number">6</div>
             <h6 class="mb-0">Add SpotPay VPS as WireGuard peer</h6>
         </div>
-        <div class="cmd-box" id="cmd6">/interface wireguard peers add interface=wg0 public-key="{{ wg_pubkey }}" endpoint-address={{ vps_ip }} endpoint-port={{ vps_port }} allowed-addresses=10.8.0.0/24 persistent-keepalive=25 comment="SpotPay VPS"<button class="copy-btn" onclick="copyCmd('cmd6',this)">Copy</button></div>
+        <div class="cmd-box" id="cmd6">/interface wireguard peers add interface=wg0 public-key="{{ wg_pubkey }}" endpoint-address={{ vps_ip }} endpoint-port={{ vps_port }} allowed-address=10.8.0.0/24 persistent-keepalive=25 comment="SpotPay VPS"<button class="copy-btn" onclick="copyCmd('cmd6',this)">Copy</button></div>
     </div>
 
     <div class="setup-step">
