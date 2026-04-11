@@ -85,13 +85,25 @@
     </div>
     {% endif %}
 
+    <!-- ROS Version Toggle -->
+    <div class="mb-4">
+        <label class="form-label fw-semibold">Select your RouterOS version:</label>
+        <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="ros_ver" id="ros_v7" autocomplete="off" checked>
+            <label class="btn btn-outline-primary" for="ros_v7"><i class="bi bi-shield-lock me-1"></i>RouterOS v7 (WireGuard)</label>
+            <input type="radio" class="btn-check" name="ros_ver" id="ros_v6" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="ros_v6"><i class="bi bi-lock me-1"></i>RouterOS v6 (OpenVPN)</label>
+        </div>
+    </div>
+
     <div class="alert alert-info mb-4" style="font-size:13px;">
         <i class="bi bi-info-circle me-2"></i>
         Open <strong>Winbox &rarr; New Terminal</strong> and run each command below one by one.
-        Then come back here and submit your WireGuard public key to complete the setup.
+        Then come back here and complete the setup.
     </div>
 
-    <!-- Commands -->
+    <!-- ===== ROS v7 WireGuard Steps ===== -->
+    <div id="steps-v7">
     <div class="setup-step">
         <div class="d-flex align-items-center gap-3 mb-3">
             <div class="step-number">1</div>
@@ -149,7 +161,6 @@
         <div class="cmd-box" id="cmd7">/interface wireguard get wg0 public-key<button class="copy-btn" onclick="copyCmd('cmd7',this)">Copy</button></div>
     </div>
 
-    <!-- Submit public key -->
     <div class="setup-step">
         <div class="d-flex align-items-center gap-3 mb-3">
             <div class="step-number">8</div>
@@ -169,11 +180,89 @@
                     <i class="bi bi-check-circle me-1"></i>Complete Setup
                 </button>
             </div>
-            <small class="text-muted mt-1 d-block">
-                The key looks like: <code>abc123.../xyz==</code> — copy it from step 7 above.
-            </small>
+            <small class="text-muted mt-1 d-block">The key looks like: <code>abc123.../xyz==</code> — copy it from step 7 above.</small>
         </form>
     </div>
+    </div><!-- end steps-v7 -->
+
+    <!-- ===== ROS v6 OpenVPN Steps ===== -->
+    <div id="steps-v6" style="display:none;">
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">1</div>
+            <h6 class="mb-0">Create SpotPay API user</h6>
+        </div>
+        <div class="cmd-box" id="v6cmd1">/user add name="{{ location.vpn_api_user }}" password="{{ location.vpn_api_password }}" group=full comment="SpotPay"<button class="copy-btn" onclick="copyCmd('v6cmd1',this)">Copy</button></div>
+    </div>
+
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">2</div>
+            <h6 class="mb-0">Enable API on port 8728</h6>
+        </div>
+        <div class="cmd-box" id="v6cmd2">/ip service set api disabled=no port=8728<button class="copy-btn" onclick="copyCmd('v6cmd2',this)">Copy</button></div>
+    </div>
+
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">3</div>
+            <h6 class="mb-0">Add firewall rule to allow SpotPay API</h6>
+        </div>
+        <div class="cmd-box" id="v6cmd3">/ip firewall filter add chain=input action=accept protocol=tcp dst-port=8728 src-address=10.9.0.0/16 comment="SpotPay API" place-before=0<button class="copy-btn" onclick="copyCmd('v6cmd3',this)">Copy</button></div>
+    </div>
+
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">4</div>
+            <h6 class="mb-0">Download OpenVPN config from SpotPay</h6>
+            <small class="text-muted">Run in MikroTik terminal</small>
+        </div>
+        <div class="cmd-box" id="v6cmd4">/tool fetch url="{{ site_url }}/locations/{{ location.id }}/ovpn-download/" dst-path="spotpay.ovpn" mode=https<button class="copy-btn" onclick="copyCmd('v6cmd4',this)">Copy</button></div>
+    </div>
+
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">5</div>
+            <h6 class="mb-0">Import the certificate</h6>
+        </div>
+        <div class="cmd-box" id="v6cmd5">/certificate import file-name=spotpay.ovpn passphrase=""<button class="copy-btn" onclick="copyCmd('v6cmd5',this)">Copy</button></div>
+    </div>
+
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">6</div>
+            <h6 class="mb-0">Check imported certificate name</h6>
+            <small class="text-muted">Note the name shown (e.g. spotpay_0)</small>
+        </div>
+        <div class="cmd-box" id="v6cmd6">/certificate print<button class="copy-btn" onclick="copyCmd('v6cmd6',this)">Copy</button></div>
+    </div>
+
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">7</div>
+            <h6 class="mb-0">Add OpenVPN client interface</h6>
+            <small class="text-muted">Replace <code>spotpay_0</code> with the actual cert name from step 6</small>
+        </div>
+        <div class="cmd-box" id="v6cmd7">/interface ovpn-client add name="spotpay-vpn" connect-to={{ vps_ip }} port=1194 mode=ip user="{{ location.vpn_api_user }}" certificate=spotpay_0 auth=sha1 cipher=aes256 add-default-route=no comment="SpotPay VPN"<button class="copy-btn" onclick="copyCmd('v6cmd7',this)">Copy</button></div>
+    </div>
+
+    <div class="setup-step">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="step-number">8</div>
+            <div>
+                <h6 class="mb-0">Complete setup</h6>
+                <small class="text-muted">Click below once your OpenVPN tunnel is connected</small>
+            </div>
+        </div>
+        <form method="POST" action="{% url 'vpn_manual_register' location.id %}">
+            {% csrf_token %}
+            <input type="hidden" name="public_key" value="ovpn">
+            <button type="submit" class="btn btn-success px-4">
+                <i class="bi bi-check-circle me-1"></i>Complete Setup (ROS v6)
+            </button>
+        </form>
+    </div>
+    </div><!-- end steps-v6 -->
 
 </div>
 </div>
@@ -192,5 +281,13 @@ function copyCmd(id, btn) {
         }, 2000);
     });
 }
+document.getElementById('ros_v7').addEventListener('change', function() {
+    document.getElementById('steps-v7').style.display = '';
+    document.getElementById('steps-v6').style.display = 'none';
+});
+document.getElementById('ros_v6').addEventListener('change', function() {
+    document.getElementById('steps-v7').style.display = 'none';
+    document.getElementById('steps-v6').style.display = '';
+});
 </script>
 {% endblock %}

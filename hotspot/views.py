@@ -167,6 +167,7 @@ def vpn_setup(request, location_id):
         'location': location,
         'one_liner': one_liner,
         'script_url': script_url,
+        'site_url': settings.SITE_URL.rstrip('/'),
         'wg_ip': f"{getattr(settings, 'VPN_SUBNET', '10.8.0')}.{location.id + 1}",
         'wg_pubkey': getattr(settings, 'VPN_SERVER_PUBLIC_KEY', ''),
         'vps_ip': getattr(settings, 'VPN_SERVER_IP', ''),
