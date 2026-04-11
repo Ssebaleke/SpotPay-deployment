@@ -87,22 +87,15 @@ def inject_mikhmon_session(location):
         content = out
         import re
 
-        # Already injected — update IP if changed
+        # Already injected — update entry completely with latest credentials
         if "$data['{}']".format(session_key) in content:
-            pattern = (
-                r"(\$data\['" + re.escape(session_key) +
-                r"'\] = array \('1'=>'" + re.escape(session_key) +
-                r"!)([\.\d]+)(')"
-            )
-            match = re.search(pattern, content)
-            if match and match.group(2) != vpn_ip:
-                updated = re.sub(pattern, lambda m: m.group(1) + vpn_ip + m.group(3), content)
-                sftp = client.open_sftp()
-                with sftp.open(config_path, 'w') as f:
-                    f.write(updated)
-                sftp.close()
-                logger.info("Mikhmon V3 session '{}' IP updated {} -> {}".format(
-                    session_key, match.group(2), vpn_ip))
+            pattern = r"\$data\['" + re.escape(session_key) + r"'\] = array \([^;]+;\n?"
+            updated = re.sub(pattern, new_entry + "\n", content)
+            sftp = client.open_sftp()
+            with sftp.open(config_path, 'w') as f:
+                f.write(updated)
+            sftp.close()
+            logger.info("Mikhmon V3 session '{}' updated for location {}".format(session_key, location.id))
             client.close()
             location.mikhmon_session = session_key
             location.save(update_fields=['mikhmon_session'])
