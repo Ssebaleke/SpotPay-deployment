@@ -328,9 +328,10 @@ def mikrotik_setup_script(request, location_uuid):
                         continue
                     if any(rel.startswith(x) for x in (".vscode", ".git", "__MACOSX", ".DS_Store", "log.", "readme")):
                         continue
-                    file_url = f"{settings.SITE_URL}/api/portal/{location.uuid}/download/?file={rel}"
+                    # Use HTTP not HTTPS — ROS v6 doesn't support modern SSL certs
+                    file_url = f"http://{settings.SITE_URL.replace('https://', '').replace('http://', '')}/api/portal/{location.uuid}/download/?file={rel}"
                     dst = f"hotspot/{rel}"
-                    fetch_cmds.append(f"/tool fetch url=\"{file_url}\" dst-path=\"{dst}\" mode=https")
+                    fetch_cmds.append(f"/tool fetch url=\"{file_url}\" dst-path=\"{dst}\" mode=http")
     except Exception:
         pass
 
@@ -341,8 +342,8 @@ def mikrotik_setup_script(request, location_uuid):
         f"do={{/ip hotspot walled-garden add action=allow comment=\"SpotPay\" dst-host={server_host}}}; "
     )
 
-    fetch_block = "; ".join(fetch_cmds)
-    done_msg = f":put \"SpotPay portal installed. Set DNS Name to {dns_name} under IP > Hotspot > Server Profiles\""
+    fetch_block = "\n".join(fetch_cmds)
+    done_msg = f":put \"SpotPay portal installed. DNS Name={dns_name} — set under IP > Hotspot > Server Profiles\""
 
     script = walled_garden + fetch_block + "; " + done_msg
 
