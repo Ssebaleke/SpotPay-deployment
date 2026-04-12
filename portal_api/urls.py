@@ -5,6 +5,7 @@ from .views import (
     download_portal_zip,
     portal_buy,
     portal_buy_api,
+    portal_buy_form,
     mikrotik_setup_script,
     location_portal_view,
     register_vpn,
@@ -13,6 +14,7 @@ from .views import (
 urlpatterns = [
     path("portal/<uuid:uuid>/", portal_data, name="portal_api"),
     path("portal/<uuid:uuid>/buy-api/", portal_buy_api, name="portal_buy_api"),
+    path("portal/<uuid:uuid>/buy-form/", portal_buy_form, name="portal_buy_form"),
     path("portal/<uuid:uuid>/buy/", portal_buy, name="portal_buy"),
     path("portal/<uuid:uuid>/portal/", location_portal_view, name="location_portal_view"),
     path("portal-download/<uuid:location_uuid>/", portal_download_page, name="portal_download_page"),

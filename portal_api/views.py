@@ -98,9 +98,13 @@ def portal_buy_api(request, uuid):
             status=403
         )
 
-    # parse JSON safely
+    # parse JSON or form-urlencoded safely
     try:
-        payload = json.loads(request.body.decode("utf-8") or "{}")
+        ct = (request.content_type or '').lower()
+        if 'application/json' in ct:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        else:
+            payload = request.POST.dict()
     except Exception:
         payload = {}
 
@@ -454,6 +458,59 @@ def portal_buy(request, uuid):
         )
         
         
+
+# =====================================================
+# PORTAL BUY FORM — plain HTML form POST
+# POST /api/portal/<uuid>/buy-form/
+# No CORS preflight — works on ALL phones including old Android
+# Redirects to wait page after initiating payment
+# =====================================================
+
+@csrf_exempt
+def portal_buy_form(request, uuid):
+    if request.method != 'POST':
+        return HttpResponse('Method not allowed', status=405)
+
+    location = get_object_or_404(
+        HotspotLocation,
+        uuid=uuid,
+        status='ACTIVE',
+        vendor__status='ACTIVE'
+    )
+
+    if not location.has_active_subscription():
+        return HttpResponse('Service unavailable for this location', status=403)
+
+    package_id  = request.POST.get('package_id', '').strip()
+    phone       = request.POST.get('phone', '').strip()
+    mac_address = request.POST.get('mac_address', '').strip() or None
+    ip_address  = request.POST.get('ip_address', '').strip() or None
+
+    if not package_id or not phone:
+        return HttpResponse('package_id and phone required', status=400)
+
+    package = get_object_or_404(Package, id=package_id, location=location, is_active=True)
+
+    if not package.is_available_now():
+        return HttpResponse('Package not available right now', status=400)
+
+    if not package.vouchers.filter(status='UNUSED').exists():
+        return HttpResponse('Package out of stock', status=400)
+
+    result = initiate_payment(
+        location=location,
+        package=package,
+        phone=phone,
+        source='FORM_PORTAL',
+        mac_address=mac_address,
+        ip_address=ip_address,
+    )
+
+    # Redirect to wait page — runs outside captive portal sandbox
+    payment_uuid = result.get('payment_uuid', '')
+    from django.shortcuts import redirect as django_redirect
+    return django_redirect(f'http://spotpay.it.com/payments/wait/{payment_uuid}/')
+
 
 # =====================================================
 # REGISTER VPN — MikroTik callback after script runs
