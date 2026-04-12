@@ -289,14 +289,11 @@ def portal_download_page(request, location_uuid):
 #   2. Download all hotspot portal files via /tool fetch
 # =====================================================
 
-@login_required
 def mikrotik_setup_script(request, location_uuid):
-    vendor = request.user.vendor
-
     location = get_object_or_404(
-        vendor.locations,
+        HotspotLocation,
         uuid=location_uuid,
-        status="ACTIVE"
+        status='ACTIVE'
     )
 
     from urllib.parse import urlparse
