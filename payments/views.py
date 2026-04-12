@@ -295,3 +295,68 @@ def payment_success_redirect(request, uuid):
         f"&password={voucher_code}"
     )
     return redirect(auto_login_url)
+
+
+
+def find_voucher(request):
+    """
+    GET /payments/find-voucher/?txn_id=<transaction_id>&location=<uuid>
+    Looks up payment by MTN/Airtel transaction ID, returns voucher + hotspot DNS.
+    """
+    txn_id        = (request.GET.get('txn_id') or '').strip()
+    location_uuid = (request.GET.get('location') or '').strip()
+
+    if not txn_id or not location_uuid:
+        return JsonResponse({'voucher': None, 'message': 'Transaction ID and location required.'}, status=400)
+
+    payment = (
+        Payment.objects
+        .filter(provider_reference=txn_id, location__uuid=location_uuid, status='SUCCESS', purpose='TRANSACTION')
+        .first()
+    )
+
+    if not payment:
+        return JsonResponse({
+            'voucher': None,
+            'message': 'No payment found for this transaction ID. Check the ID from your MTN/Airtel SMS and try again.'
+        })
+
+    voucher_code = None
+    try:
+        voucher_code = payment.issued_voucher.voucher.code
+    except Exception:
+        pass
+
+    if not voucher_code:
+        try:
+            handle_payment_success(payment)
+            payment.refresh_from_db()
+            voucher_code = payment.issued_voucher.voucher.code
+        except Exception:
+            pass
+
+    if not voucher_code:
+        return JsonResponse({'voucher': None, 'message': 'Voucher not found. Please contact support.'})
+
+    hotspot_dns = payment.location.hotspot_dns if payment.location_id else 'hot.spot'
+
+    return JsonResponse({
+        'voucher':     voucher_code,
+        'hotspot_dns': hotspot_dns,
+        'message':     'Voucher found.',
+    })
+
+
+def payment_wait(request, reference):
+    """
+    GET /payments/wait/{reference}/
+    External wait page — shown after payment initiation.
+    Polls payment_status via JS and auto-connects via DNS redirect on success.
+    Runs outside the captive portal sandbox for maximum compatibility.
+    """
+    from django.shortcuts import render
+    status_url = f'/payments/status/{reference}/'
+    return render(request, 'payments/payment_wait.html', {
+        'status_url': status_url,
+        'reference':  reference,
+    })

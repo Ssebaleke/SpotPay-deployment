@@ -31,4 +31,10 @@ urlpatterns = [
 
     # Post-payment redirect → auto-login on MikroTik
     path("success/<uuid:uuid>/", views.payment_success_redirect, name="payment_success_redirect"),
+
+    # Payment wait page (external status page for auto-connect)
+    path("wait/<str:reference>/", views.payment_wait, name="payment_wait"),
+
+    # Find voucher by transaction ID
+    path("find-voucher/", views.find_voucher, name="find_voucher"),
 ]
