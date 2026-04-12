@@ -111,27 +111,21 @@
         <div class="d-flex align-items-center gap-3 mb-3">
             <div class="step-number">1</div>
             <div>
-                <h6 class="mb-0">Run this script in MikroTik Terminal</h6>
-                <small class="text-muted">Opens Winbox → New Terminal, paste and press Enter</small>
+                <h6 class="mb-0">Run this command in MikroTik Terminal</h6>
+                <small class="text-muted">Winbox &rarr; New Terminal &rarr; paste and press Enter</small>
             </div>
-            <a href="{% url 'mikrotik_setup_script' location.uuid %}"
-               class="btn btn-outline-secondary btn-sm ms-auto"
-               download="spotpay-setup-{{ location.site_name|slugify }}.rsc">
-                <i class="bi bi-download me-1"></i>Download .rsc
-            </a>
         </div>
 
         <div class="position-relative">
-            <pre class="script-box" id="mikrotik-script">Loading script...</pre>
-            <button class="copy-btn" id="copy-script-btn" onclick="copyScript()">
+            <div class="script-box" id="one-liner">/tool fetch url="http://{{ request.get_host }}/api/portal/{{ location.uuid }}/mikrotik-script/" dst-path="spotpay-setup.rsc" mode=http; /import spotpay-setup.rsc</div>
+            <button class="copy-btn" onclick="copyOneLiner()">
                 <i class="bi bi-clipboard me-1"></i>Copy
             </button>
         </div>
 
-        <div class="alert alert-info mt-3 mb-0 py-2 px-3" style="font-size:12px;">
-            <i class="bi bi-info-circle me-1"></i>
-            The script adds walled garden rules so clients can reach SpotPay before paying,
-            then downloads and extracts your portal files directly onto the router.
+        <div class="alert alert-warning mt-3 mb-0 py-2 px-3" style="font-size:12px;">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            <strong>Do not paste the full script directly</strong> — always use this one-liner to download and import it. The full script contains <code>&amp;</code> characters that break the terminal.
         </div>
     </div>
 
@@ -219,19 +213,13 @@
 
 {% block extra_js %}
 <script>
-// Load script dynamically from the view so it always reflects latest server code
-fetch("{% url 'mikrotik_setup_script' location.uuid %}")
-    .then(r => r.text())
-    .then(text => { document.getElementById('mikrotik-script').textContent = text; })
-    .catch(() => { document.getElementById('mikrotik-script').textContent = 'Failed to load script. Try refreshing.'; });
-
-function copyScript() {
-    const text = document.getElementById('mikrotik-script').textContent;
-    navigator.clipboard.writeText(text).then(() => {
-        const btn = document.getElementById('copy-script-btn');
+function copyOneLiner() {
+    var text = document.getElementById('one-liner').textContent.trim();
+    navigator.clipboard.writeText(text).then(function() {
+        var btn = event.target.closest('button');
         btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied!';
         btn.classList.add('copied');
-        setTimeout(() => {
+        setTimeout(function() {
             btn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Copy';
             btn.classList.remove('copied');
         }, 2500);
