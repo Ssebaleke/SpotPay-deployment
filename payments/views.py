@@ -82,7 +82,7 @@ def initiate_payment(request):
         "payment_uuid": str(payment.uuid),
         "reference": ref,
         "status": payment.status,
-        "status_url": f"/payments/status/{ref}/",
+        "status_url": f"/payments/status/{payment.uuid}/",
         "success_url": f"/payments/success/{payment.uuid}/",
         "message": "Please approve the payment on your phone."
     })
@@ -132,42 +132,6 @@ def payment_status(request, reference):
                         handle_payment_success(payment)
 
                 elif status == "FAILED" and payment.status == "PENDING":
-                    with transaction.atomic():
-                        p = Payment.objects.select_for_update().get(pk=payment.pk)
-                        if p.status == "PENDING":
-                            p.mark_failed(result)
-                    payment.refresh_from_db()
-
-            except Exception:
-                pass
-
-    # If still PENDING and using LivePay, poll live status throttled to once per 5s
-    if payment.status == "PENDING" and payment.provider and payment.provider.provider_type == "LIVE":
-        from django.core.cache import cache
-        cache_key = f"live_poll_{payment.pk}"
-        if not cache.get(cache_key):
-            cache.set(cache_key, True, 5)
-            try:
-                from payments.live_client import LivePayClient
-                client = LivePayClient(
-                    public_key=payment.provider.api_key,
-                    secret_key=payment.provider.api_secret,
-                )
-                result = client.check_status(payment.provider_reference)
-                status = str(result.get("transaction", {}).get("status", "")).lower()
-
-                if status in ("approved", "success", "successful", "completed"):
-                    with transaction.atomic():
-                        p = Payment.objects.select_for_update().get(pk=payment.pk)
-                        if p.status == "PENDING":
-                            p.mark_success(result)
-                            if p.vendor_id:
-                                notify_vendor_payment_received(p)
-                    payment.refresh_from_db()
-                    if payment.status == "SUCCESS":
-                        handle_payment_success(payment)
-
-                elif status in ("failed", "cancelled", "canceled"):
                     with transaction.atomic():
                         p = Payment.objects.select_for_update().get(pk=payment.pk)
                         if p.status == "PENDING":
@@ -336,25 +300,33 @@ def payment_success_redirect(request, uuid):
 
 def find_voucher(request):
     """
-    GET /payments/find-voucher/?txn_id=<transaction_id>&location=<uuid>
-    Looks up payment by MTN/Airtel transaction ID, returns voucher + hotspot DNS.
+    GET /payments/find-voucher/?phone=256XXXXXXXXX&location=<uuid>
+    Returns the most recent unused voucher issued to this phone at this location.
     """
-    txn_id        = (request.GET.get('txn_id') or '').strip()
+    phone         = (request.GET.get('phone') or '').strip()
     location_uuid = (request.GET.get('location') or '').strip()
 
-    if not txn_id or not location_uuid:
-        return JsonResponse({'voucher': None, 'message': 'Transaction ID and location required.'}, status=400)
+    if not phone or not location_uuid:
+        return JsonResponse({'voucher': None, 'message': 'Phone and location required.'}, status=400)
+
+    # Normalize phone to 256XXXXXXXXX
+    digits = ''.join(c for c in phone if c.isdigit())
+    if digits.startswith('0'):
+        digits = '256' + digits[1:]
+    elif not digits.startswith('256'):
+        digits = '256' + digits
 
     payment = (
         Payment.objects
-        .filter(provider_reference=txn_id, location__uuid=location_uuid, status='SUCCESS', purpose='TRANSACTION')
+        .filter(phone=digits, location__uuid=location_uuid, status='SUCCESS', purpose='TRANSACTION')
+        .order_by('-initiated_at')
         .first()
     )
 
     if not payment:
         return JsonResponse({
             'voucher': None,
-            'message': 'No payment found for this transaction ID. Check the ID from your MTN/Airtel SMS and try again.'
+            'message': 'No payment found for this number at this location. Make sure you enter the number you used to pay.'
         })
 
     voucher_code = None
@@ -384,15 +356,15 @@ def find_voucher(request):
 
 
 def payment_wait(request, reference):
-    """
-    GET /payments/wait/{reference}/
-    External wait page — shown after payment initiation.
-    Polls payment_status via JS and auto-connects via DNS redirect on success.
-    Runs outside the captive portal sandbox for maximum compatibility.
-    """
     from django.shortcuts import render
-    status_url = f'/payments/status/{reference}/'
+    payment = (
+        Payment.objects.filter(uuid=reference).first()
+        or Payment.objects.filter(provider_reference=reference).first()
+    )
+    hotspot_dns = 'hot.spot'
+    if payment and payment.location_id:
+        hotspot_dns = payment.location.hotspot_dns or 'hot.spot'
     return render(request, 'payments/payment_wait.html', {
-        'status_url': status_url,
-        'reference':  reference,
+        'reference':   reference,
+        'hotspot_dns': hotspot_dns,
     })

@@ -234,14 +234,15 @@
     </div>
 
     <a class="btn btn-connect" id="btn-connect" href="#">🔗 Tap to Connect</a>
-    <button class="btn btn-retry" id="btn-retry" onclick="window.history.back()">← Go Back</button>
+    <button class="btn btn-retry" id="btn-retry" onclick="window.location.href='http://'+(window.HOTSPOT_DNS||'hot.spot')+'/'">← Try Again</button>
 
 </div>
 
 <div class="powered">Powered by SpotPay</div>
 
 <script>
-    var STATUS_URL  = 'http://spotpay.it.com/payments/status/{{ reference }}/';
+    var STATUS_URL   = 'http://spotpay.it.com/payments/status/{{ reference }}/';
+    var HOTSPOT_DNS  = '{{ hotspot_dns }}';
     var POLL_INTERVAL = 2500;
     var MAX_SECONDS   = 120;
 
