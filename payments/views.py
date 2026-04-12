@@ -141,6 +141,42 @@ def payment_status(request, reference):
             except Exception:
                 pass
 
+    # If still PENDING and using LivePay, poll live status throttled to once per 5s
+    if payment.status == "PENDING" and payment.provider and payment.provider.provider_type == "LIVE":
+        from django.core.cache import cache
+        cache_key = f"live_poll_{payment.pk}"
+        if not cache.get(cache_key):
+            cache.set(cache_key, True, 5)
+            try:
+                from payments.live_client import LivePayClient
+                client = LivePayClient(
+                    public_key=payment.provider.api_key,
+                    secret_key=payment.provider.api_secret,
+                )
+                result = client.check_status(payment.provider_reference)
+                status = str(result.get("transaction", {}).get("status", "")).lower()
+
+                if status in ("approved", "success", "successful", "completed"):
+                    with transaction.atomic():
+                        p = Payment.objects.select_for_update().get(pk=payment.pk)
+                        if p.status == "PENDING":
+                            p.mark_success(result)
+                            if p.vendor_id:
+                                notify_vendor_payment_received(p)
+                    payment.refresh_from_db()
+                    if payment.status == "SUCCESS":
+                        handle_payment_success(payment)
+
+                elif status in ("failed", "cancelled", "canceled"):
+                    with transaction.atomic():
+                        p = Payment.objects.select_for_update().get(pk=payment.pk)
+                        if p.status == "PENDING":
+                            p.mark_failed(result)
+                    payment.refresh_from_db()
+
+            except Exception:
+                pass
+
     resp = {
         "success": True,
         "reference": payment.provider_reference,
