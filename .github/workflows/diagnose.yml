@@ -1,0 +1,48 @@
+name: Server Diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Diagnostic command to run'
+        required: true
+        default: 'diagnose_livepay'
+        type: choice
+        options:
+          - diagnose_livepay
+          - test_livepay_creds
+          - list_providers
+          - check_migrations
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Run diagnostic on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /root/SpotPay-deployment
+            
+            case "${{ github.event.inputs.command }}" in
+              "diagnose_livepay")
+                docker compose exec web python manage.py diagnose_livepay
+                ;;
+              "test_livepay_creds")
+                docker compose exec web python manage.py test_livepay_creds
+                ;;
+              "list_providers")
+                docker compose exec web python manage.py list_providers
+                ;;
+              "check_migrations")
+                docker compose exec web python manage.py showmigrations payments
+                ;;
+              *)
+                echo "Unknown command: ${{ github.event.inputs.command }}"
+                exit 1
+                ;;
+            esac
