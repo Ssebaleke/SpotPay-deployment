@@ -1,0 +1,30 @@
+Mikhmon inject failed for location 4: Could not read Mikhmon config at /var/www/html/mikhmonv3-master/include/config.php
+172.18.0.4 - - [08/Apr/2026:14:58:35 +0300] "POST /api/register-vpn/ HTTP/1.1" 200 87 "-" "python-requests/2.31.0"
+[2026-04-08 14:58:37 +0300] [11] [DEBUG] GET /api/portal/9d5165a1-040e-4fba-ac30-70faa0f3fff9/
+172.18.0.4 - - [08/Apr/2026:14:58:38 +0300] "GET /api/portal/9d5165a1-040e-4fba-ac30-70faa0f3fff9/ HTTP/1.1" 200 326 "http://wifi.net/" "Mozilla/5.0 (Linux; Android 15; SM-A155F Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/146.0.7680.164 Mobile Safari/537.36"
+[2026-04-08 14:58:47 +0300] [10] [DEBUG] POST /api/portal/aa33b047-0939-443d-a2f7-f08677f1e5bc/buy-api/
+LIVEPAY COLLECT → phone=256703738424 amount=1500 network=AIRTEL ref=b2344bcdb1334477a1bb22ca9d4e02b7
+LIVEPAY COLLECT ← HTTP 201 | {"status":"success","message":"Collection initiated successfully","data":{"reference":"b2344bcdb1334477a1bb22ca9d4e02b7","transaction_id":"TXN1775649528247","amount":1500,"currency":"UGX","network":"AIRTEL"}}
+LIVEPAY ADAPTER RESULT: {'status': 'success', 'message': 'Collection initiated successfully', 'data': {'reference': 'b2344bcdb1334477a1bb22ca9d4e02b7', 'transaction_id': 'TXN1775649528247', 'amount': 1500, 'currency': 'UGX', 'network': 'AIRTEL'}}
+172.18.0.4 - - [08/Apr/2026:14:58:51 +0300] "POST /api/portal/aa33b047-0939-443d-a2f7-f08677f1e5bc/buy-api/ HTTP/1.1" 200 373 "http://vico.net/" "Mozilla/5.0 (Linux; Android 15; SM-A146U Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/146.0.7680.177 Mobile Safari/537.36"
+[2026-04-08 14:58:52 +0300] [12] [DEBUG] GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/
+172.18.0.4 - - [08/Apr/2026:14:58:53 +0300] "GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/ HTTP/1.1" 200 183 "http://vico.net/" "Mozilla/5.0 (Linux; Android 15; SM-A146U Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/146.0.7680.177 Mobile Safari/537.36"
+[2026-04-08 14:58:56 +0300] [11] [DEBUG] GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/
+172.18.0.4 - - [08/Apr/2026:14:58:56 +0300] "GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/ HTTP/1.1" 200 183 "http://vico.net/" "Mozilla/5.0 (Linux; Android 15; SM-A146U Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/146.0.7680.177 Mobile Safari/537.36"
+[2026-04-08 14:58:59 +0300] [10] [DEBUG] GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/
+172.18.0.4 - - [08/Apr/2026:14:59:00 +0300] "GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/ HTTP/1.1" 200 183 "http://vico.net/" "Mozilla/5.0 (Linux; Android 15; SM-A146U Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/146.0.7680.177 Mobile Safari/537.36"
+[2026-04-08 14:59:03 +0300] [12] [DEBUG] GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/
+172.18.0.4 - - [08/Apr/2026:14:59:04 +0300] "GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/ HTTP/1.1" 200 183 "http://vico.net/" "Mozilla/5.0 (Linux; Android 15; SM-A146U Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/146.0.7680.177 Mobile Safari/537.36"
+[2026-04-08 14:59:06 +0300] [11] [DEBUG] POST /payments/webhook/live/ipn/
+LIVEPAY IPN RAW BODY: {"status":"Success","message":"Wallet top-up completed successfully.","reference":"b2344bcdb1334477a1bb22ca9d4e02b7","transaction_id":"TXN1775649528247","amount":1500,"charge":45,"phone":"256703738424","provider":"livepay","type":"COLLECTION","completed_at":"2026-04-08T14:59:06+03:00"}
+LIVEPAY IPN HEADERS: livepay-signature=MISSING
+LIVEPAY IPN: {'status': 'Success', 'message': 'Wallet top-up completed successfully.', 'reference': 'b2344bcdb1334477a1bb22ca9d4e02b7', 'transaction_id': 'TXN1775649528247', 'amount': 1500, 'charge': 45, 'phone': '256703738424', 'provider': 'livepay', 'type': 'COLLECTION', 'completed_at': '2026-04-08T14:59:06+03:00'}
+[2026-04-08 14:59:07 +0300] [10] [DEBUG] GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/
+LIVEPAY IPN: found payment b2344bcd-b133-4477-a1bb-22ca9d4e02b7 status=PENDING is_success=True
+RESEND: sending to=johnvico100@gmail.com subject='Payment Received - SpotPay' from=noreply@spotpay.it.com
+172.18.0.4 - - [08/Apr/2026:14:59:07 +0300] "GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/ HTTP/1.1" 200 183 "http://vico.net/" "Mozilla/5.0 (Linux; Android 15; SM-A146U Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/146.0.7680.177 Mobile Safari/537.36"
+RESEND: status=200 response={'id': '1c6ee9e1-b046-47e7-87d6-30a5aa230e20'}
+[2026-04-08 14:59:10 +0300] [12] [DEBUG] GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/
+LIVEPAY IPN: handle_payment_success completed for 2226
+172.18.0.4 - - [08/Apr/2026:14:59:11 +0300] "POST /payments/webhook/live/ipn/ HTTP/1.1" 200 67 "-" "-"
+172.18.0.4 - - [08/Apr/2026:14:59:11 +0300] "GET /payments/status/b2344bcd-b133-4477-a1bb-22ca9d4e02b7/ HTTP/1.1" 200 208 "http://vico.net/" "Mozilla/5.0 (Linux; Android 15; SM-A146U Build/AP3A.240905.015.A2; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/146.0.7680.177 Mobile Safari/537.36"

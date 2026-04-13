@@ -1,0 +1,30 @@
+worker_int: <function WorkerInt.worker_int at 0x7ab6e07d0680>
+  worker_abort: <function WorkerAbort.worker_abort at 0x7ab6e07d07c0>
+  pre_exec: <function PreExec.pre_exec at 0x7ab6e07d0900>
+  pre_request: <function PreRequest.pre_request at 0x7ab6e07d0a40>
+  post_request: <function PostRequest.post_request at 0x7ab6e07d0ae0>
+  child_exit: <function ChildExit.child_exit at 0x7ab6e07d0c20>
+  worker_exit: <function WorkerExit.worker_exit at 0x7ab6e07d0d60>
+  nworkers_changed: <function NumWorkersChanged.nworkers_changed at 0x7ab6e07d0ea0>
+  on_exit: <function OnExit.on_exit at 0x7ab6e07d0fe0>
+  ssl_context: <function NewSSLContext.ssl_context at 0x7ab6e07d11c0>
+  proxy_protocol: False
+  proxy_allow_ips: ['127.0.0.1']
+  keyfile: None
+  certfile: None
+  ssl_version: 2
+  cert_reqs: 0
+  ca_certs: None
+  suppress_ragged_eofs: True
+  do_handshake_on_connect: False
+  ciphers: None
+  raw_paste_global_conf: []
+  strip_header_spaces: False
+[2026-04-10 18:56:44 +0000] [9] [INFO] Starting gunicorn 21.2.0
+[2026-04-10 18:56:44 +0000] [9] [DEBUG] Arbiter booted
+[2026-04-10 18:56:44 +0000] [9] [INFO] Listening at: http://0.0.0.0:8000 (9)
+[2026-04-10 18:56:44 +0000] [9] [INFO] Using worker: sync
+[2026-04-10 18:56:44 +0000] [10] [INFO] Booting worker with pid: 10
+[2026-04-10 18:56:44 +0000] [11] [INFO] Booting worker with pid: 11
+[2026-04-10 18:56:44 +0000] [12] [INFO] Booting worker with pid: 12
+[2026-04-10 18:56:44 +0000] [9] [DEBUG] 3 workers

@@ -23,6 +23,7 @@ from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 from datetime import timedelta
 from urllib.parse import parse_qs
 
@@ -340,6 +341,101 @@ def kwa_verify(request, reference):
     return HttpResponse(f"status={status}", status=200)
 
 
+@csrf_exempt
+def live_verify(request, reference):
+    """
+    GET /payments/live/verify/<reference>/
+    Manually poll LivePay check_status and complete payment if successful.
+    Used when webhook callback is missed.
+    """
+    import json as _json
+    from payments.models import PaymentProvider
+    from payments.live_client import LivePayClient
+
+    payment = (
+        Payment.objects.filter(provider_reference=reference).first()
+        or Payment.objects.filter(uuid=reference).first()
+    )
+    
+    # Try UUID without hyphens format
+    if not payment and len(reference) == 32 and reference.isalnum():
+        formatted_uuid = f"{reference[:8]}-{reference[8:12]}-{reference[12:16]}-{reference[16:20]}-{reference[20:]}"
+        payment = Payment.objects.filter(uuid=formatted_uuid).first()
+
+    if not payment:
+        return HttpResponse("Payment not found", status=404)
+
+    if payment.status == "SUCCESS":
+        return HttpResponse("Already completed", status=200)
+
+    provider = PaymentProvider.objects.filter(provider_type="LIVE", is_active=True).first()
+    if not provider:
+        return HttpResponse("No LivePay provider configured", status=400)
+
+    client = LivePayClient(
+        public_key=provider.api_key,
+        secret_key=provider.api_secret,
+    )
+
+    # Use our original reference (UUID without hyphens) to check status
+    our_reference = str(payment.uuid).replace("-", "").replace(" ", "")[:30]
+    result = client.check_status(our_reference)
+    logger.warning("LIVEPAY VERIFY: ref=%s result=%s", reference, result)
+
+    if not result.get("success"):
+        return HttpResponse(f"Status check failed: {result.get('message', 'Unknown error')}", status=400)
+
+    status = str(result.get("status", "")).lower()
+    is_success = status == "success"
+    is_failed = status == "failed"
+
+    payment_id = None
+    run_success_handler = False
+
+    with transaction.atomic():
+        payment = Payment.objects.select_for_update().filter(
+            uuid=payment.uuid
+        ).first()
+
+        if payment.status == "SUCCESS":
+            return HttpResponse("Already completed", status=200)
+
+        payment.raw_callback_data = result
+
+        if is_success:
+            payment.mark_success(result)
+
+            if payment.purpose == "SUBSCRIPTION" and payment.location_id:
+                _handle_subscription_renewal(payment)
+
+            if payment.purpose == "SMS_PURCHASE" and payment.vendor_id:
+                try:
+                    credit_sms_wallet(vendor=payment.vendor, amount_paid=int(payment.amount))
+                except Exception as exc:
+                    payment.processor_message = f"SMS credit warning: {exc}"
+                    payment.save(update_fields=["processor_message"])
+
+            if payment.vendor_id:
+                if payment.purpose in ("SMS_PURCHASE", "SUBSCRIPTION"):
+                    notify_vendor_receipt(payment)
+                else:
+                    notify_vendor_payment_received(payment)
+
+            payment_id = payment.id
+            run_success_handler = True
+
+        elif is_failed:
+            payment.mark_failed(result)
+        else:
+            payment.save(update_fields=["raw_callback_data"])
+
+    if run_success_handler and payment_id:
+        payment = Payment.objects.get(id=payment_id)
+        handle_payment_success(payment)
+
+    return HttpResponse(f"status={status}", status=200)
+
+
 # ---------------------------------------------------------------------------
 # LivePay Webhook
 # ---------------------------------------------------------------------------
@@ -349,6 +445,12 @@ def live_ipn(request):
     """
     POST /payments/webhook/live/ipn/
     LivePay POSTs JSON to this URL when a transaction settles.
+    
+    New webhook format:
+    - status: "Success" or "Failed"
+    - customer_reference: our original reference
+    - internal_reference: LivePay's UUID
+    - X-Webhook-Signature header for verification
     """
     import json as _json
     from payments.models import PaymentProvider
@@ -358,35 +460,45 @@ def live_ipn(request):
         return HttpResponse("OK")
 
     logger.warning("LIVEPAY IPN RAW BODY: %.800s", request.body.decode('utf-8', errors='replace'))
-    logger.warning("LIVEPAY IPN HEADERS: livepay-signature=%s", request.headers.get('livepay-signature', 'MISSING'))
+    logger.warning("LIVEPAY IPN HEADERS: X-Webhook-Signature=%s", request.headers.get('X-Webhook-Signature', 'MISSING'))
 
     try:
         data = _json.loads(request.body.decode("utf-8", errors="replace"))
     except Exception:
-        data = {}
+        logger.error("LIVEPAY IPN: Invalid JSON payload")
+        return HttpResponse("Invalid JSON", status=400)
 
     logger.warning("LIVEPAY IPN: %s", data)
 
     # Verify signature
     provider = PaymentProvider.objects.filter(provider_type="LIVE", is_active=True).first()
     if provider:
-        signature_header = request.headers.get("livepay-signature", "")
+        signature_header = request.headers.get("X-Webhook-Signature", "")
         if signature_header:
+            webhook_url = f"{settings.SITE_URL}/payments/webhook/live/ipn/"
             valid = LivePayClient.verify_webhook_signature(
                 secret_key=provider.api_secret,
                 signature_header=signature_header,
                 payload=data,
+                webhook_url=webhook_url,
             )
             if not valid:
                 logger.warning("LIVEPAY IPN: invalid signature — rejecting")
                 return HttpResponse("Invalid signature", status=401)
+        else:
+            logger.warning("LIVEPAY IPN: missing signature header")
 
-    # reference is our original reference (payment UUID without hyphens)
-    reference = data.get("reference") or data.get("reference_id") or data.get("transaction_id")
+    # Extract transaction details
+    customer_reference = data.get("customer_reference", "")
+    internal_reference = data.get("internal_reference", "")
     status = str(data.get("status", "")).lower()
-    is_success = status in ("approved", "success")
-    is_failed = status in ("failed", "cancelled")
+    
+    # Normalize status values
+    is_success = status == "success"
+    is_failed = status == "failed"
 
+    # Try to find payment by customer_reference (our original reference) or internal_reference
+    reference = customer_reference or internal_reference
     if not reference:
         logger.warning("LIVEPAY IPN: no reference found — ignoring")
         return HttpResponse("OK")
@@ -395,22 +507,25 @@ def live_ipn(request):
     run_success_handler = False
 
     with transaction.atomic():
-        payment = (
-            Payment.objects.select_for_update().filter(provider_reference=reference).first()
-            or Payment.objects.select_for_update().filter(uuid=reference).first()
-        )
-
-        # Try matching UUID without hyphens
-        if not payment and len(reference) == 32:
-            formatted = f"{reference[:8]}-{reference[8:12]}-{reference[12:16]}-{reference[16:20]}-{reference[20:]}"
-            payment = Payment.objects.select_for_update().filter(uuid=formatted).first()
+        # First try to find by provider_reference (internal_reference)
+        payment = Payment.objects.select_for_update().filter(provider_reference=internal_reference).first()
+        
+        # If not found, try by UUID (customer_reference might be our UUID without hyphens)
+        if not payment and customer_reference:
+            if len(customer_reference) == 32 and customer_reference.isalnum():
+                # Convert back to UUID format
+                formatted_uuid = f"{customer_reference[:8]}-{customer_reference[8:12]}-{customer_reference[12:16]}-{customer_reference[16:20]}-{customer_reference[20:]}"
+                payment = Payment.objects.select_for_update().filter(uuid=formatted_uuid).first()
+            else:
+                # Try direct UUID match
+                payment = Payment.objects.select_for_update().filter(uuid=customer_reference).first()
 
         if not payment:
-            logger.warning("LIVEPAY IPN: no payment found for reference=%s", reference)
+            logger.warning("LIVEPAY IPN: no payment found for customer_ref=%s internal_ref=%s", customer_reference, internal_reference)
             return HttpResponse("OK")
 
         if payment.status == "SUCCESS":
-            logger.warning("LIVEPAY IPN: payment %s already SUCCESS — skipping", reference)
+            logger.warning("LIVEPAY IPN: payment %s already SUCCESS — skipping", payment.uuid)
             return HttpResponse("OK")  # idempotent
 
         logger.warning("LIVEPAY IPN: found payment %s status=%s is_success=%s", payment.uuid, payment.status, is_success)
@@ -448,6 +563,7 @@ def live_ipn(request):
         elif is_failed:
             payment.mark_failed(data)
         else:
+            # Unknown status, just save the callback data
             payment.save(update_fields=["raw_callback_data"])
 
     if run_success_handler and payment_id:

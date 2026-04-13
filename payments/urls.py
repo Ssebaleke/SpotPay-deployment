@@ -26,6 +26,9 @@ urlpatterns = [
     # KwaPay manual verify (polls check_status for stuck PENDING payments)
     path("kwa/verify/<str:reference>/", ipn_views.kwa_verify, name="kwa_verify"),
 
+    # LivePay manual verify (polls check_status for stuck PENDING payments)
+    path("live/verify/<str:reference>/", ipn_views.live_verify, name="live_verify"),
+
     # Payment status polling (used by portal.js)
     path("status/<str:reference>/", views.payment_status, name="payment_status"),
 

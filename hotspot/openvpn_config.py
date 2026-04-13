@@ -77,12 +77,11 @@ def generate_ovpn_config(location):
             f"persist-key\n"
             f"persist-tun\n"
             f"cipher AES-256-CBC\n"
+            f"auth SHA1\n"
             f"verb 3\n"
-            f"key-direction 1\n"
             f"<ca>\n{ca}\n</ca>\n"
             f"<cert>\n{cert}\n</cert>\n"
             f"<key>\n{key}\n</key>\n"
-            f"<tls-auth>\n{ta}\n</tls-auth>\n"
         )
 
         location.ovpn_client_config = ovpn

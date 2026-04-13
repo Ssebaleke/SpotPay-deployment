@@ -1,0 +1,10 @@
+Apr 10 06:36:35 vps3324064 ovpn-server[754534]: Could not determine IPv4/IPv6 protocol. Using AF_INET
+Apr 10 06:36:35 vps3324064 ovpn-server[754534]: Socket Buffers: R=[131072->131072] S=[16384->16384]
+Apr 10 06:36:35 vps3324064 ovpn-server[754534]: Listening for incoming TCP connection on [AF_INET][undef]:1194
+Apr 10 06:36:35 vps3324064 ovpn-server[754534]: TCPv4_SERVER link local (bound): [AF_INET][undef]:1194
+Apr 10 06:36:35 vps3324064 ovpn-server[754534]: TCPv4_SERVER link remote: [AF_UNSPEC]
+Apr 10 06:36:35 vps3324064 ovpn-server[754534]: MULTI: multi_init called, r=256 v=256
+Apr 10 06:36:35 vps3324064 ovpn-server[754534]: IFCONFIG POOL IPv4: base=10.9.0.4 size=62
+Apr 10 06:36:35 vps3324064 ovpn-server[754534]: IFCONFIG POOL LIST
+Apr 10 06:36:35 vps3324064 ovpn-server[754534]: MULTI: TCP INIT maxclients=1024 maxevents=1029
+Apr 10 06:36:35 vps3324064 ovpn-server[754534]: Initialization Sequence Completed

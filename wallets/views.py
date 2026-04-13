@@ -318,15 +318,20 @@ def wallet_withdraw(request):
             messages.error(request, "Minimum withdrawal amount is UGX 10,000.")
             return redirect('wallet_withdraw')
 
-        # Calculate fees
+        # Calculate fees — deducted FROM the amount, vendor receives amount - fees
         from payments.models import PaymentSystemConfig
         config = PaymentSystemConfig.get()
-        gateway_fee = config.withdrawal_gateway_fee
+        gateway_fee = config.withdrawal_gateway_fee.quantize(Decimal('1'))
         spotpay_fee = config.withdrawal_spotpay_fee.quantize(Decimal('1'))
-        total_deduction = amount + gateway_fee + spotpay_fee
+        total_fees = gateway_fee + spotpay_fee
+        payout_amount = amount - total_fees  # what vendor actually receives
 
-        if total_deduction > wallet.balance:
-            messages.error(request, f"Insufficient balance. Withdrawal of UGX {amount:,.0f} + fees (UGX {gateway_fee + spotpay_fee:,.0f}) requires UGX {total_deduction:,.0f}.")
+        if payout_amount <= 0:
+            messages.error(request, f"Amount too low. Fees are UGX {total_fees:,.0f}.")
+            return redirect('wallet_withdraw')
+
+        if amount > wallet.balance:
+            messages.error(request, f"Insufficient balance. You have UGX {wallet.balance:,.0f}.")
             return redirect('wallet_withdraw')
 
         import logging
@@ -356,7 +361,7 @@ def wallet_withdraw(request):
                     )
                     callback_url = f"{settings.SITE_URL}/payments/webhook/kwa/ipn/"
                     result = client.withdraw(
-                        amount=int(amount),
+                        amount=int(payout_amount),
                         phone=payout_phone,
                         callback_url=callback_url,
                     )
@@ -372,23 +377,16 @@ def wallet_withdraw(request):
                         public_key=provider.api_key,
                         secret_key=provider.api_secret,
                     )
-                    network = LivePayClient.detect_network(payout_phone)
-                    pin = provider.transaction_pin or ''
-                    if not pin:
-                        disbursement_error = "LivePay transaction PIN not configured"
+                    result = client.send(
+                        amount=int(payout_amount),
+                        phone=payout_phone,
+                        reference=withdrawal_ref[:30],
+                    )
+                    logger.warning(f"LIVEPAY SEND RESULT: {result}")
+                    if not result.get('success'):
+                        disbursement_error = result.get('message') or 'Disbursement failed'
                     else:
-                        result = client.send(
-                            amount=int(amount),
-                            phone=payout_phone,
-                            network=network,
-                            pin=pin,
-                            reference=withdrawal_ref,
-                        )
-                        logger.warning(f"LIVEPAY SEND RESULT: {result}")
-                        if result.get('status') != 'success':
-                            disbursement_error = result.get('message') or 'Disbursement failed'
-                        else:
-                            disbursement_success = True
+                        disbursement_success = True
             else:
                 disbursement_error = "No disbursement provider configured"
 
@@ -407,16 +405,16 @@ def wallet_withdraw(request):
         with transaction.atomic():
             locked_wallet = VendorWallet.objects.select_for_update().get(pk=wallet.pk)
 
-            if total_deduction > locked_wallet.balance:
+            if amount > locked_wallet.balance:
                 messages.error(request, "Insufficient wallet balance.")
                 return redirect('wallet_withdraw')
 
-            locked_wallet.balance -= total_deduction
+            locked_wallet.balance -= amount
             locked_wallet.save(update_fields=['balance', 'updated_at'])
 
             withdrawal = WithdrawalRequest.objects.create(
                 wallet=locked_wallet,
-                amount=amount,
+                amount=payout_amount,
                 payout_method=payout_method,
                 payout_phone=payout_phone,
                 payout_name=payout_name,
@@ -426,7 +424,7 @@ def wallet_withdraw(request):
 
             WalletTransaction.objects.create(
                 wallet=locked_wallet,
-                amount=total_deduction,
+                amount=amount,
                 transaction_type=WalletTransaction.DEBIT,
                 reason='WITHDRAWAL',
                 reference=f"WD-{withdrawal.reference}",
@@ -452,7 +450,10 @@ def wallet_withdraw(request):
         return redirect('wallet_dashboard')
 
     return render(request, 'wallets/withdraw.html', {
-        'wallet': wallet
+        'wallet': wallet,
+        'gateway_fee': config.withdrawal_gateway_fee.quantize(Decimal('1')),
+        'spotpay_fee': config.withdrawal_spotpay_fee.quantize(Decimal('1')),
+        'total_fees': (config.withdrawal_gateway_fee + config.withdrawal_spotpay_fee).quantize(Decimal('1')),
     })
 
 

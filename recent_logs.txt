@@ -1,0 +1,30 @@
+WireGuard peer add warning for location 4: Key is not the correct length or format: `jowT2R7RrW5kuf5uBiOx345 R5B/GYncBvI15NJtFj0='
+wg-quick save warning for location 4: [#] wg showconf wg0
+Mikhmon V3 inject failed for location 4: missing ), unterminated subpattern at position 73
+Mikhmon inject failed for location 4: missing ), unterminated subpattern at position 73
+172.18.0.5 - - [09/Apr/2026:15:26:58 +0300] "POST /api/register-vpn/ HTTP/1.1" 200 87 "-" "Mikrotik/7.x Fetch"
+[2026-04-09 15:27:07 +0300] [11] [DEBUG] GET /locations/voucher-generator/4/open/
+/usr/local/lib/python3.12/site-packages/paramiko/pkey.py:100: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+  "cipher": algorithms.TripleDES,
+/usr/local/lib/python3.12/site-packages/paramiko/transport.py:259: CryptographyDeprecationWarning: TripleDES has been moved to cryptography.hazmat.decrepit.ciphers.algorithms.TripleDES and will be removed from cryptography.hazmat.primitives.ciphers.algorithms in 48.0.0.
+  "class": algorithms.TripleDES,
+172.18.0.5 - - [09/Apr/2026:15:27:08 +0300] "GET /locations/voucher-generator/4/open/ HTTP/1.1" 302 0 "https://spotpay.it.com/locations/voucher-generator/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+[2026-04-09 15:27:44 +0300] [10] [DEBUG] GET /
+172.18.0.5 - - [09/Apr/2026:15:27:44 +0300] "GET /?XDEBUG_SESSION_START=phpstorm HTTP/1.1" 200 19206 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36"
+[2026-04-09 15:30:42 +0300] [11] [DEBUG] GET /
+Invalid HTTP_HOST header: 'ogs.google.authoresetionsetup.xyz'. You may need to add 'ogs.google.authoresetionsetup.xyz' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+           ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/django/http/request.py", line 150, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'ogs.google.authoresetionsetup.xyz'. You may need to add 'ogs.google.authoresetionsetup.xyz' to ALLOWED_HOSTS.
+Bad Request: /
+172.18.0.5 - - [09/Apr/2026:15:30:42 +0300] "GET / HTTP/1.1" 400 62392 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.3"

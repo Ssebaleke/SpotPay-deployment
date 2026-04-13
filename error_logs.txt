@@ -1,0 +1,50 @@
+[2026-04-08 15:09:38 +0300] [12] [DEBUG] POST /login/
+[2026-04-08 15:09:38 +0300] [10] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:09:39 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+172.18.0.5 - - [08/Apr/2026:15:09:40 +0300] "POST /login/ HTTP/1.1" 302 0 "https://spotpay.it.com/login/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+[2026-04-08 15:09:40 +0300] [11] [DEBUG] GET /dashboard/
+[2026-04-08 15:09:42 +0300] [10] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:09:43 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+172.18.0.5 - - [08/Apr/2026:15:09:43 +0300] "GET /dashboard/ HTTP/1.1" 200 38611 "https://spotpay.it.com/login/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+[2026-04-08 15:09:45 +0300] [12] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:09:46 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:09:47 +0300] [10] [DEBUG] GET /locations/voucher-generator/
+172.18.0.5 - - [08/Apr/2026:15:09:48 +0300] "GET /locations/voucher-generator/ HTTP/1.1" 200 26450 "https://spotpay.it.com/dashboard/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+[2026-04-08 15:09:49 +0300] [11] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:09:50 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:09:50 +0300] [12] [DEBUG] GET /locations/voucher-generator/4/open/
+172.18.0.5 - - [08/Apr/2026:15:09:51 +0300] "GET /locations/voucher-generator/4/open/ HTTP/1.1" 302 0 "https://spotpay.it.com/locations/voucher-generator/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+[2026-04-08 15:09:52 +0300] [11] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:09:53 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:09:56 +0300] [10] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:09:57 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:09:59 +0300] [12] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:10:00 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:10:03 +0300] [10] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:10:04 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:10:07 +0300] [12] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:10:08 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:10:11 +0300] [11] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:10:11 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:10:14 +0300] [10] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:10:15 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:10:18 +0300] [12] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:10:19 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:10:21 +0300] [11] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:10:22 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:10:25 +0300] [10] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:10:26 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:10:29 +0300] [12] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:10:30 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:10:33 +0300] [11] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:10:33 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 183 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:10:51 +0300] [12] [DEBUG] GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/
+172.18.0.5 - - [08/Apr/2026:15:10:51 +0300] "GET /payments/status/02ec9680-8c2e-4c49-9b49-c34fa9e38c7b/ HTTP/1.1" 200 156 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:11:38 +0300] [12] [DEBUG] GET /api/portal/d5a11b0d-66db-4fcb-9b7d-e3f321862878/
+172.18.0.5 - - [08/Apr/2026:15:11:39 +0300] "GET /api/portal/d5a11b0d-66db-4fcb-9b7d-e3f321862878/ HTTP/1.1" 200 233 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:12:02 +0300] [12] [DEBUG] GET /
+172.18.0.5 - - [08/Apr/2026:15:12:02 +0300] "GET / HTTP/1.1" 200 19206 "http://www.authoresetionsetup.xyz" "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1"
+[2026-04-08 15:12:47 +0300] [10] [DEBUG] GET /api/portal/d5a11b0d-66db-4fcb-9b7d-e3f321862878/
+172.18.0.5 - - [08/Apr/2026:15:12:47 +0300] "GET /api/portal/d5a11b0d-66db-4fcb-9b7d-e3f321862878/ HTTP/1.1" 200 233 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"
+[2026-04-08 15:12:54 +0300] [11] [DEBUG] GET /api/portal/d5a11b0d-66db-4fcb-9b7d-e3f321862878/
+172.18.0.5 - - [08/Apr/2026:15:12:54 +0300] "GET /api/portal/d5a11b0d-66db-4fcb-9b7d-e3f321862878/ HTTP/1.1" 200 233 "http://hot.spot/" "Mozilla/5.0 (iPhone; CPU iPhone OS 16_7_15 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148"

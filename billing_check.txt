@@ -1,0 +1,20 @@
+172.18.0.5 - - [10/Apr/2026:16:19:03 +0300] "GET /payments/status/a25a95d6-c9bd-4fda-9018-411870c8604a/ HTTP/1.1" 200 183 "http://vico.net/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+[2026-04-10 16:19:06 +0300] [12] [DEBUG] GET /payments/status/a25a95d6-c9bd-4fda-9018-411870c8604a/
+172.18.0.5 - - [10/Apr/2026:16:19:06 +0300] "GET /payments/status/a25a95d6-c9bd-4fda-9018-411870c8604a/ HTTP/1.1" 200 183 "http://vico.net/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+[2026-04-10 16:19:09 +0300] [12] [DEBUG] GET /payments/status/a25a95d6-c9bd-4fda-9018-411870c8604a/
+172.18.0.5 - - [10/Apr/2026:16:19:10 +0300] "GET /payments/status/a25a95d6-c9bd-4fda-9018-411870c8604a/ HTTP/1.1" 200 183 "http://vico.net/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+[2026-04-10 16:19:12 +0300] [10] [DEBUG] POST /payments/webhook/live/ipn/
+LIVEPAY IPN RAW BODY: {"status":"Success","message":"Wallet top-up completed successfully.","reference":"a25a95d6c9bd4fda9018411870c8604a","transaction_id":"TXN1775827127691","amount":1500,"charge":45,"phone":"256705070393","provider":"livepay","type":"COLLECTION","completed_at":"2026-04-10T16:19:12+03:00"}
+LIVEPAY IPN HEADERS: livepay-signature=MISSING
+LIVEPAY IPN: {'status': 'Success', 'message': 'Wallet top-up completed successfully.', 'reference': 'a25a95d6c9bd4fda9018411870c8604a', 'transaction_id': 'TXN1775827127691', 'amount': 1500, 'charge': 45, 'phone': '256705070393', 'provider': 'livepay', 'type': 'COLLECTION', 'completed_at': '2026-04-10T16:19:12+03:00'}
+LIVEPAY IPN: found payment a25a95d6-c9bd-4fda-9018-411870c8604a status=PENDING is_success=True
+[2026-04-10 16:19:13 +0300] [11] [DEBUG] GET /payments/status/a25a95d6-c9bd-4fda-9018-411870c8604a/
+RESEND: sending to=johnvico100@gmail.com subject='Payment Received - SpotPay' from=noreply@spotpay.it.com
+RESEND: status=200 response={'id': '0cd2f19b-0702-4109-8da9-081cc28c136a'}
+172.18.0.5 - - [10/Apr/2026:16:19:16 +0300] "GET /payments/status/a25a95d6-c9bd-4fda-9018-411870c8604a/ HTTP/1.1" 200 205 "http://vico.net/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+172.18.0.5 - - [10/Apr/2026:16:19:16 +0300] "POST /payments/webhook/live/ipn/ HTTP/1.1" 200 67 "-" "-"
+LIVEPAY IPN: handle_payment_success completed for 2622
+[2026-04-10 16:19:51 +0300] [12] [DEBUG] GET /api/portal/aa33b047-0939-443d-a2f7-f08677f1e5bc/
+172.18.0.5 - - [10/Apr/2026:16:19:52 +0300] "GET /api/portal/aa33b047-0939-443d-a2f7-f08677f1e5bc/ HTTP/1.1" 200 307 "http://vico.net/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0"
+[2026-04-10 16:20:08 +0300] [10] [DEBUG] GET /
+172.18.0.5 - - [10/Apr/2026:16:20:08 +0300] "GET / HTTP/1.1" 200 19206 "http://68.168.222.37/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36"

@@ -76,11 +76,14 @@ def voucher_list(request):
             location__vendor=vendor
         )
 
-        batch = VoucherBatch.objects.create(
-            package=package,
-            uploaded_by=request.user,
-            source_filename=getattr(csv_file, 'name', ''),
-        )
+        # Reuse existing batch for this package, or create new one
+        batch = VoucherBatch.objects.filter(package=package).first()
+        if not batch:
+            batch = VoucherBatch.objects.create(
+                package=package,
+                uploaded_by=request.user,
+                source_filename=getattr(csv_file, 'name', ''),
+            )
 
         decoded_file = csv_file.read().decode('utf-8-sig').splitlines()
 
@@ -126,14 +129,18 @@ def voucher_list(request):
 
         batch.total_uploaded = created_count
         if created_count == 0:
-            batch.delete()
+            if not batch.vouchers.exists():
+                batch.delete()
             messages.warning(request,
                 f"0 new vouchers added — all {skipped_count} codes already exist in the system. "
                 f"Delete the existing batch first if you want to re-upload."
             )
             return redirect('voucher_list')
         else:
+            batch.total_uploaded = (batch.vouchers.count())
             batch.save(update_fields=['total_uploaded'])
+            from django.core.cache import cache
+            cache.delete(f'portal_data_{package.location.uuid}')
 
         messages.success(
             request,

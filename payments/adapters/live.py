@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class LiveAdapter:
+    """SpotPay adapter for LivePay API integration."""
 
     def __init__(self, provider):
         self.provider = provider
@@ -26,7 +27,7 @@ class LiveAdapter:
         Initiate a LivePay collection (USSD push to customer).
 
         Returns:
-            reference used as provider_reference.
+            internal_reference from LivePay used as provider_reference.
 
         Raises:
             ValueError: if LivePay returns an error.
@@ -36,24 +37,21 @@ class LiveAdapter:
             raise ValueError("Phone number is required")
 
         amount_int = int(Decimal(str(data.get("amount") or payment.amount)))
-        network = self.client.detect_network(phone)
 
-        # Use payment UUID as reference for idempotency
-        reference = str(payment.uuid).replace("-", "")
+        # Ensure reference has no spaces and is max 30 chars (LivePay requirement)
+        reference = str(payment.uuid).replace("-", "").replace(" ", "")[:30]
 
         result = self.client.collect(
             amount=amount_int,
             phone=phone,
-            network=network,
             reference=reference,
         )
 
         logger.warning("LIVEPAY ADAPTER RESULT: %s", result)
 
-        if result.get("status") == "error" or result.get("status") not in ("success",):
-            raise ValueError(f"LivePay error: {result.get('message', 'Unknown error')}")
+        if not result.get("success"):
+            error_msg = result.get("message") or result.get("error") or "Unknown error"
+            raise ValueError(f"LivePay error: {error_msg}")
 
-        # LivePay returns transaction_id — use our reference as provider_reference
-        # since that's what we'll match on webhook
-        transaction_id = result.get("data", {}).get("transaction_id") or reference
-        return transaction_id
+        # Use internal_reference for webhook matching
+        return result.get("internal_reference") or reference
