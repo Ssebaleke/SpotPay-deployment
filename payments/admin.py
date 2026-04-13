@@ -33,7 +33,7 @@ class PaymentProviderAdmin(admin.ModelAdmin):
         ("API Settings", {
             "fields": ("base_url", "api_key", "api_secret", "transaction_pin", "gateway_fee_percentage")
         }),
-        ("Webhook URL (register this in MakyPay dashboard)", {
+        ("Webhook URL (register this in provider dashboard)", {
             "fields": ("webhook_url_display",)
         }),
         ("Meta", {
@@ -43,9 +43,23 @@ class PaymentProviderAdmin(admin.ModelAdmin):
 
     def webhook_url_display(self, obj):
         from django.conf import settings
-        url = f"{settings.SITE_URL}/payments/webhook/makypay/"
+        
+        # Different webhook URLs for different providers
+        webhook_urls = {
+            "MOMO": f"{settings.SITE_URL}/payments/webhook/makypay/",
+            "YOO": f"{settings.SITE_URL}/payments/webhook/yoo/ipn/",
+            "KWA": f"{settings.SITE_URL}/payments/webhook/kwa/ipn/",
+            "LIVE": f"{settings.SITE_URL}/payments/webhook/live/ipn/",
+            "CARD": "N/A",
+        }
+        
+        url = webhook_urls.get(obj.provider_type, "N/A")
+        
+        if url == "N/A":
+            return format_html('<span style="color:gray;">N/A</span>')
+        
         return format_html(
-            '<code style="background:#f1f5f9;padding:4px 8px;border-radius:4px;">{}</code>',
+            '<code style="background:#f1f5f9;padding:4px 8px;border-radius:4px;font-size:12px;">{}</code>',
             url
         )
     webhook_url_display.short_description = "Webhook URL"
