@@ -477,7 +477,7 @@ def live_ipn(request):
         if signature_header:
             webhook_url = f"{settings.SITE_URL}/payments/webhook/live/ipn/"
             valid = LivePayClient.verify_webhook_signature(
-                secret_key=provider.api_secret,
+                secret_key=provider.webhook_secret or provider.api_secret,
                 signature_header=signature_header,
                 payload=data,
                 webhook_url=webhook_url,

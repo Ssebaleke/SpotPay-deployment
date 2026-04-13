@@ -31,7 +31,7 @@ class PaymentProviderAdmin(admin.ModelAdmin):
             "fields": ("name", "provider_type", "environment", "is_active")
         }),
         ("API Settings", {
-            "fields": ("base_url", "api_key", "api_secret", "transaction_pin", "gateway_fee_percentage")
+            "fields": ("base_url", "api_key", "api_secret", "webhook_secret", "transaction_pin", "gateway_fee_percentage")
         }),
         ("Webhook URL (register this in provider dashboard)", {
             "fields": ("webhook_url_display",)

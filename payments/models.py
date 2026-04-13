@@ -31,6 +31,14 @@ class PaymentProvider(models.Model):
     # for MakyPay: api_key = public_key, api_secret = secret_key
     api_key = models.CharField(max_length=500)
     api_secret = models.CharField(max_length=500, blank=True)
+    
+    # Webhook secret for signature verification (separate from API secret)
+    webhook_secret = models.CharField(
+        max_length=500,
+        blank=True,
+        help_text="Webhook secret key for signature verification (LivePay, KwaPay, etc.)"
+    )
+    
     transaction_pin = models.CharField(
         max_length=20,
         blank=True,
