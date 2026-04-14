@@ -291,6 +291,9 @@ def wallet_withdraw(request):
     vendor = request.user.vendor
     wallet = vendor.wallet
 
+    from payments.models import PaymentSystemConfig
+    config = PaymentSystemConfig.get()
+
     if request.method == 'POST':
         try:
             amount = Decimal(request.POST.get('amount'))
@@ -319,8 +322,7 @@ def wallet_withdraw(request):
             return redirect('wallet_withdraw')
 
         # Calculate fees — deducted FROM the amount, vendor receives amount - fees
-        from payments.models import PaymentSystemConfig
-        config = PaymentSystemConfig.get()
+        gateway_fee = config.withdrawal_gateway_fee.quantize(Decimal('1'))
         gateway_fee = config.withdrawal_gateway_fee.quantize(Decimal('1'))
         spotpay_fee = config.withdrawal_spotpay_fee.quantize(Decimal('1'))
         total_fees = gateway_fee + spotpay_fee
