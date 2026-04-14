@@ -168,21 +168,10 @@ class LivePayClient:
             logger.error("LIVEPAY STATUS BY INTERNAL REF error: %s", exc)
             return {"success": False, "message": str(exc)}
 
-    def collect(self, amount: int, phone: str, reference: str = None, description: str = "Payment for internet voucher", callback_url: str = None) -> dict:
+    def collect(self, amount: int, phone: str, reference: str = None, description: str = "Payment for internet voucher") -> dict:
         """
         Initiate a mobile money collection (USSD push to customer).
-
-        Args:
-            amount       : Amount in UGX (integer).
-            phone        : Customer phone (any format accepted).
-            reference    : Unique reference ID (max 30 chars, no spaces).
-            description  : Transaction description.
-            callback_url : URL LivePay will POST the webhook to on completion.
-
-        Returns:
-            dict with keys: success, message, reference, internal_reference, network.
         """
-        # Ensure reference has no spaces and is max 30 chars
         ref = (reference or str(uuid.uuid4()).replace("-", ""))[:30].replace(" ", "")
 
         payload = {
@@ -193,9 +182,6 @@ class LivePayClient:
             "reference": ref,
             "description": description,
         }
-
-        if callback_url:
-            payload["callbackUrl"] = callback_url
 
         try:
             logger.warning("LIVEPAY COLLECT → phone=%s amount=%s ref=%s",
