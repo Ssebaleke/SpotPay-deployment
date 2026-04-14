@@ -5,6 +5,7 @@ Credentials stored in PaymentProvider DB record (api_key=public_key, api_secret=
 """
 
 import logging
+import time
 from decimal import Decimal
 
 from payments.live_client import LivePayClient
@@ -41,16 +42,32 @@ class LiveAdapter:
         # Ensure reference has no spaces and is max 30 chars (LivePay requirement)
         reference = str(payment.uuid).replace("-", "").replace(" ", "")[:30]
 
-        result = self.client.collect(
-            amount=amount_int,
-            phone=phone,
-            reference=reference,
-        )
+        # Retry logic for rate limiting
+        max_retries = 3
+        retry_delay = 2  # seconds
+        
+        for attempt in range(max_retries):
+            result = self.client.collect(
+                amount=amount_int,
+                phone=phone,
+                reference=reference,
+            )
 
-        logger.warning("LIVEPAY ADAPTER RESULT: %s", result)
+            logger.warning("LIVEPAY ADAPTER RESULT (attempt %d): %s", attempt + 1, result)
 
-        if not result.get("success"):
+            if result.get("success"):
+                break
+                
             error_msg = result.get("message") or result.get("error") or "Unknown error"
+            
+            # If rate limited, wait and retry
+            if "too many requests" in error_msg.lower() and attempt < max_retries - 1:
+                logger.warning("LivePay rate limited, retrying in %d seconds...", retry_delay)
+                time.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+                continue
+            
+            # Other errors or max retries reached
             raise ValueError(f"LivePay error: {error_msg}")
 
         # Use internal_reference for webhook matching
