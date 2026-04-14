@@ -453,9 +453,9 @@ def wallet_withdraw(request):
 
     return render(request, 'wallets/withdraw.html', {
         'wallet': wallet,
-        'gateway_fee': config.withdrawal_gateway_fee.quantize(Decimal('1')),
-        'spotpay_fee': config.withdrawal_spotpay_fee.quantize(Decimal('1')),
-        'total_fees': (config.withdrawal_gateway_fee + config.withdrawal_spotpay_fee).quantize(Decimal('1')),
+        'gateway_fee': Decimal(str(config.withdrawal_gateway_fee)).quantize(Decimal('1')),
+        'spotpay_fee': Decimal(str(config.withdrawal_spotpay_fee)).quantize(Decimal('1')),
+        'total_fees': (Decimal(str(config.withdrawal_gateway_fee)) + Decimal(str(config.withdrawal_spotpay_fee))).quantize(Decimal('1')),
     })
 
 
