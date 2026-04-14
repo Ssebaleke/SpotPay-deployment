@@ -8,6 +8,8 @@ import logging
 import time
 from decimal import Decimal
 
+from django.conf import settings
+
 from payments.live_client import LivePayClient
 
 logger = logging.getLogger(__name__)
@@ -46,11 +48,14 @@ class LiveAdapter:
         max_retries = 3
         retry_delay = 2  # seconds
         
+        callback_url = f"{settings.SITE_URL}/payments/webhook/live/ipn/"
+
         for attempt in range(max_retries):
             result = self.client.collect(
                 amount=amount_int,
                 phone=phone,
                 reference=reference,
+                callback_url=callback_url,
             )
 
             logger.warning("LIVEPAY ADAPTER RESULT (attempt %d): %s", attempt + 1, result)
