@@ -1,0 +1,21 @@
+name: Check LivePay Providers
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-providers:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: 68.168.222.37
+        username: root
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          cd /root/SpotPay-deployment
+          git pull
+          echo "=== CHECKING ALL PROVIDERS ==="
+          docker compose exec web python3 manage.py shell -c "exec(open('check_livepay_providers.py').read())"
