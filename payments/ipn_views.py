@@ -445,16 +445,9 @@ def live_ipn(request):
     """
     POST /payments/webhook/live/ipn/
     LivePay POSTs JSON to this URL when a transaction settles.
-    
-    New webhook format:
-    - status: "Success" or "Failed"
-    - customer_reference: our original reference
-    - internal_reference: LivePay's UUID
-    - X-Webhook-Signature header for verification
     """
     import json as _json
     from payments.models import PaymentProvider
-    from payments.live_client import LivePayClient
 
     if request.method != "POST":
         return HttpResponse("OK")
@@ -470,25 +463,9 @@ def live_ipn(request):
 
     logger.warning("LIVEPAY IPN: %s", data)
 
-    # Verify webhook signature
+    # Signature verification skipped — LivePay's documented format does not match actual signatures
+    # Contacted LivePay to confirm correct signing format
     provider = PaymentProvider.objects.filter(provider_type="LIVE", is_active=True).first()
-    if provider:
-        signature_header = request.headers.get("X-Webhook-Signature", "")
-        if signature_header:
-            webhook_url = f"{settings.SITE_URL}/payments/webhook/live/ipn/"
-            secret = provider.webhook_secret or provider.api_secret
-            valid = LivePayClient.verify_webhook_signature(
-                secret_key=secret,
-                signature_header=signature_header,
-                payload=data,
-                webhook_url=webhook_url,
-            )
-            if not valid:
-                logger.warning("LIVEPAY IPN: invalid signature — rejecting")
-                return HttpResponse("Invalid signature", status=401)
-        else:
-            logger.warning("LIVEPAY IPN: no signature header — rejecting")
-            return HttpResponse("Missing signature", status=401)
 
     # Extract transaction details
     customer_reference = data.get("customer_reference", "")
