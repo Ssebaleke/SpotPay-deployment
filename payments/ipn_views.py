@@ -470,23 +470,25 @@ def live_ipn(request):
 
     logger.warning("LIVEPAY IPN: %s", data)
 
-    # TEMPORARILY DISABLE signature verification until we fix the format
+    # Verify webhook signature
     provider = PaymentProvider.objects.filter(provider_type="LIVE", is_active=True).first()
     if provider:
         signature_header = request.headers.get("X-Webhook-Signature", "")
-        logger.warning("LIVEPAY IPN: Signature verification temporarily disabled - processing webhook")
-        # TODO: Fix signature verification format
-        # if signature_header:
-        #     webhook_url = f"{settings.SITE_URL}/payments/webhook/live/ipn/"
-        #     valid = LivePayClient.verify_webhook_signature(
-        #         secret_key=provider.webhook_secret or provider.api_secret,
-        #         signature_header=signature_header,
-        #         payload=data,
-        #         webhook_url=webhook_url,
-        #     )
-        #     if not valid:
-        #         logger.warning("LIVEPAY IPN: invalid signature — rejecting")
-        #         return HttpResponse("Invalid signature", status=401)
+        if signature_header:
+            webhook_url = f"{settings.SITE_URL}/payments/webhook/live/ipn/"
+            secret = provider.webhook_secret or provider.api_secret
+            valid = LivePayClient.verify_webhook_signature(
+                secret_key=secret,
+                signature_header=signature_header,
+                payload=data,
+                webhook_url=webhook_url,
+            )
+            if not valid:
+                logger.warning("LIVEPAY IPN: invalid signature — rejecting")
+                return HttpResponse("Invalid signature", status=401)
+        else:
+            logger.warning("LIVEPAY IPN: no signature header — rejecting")
+            return HttpResponse("Missing signature", status=401)
 
     # Extract transaction details
     customer_reference = data.get("customer_reference", "")

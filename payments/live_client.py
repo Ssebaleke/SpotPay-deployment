@@ -16,7 +16,6 @@ Webhook:
 
 import hashlib
 import hmac
-import json
 import logging
 import time
 import uuid
@@ -236,8 +235,7 @@ class LivePayClient:
         """
         Verify the X-Webhook-Signature header.
         Format: t=TIMESTAMP,v=HMAC_SHA256_HEX
-        LivePay signs: timestamp + status + customer_reference + internal_reference
-        Rejects requests older than 5 minutes.
+        Signed string: webhook_url + timestamp + status + customer_reference + internal_reference
         """
         try:
             parts = {}
@@ -255,29 +253,21 @@ class LivePayClient:
                 logger.warning("LIVEPAY WEBHOOK: stale timestamp %s", timestamp)
                 return False
 
-            # Try different signature formats
-            formats_to_test = [
-                # Format 1: timestamp + status + customer_reference + internal_reference
-                timestamp + str(payload.get("status", "")) + str(payload.get("customer_reference", "")) + str(payload.get("internal_reference", "")),
-                # Format 2: Just the JSON payload
-                json.dumps(payload, separators=(',', ':'), sort_keys=True),
-                # Format 3: timestamp + JSON payload
-                timestamp + json.dumps(payload, separators=(',', ':'), sort_keys=True),
-                # Format 4: Original format with webhook_url
-                webhook_url + timestamp + str(payload.get("status", "")) + str(payload.get("customer_reference", "")) + str(payload.get("internal_reference", ""))
-            ]
-            
-            for signed_data in formats_to_test:
-                expected = hmac.new(
-                    secret_key.encode(),
-                    signed_data.encode(),
-                    hashlib.sha256
-                ).hexdigest()
-                
-                if hmac.compare_digest(expected, received_sig):
-                    return True
-            
-            return False
+            string_to_sign = (
+                webhook_url
+                + timestamp
+                + str(payload.get("status", ""))
+                + str(payload.get("customer_reference", ""))
+                + str(payload.get("internal_reference", ""))
+            )
+
+            expected = hmac.new(
+                secret_key.encode(),
+                string_to_sign.encode(),
+                hashlib.sha256,
+            ).hexdigest()
+
+            return hmac.compare_digest(expected, received_sig)
 
         except Exception as exc:
             logger.error("LIVEPAY signature verification error: %s", exc)
