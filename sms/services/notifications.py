@@ -14,6 +14,7 @@ def _send(*, to_email, subject, html=None, text=None, context=""):
 
 
 def notify_vendor_payment_received(payment):
+    return  # paused — Resend free tier limit
     vendor = payment.vendor
     if not vendor:
         return
@@ -58,7 +59,7 @@ def notify_vendor_payment_received(payment):
 
 
 def notify_vendor_receipt(payment):
-    """Email receipt to vendor for SMS purchase or subscription payment."""
+    return  # paused — Resend free tier limit
     vendor = payment.vendor
     if not vendor:
         return
