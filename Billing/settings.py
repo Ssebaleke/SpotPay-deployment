@@ -133,6 +133,7 @@ if DATABASE_URL:
             ssl_require=True,
         )
     }
+    DATABASES["default"]["DISABLE_SERVER_SIDE_CURSORS"] = True
 else:
     if not DEBUG:
         raise RuntimeError("DATABASE_URL missing in production. Refusing SQLite fallback.")
