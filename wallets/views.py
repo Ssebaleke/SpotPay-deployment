@@ -322,7 +322,6 @@ def wallet_withdraw(request):
             return redirect('wallet_withdraw')
 
         # Calculate fees — deducted FROM the amount, vendor receives amount - fees
-        gateway_fee = config.withdrawal_gateway_fee.quantize(Decimal('1'))
         gateway_fee = Decimal(str(config.withdrawal_gateway_fee)).quantize(Decimal('1'))
         spotpay_fee = Decimal(str(config.withdrawal_spotpay_fee)).quantize(Decimal('1'))
         total_fees = gateway_fee + spotpay_fee
