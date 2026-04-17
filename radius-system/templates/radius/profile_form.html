@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}{% if profile %}Edit{% else %}New{% endif %} Profile — SpotPay RADIUS{% endblock %}
+{% block page_title %}{% if profile %}Edit Profile{% else %}New Profile{% endif %}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-md-6">
+<div class="card">
+    <div class="card-header">Profile Settings</div>
+    <div class="card-body p-4">
+        <form method="POST">
+            {% csrf_token %}
+            {% if not profile %}
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Profile Name <span class="text-danger">*</span></label>
+                <input type="text" name="name" class="form-control" placeholder="e.g. 1 Day, 1 Hour, Weekly" required>
+                <small class="text-muted">This name appears on MikroTik as the hotspot profile</small>
+            </div>
+            {% endif %}
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Session Duration (minutes)</label>
+                <input type="number" name="session_timeout" class="form-control" min="0"
+                       value="{{ profile.session_timeout|default:0 }}" placeholder="0 = unlimited">
+                <small class="text-muted">e.g. 60 = 1 hour, 1440 = 1 day, 0 = unlimited</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Data Limit (MB)</label>
+                <input type="number" name="data_limit_mb" class="form-control" min="0"
+                       value="{{ profile.data_limit_mb|default:0 }}" placeholder="0 = unlimited">
+                <small class="text-muted">e.g. 500 = 500MB, 1024 = 1GB, 0 = unlimited</small>
+            </div>
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="form-label fw-semibold">Download Speed (Kbps)</label>
+                    <input type="number" name="download_kbps" class="form-control" min="0"
+                           value="{{ profile.download_kbps|default:0 }}" placeholder="0 = unlimited">
+                    <small class="text-muted">e.g. 2048 = 2Mbps</small>
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-semibold">Upload Speed (Kbps)</label>
+                    <input type="number" name="upload_kbps" class="form-control" min="0"
+                           value="{{ profile.upload_kbps|default:0 }}" placeholder="0 = unlimited">
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Simultaneous Users</label>
+                <input type="number" name="simultaneous_use" class="form-control" min="1" max="10"
+                       value="{{ profile.simultaneous_use|default:1 }}">
+                <small class="text-muted">How many devices can use one voucher at the same time</small>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary px-4">
+                    {% if profile %}Update Profile{% else %}Create Profile{% endif %}
+                </button>
+                <a href="{% url 'profile_list' %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+</div>
+{% endblock %}

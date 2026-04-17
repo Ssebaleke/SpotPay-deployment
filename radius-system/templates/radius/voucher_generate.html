@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% block title %}Generate Vouchers — SpotPay RADIUS{% endblock %}
+{% block page_title %}Generate Vouchers{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-md-6">
+<div class="card">
+    <div class="card-header">Generate Voucher Batch</div>
+    <div class="card-body p-4">
+        {% if not profiles %}
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            You need to <a href="{% url 'profile_add' %}">create a profile</a> first before generating vouchers.
+        </div>
+        {% else %}
+        <form method="POST">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Profile <span class="text-danger">*</span></label>
+                <select name="profile_id" class="form-select" required>
+                    <option value="">Select a profile...</option>
+                    {% for p in profiles %}
+                    <option value="{{ p.pk }}">{{ p.name }} — {{ p.session_timeout_display }} / {{ p.data_limit_display }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Quantity <span class="text-danger">*</span></label>
+                <input type="number" name="quantity" class="form-control" min="1" max="1000" value="10" required>
+                <small class="text-muted">Maximum 1000 vouchers per batch</small>
+            </div>
+            <div class="alert alert-info small">
+                <i class="bi bi-info-circle me-2"></i>
+                Vouchers are generated instantly and pushed to FreeRADIUS. You can download them as CSV or print as PDF after generation.
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary px-4">
+                    <i class="bi bi-lightning me-1"></i>Generate Now
+                </button>
+                <a href="{% url 'batch_list' %}" class="btn btn-outline-secondary">View Batches</a>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+</div>
+</div>
+</div>
+{% endblock %}

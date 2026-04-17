@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block title %}Profiles — SpotPay RADIUS{% endblock %}
+{% block page_title %}Profiles{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div></div>
+    <a href="{% url 'profile_add' %}" class="btn btn-primary"><i class="bi bi-plus me-1"></i>New Profile</a>
+</div>
+
+{% if profiles %}
+<div class="row g-3">
+{% for p in profiles %}
+<div class="col-md-4">
+    <div class="card h-100">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <h6 class="fw-bold mb-0">{{ p.name }}</h6>
+                <span class="badge bg-primary bg-opacity-10 text-primary">Active</span>
+            </div>
+            <div class="row g-2 text-sm">
+                <div class="col-6">
+                    <div class="text-muted small">Duration</div>
+                    <div class="fw-semibold">{{ p.session_timeout_display }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted small">Data Limit</div>
+                    <div class="fw-semibold">{{ p.data_limit_display }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted small">Speed</div>
+                    <div class="fw-semibold">{{ p.speed_display }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted small">Simultaneous</div>
+                    <div class="fw-semibold">{{ p.simultaneous_use }} user(s)</div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer bg-white border-top d-flex gap-2">
+            <a href="{% url 'profile_edit' p.pk %}" class="btn btn-sm btn-outline-primary flex-fill">
+                <i class="bi bi-pencil me-1"></i>Edit
+            </a>
+            <form method="POST" action="{% url 'profile_delete' p.pk %}" class="flex-fill">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger w-100"
+                        onclick="return confirm('Delete profile {{ p.name }}?')">
+                    <i class="bi bi-trash me-1"></i>Delete
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-sliders fs-1 d-block mb-2"></i>
+        No profiles yet. <a href="{% url 'profile_add' %}">Create your first profile</a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

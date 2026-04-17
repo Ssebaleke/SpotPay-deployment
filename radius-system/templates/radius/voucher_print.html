@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Vouchers — {{ batch.profile.name }}</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: Arial, sans-serif; font-size: 12px; }
+.header { text-align: center; padding: 20px; border-bottom: 2px solid #333; margin-bottom: 20px; }
+.header h2 { font-size: 18px; }
+.header p { color: #666; font-size: 12px; }
+.vouchers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 10px; }
+.voucher {
+    border: 1px dashed #999;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    page-break-inside: avoid;
+}
+.voucher .company { font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+.voucher .profile { font-size: 11px; font-weight: bold; color: #333; margin: 4px 0; }
+.voucher .code { font-size: 18px; font-weight: bold; font-family: monospace; letter-spacing: 2px; color: #1e1b4b; margin: 8px 0; }
+.voucher .details { font-size: 10px; color: #666; }
+.voucher .cut { border-top: 1px dashed #ccc; margin-top: 8px; padding-top: 6px; font-size: 9px; color: #999; }
+@media print {
+    .no-print { display: none; }
+    body { print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<div class="no-print" style="padding:15px; background:#f0f0f0; text-align:center;">
+    <button onclick="window.print()" style="padding:10px 30px; background:#6366f1; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:14px;">
+        🖨️ Print Vouchers
+    </button>
+    <button onclick="window.close()" style="padding:10px 20px; margin-left:10px; background:#666; color:#fff; border:none; border-radius:6px; cursor:pointer;">
+        Close
+    </button>
+</div>
+
+<div class="header">
+    <h2>{{ vendor.company_name }}</h2>
+    <p>Profile: {{ profile.name }} &nbsp;|&nbsp; Duration: {{ profile.session_timeout_display }} &nbsp;|&nbsp; Data: {{ profile.data_limit_display }}</p>
+    <p>Generated: {% now "d M Y H:i" %} &nbsp;|&nbsp; Total: {{ vouchers.count }} vouchers</p>
+</div>
+
+<div class="vouchers">
+{% for v in vouchers %}
+<div class="voucher">
+    <div class="company">{{ vendor.company_name }}</div>
+    <div class="profile">{{ profile.name }}</div>
+    <div class="code">{{ v.code }}</div>
+    <div class="details">
+        {% if profile.session_timeout %}⏱ {{ profile.session_timeout_display }}{% endif %}
+        {% if profile.data_limit_mb %} &nbsp; 📶 {{ profile.data_limit_display }}{% endif %}
+    </div>
+    <div class="cut">SpotPay RADIUS &nbsp;•&nbsp; WiFi Voucher</div>
+</div>
+{% endfor %}
+</div>
+</body>
+</html>

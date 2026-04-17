@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Add Router — SpotPay RADIUS{% endblock %}
+{% block page_title %}Add MikroTik Router{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-md-6">
+<div class="card">
+    <div class="card-header">Router Configuration</div>
+    <div class="card-body p-4">
+        <div class="alert alert-info small mb-4">
+            <i class="bi bi-info-circle me-2"></i>
+            After adding the router, click the <strong>config script</strong> button to get the MikroTik terminal commands to configure RADIUS on your router.
+        </div>
+        <form method="POST">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Router Name <span class="text-danger">*</span></label>
+                <input type="text" name="name" class="form-control" placeholder="e.g. Main Router, Branch Office" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Router IP Address <span class="text-danger">*</span></label>
+                <input type="text" name="nas_ip" class="form-control" placeholder="e.g. 41.210.155.100" required>
+                <small class="text-muted">The public IP or any IP your MikroTik uses to reach the internet</small>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Shared Secret <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <input type="text" name="shared_secret" id="secret" class="form-control font-monospace" required>
+                    <button type="button" class="btn btn-outline-secondary" onclick="generateSecret()">Generate</button>
+                </div>
+                <small class="text-muted">A password shared between MikroTik and RADIUS server. Keep it secret.</small>
+            </div>
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Description</label>
+                <input type="text" name="description" class="form-control" placeholder="Optional notes">
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary px-4">Add Router</button>
+                <a href="{% url 'nas_list' %}" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function generateSecret() {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let secret = '';
+    for (let i = 0; i < 16; i++) secret += chars[Math.floor(Math.random() * chars.length)];
+    document.getElementById('secret').value = secret;
+}
+generateSecret();
+</script>
+{% endblock %}

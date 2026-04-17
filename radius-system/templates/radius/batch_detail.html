@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% block title %}Batch Detail — SpotPay RADIUS{% endblock %}
+{% block page_title %}Batch — {{ batch.profile.name }}{% endblock %}
+{% block content %}
+<div class="d-flex gap-2 mb-4">
+    <a href="{% url 'batch_list' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Back</a>
+    <a href="{% url 'export_csv' batch.uuid %}" class="btn btn-success btn-sm"><i class="bi bi-filetype-csv me-1"></i>Download CSV</a>
+    <a href="{% url 'export_pdf' batch.uuid %}" class="btn btn-secondary btn-sm" target="_blank"><i class="bi bi-printer me-1"></i>Print PDF</a>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-collection"></i></div>
+            <div><div class="text-muted small">Total</div><div class="fw-bold fs-5">{{ batch.quantity }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-success bg-opacity-10 text-success"><i class="bi bi-check-circle"></i></div>
+            <div><div class="text-muted small">Unused</div><div class="fw-bold fs-5">{{ batch.unused_count }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-danger bg-opacity-10 text-danger"><i class="bi bi-x-circle"></i></div>
+            <div><div class="text-muted small">Used</div><div class="fw-bold fs-5">{{ batch.used_count }}</div></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-icon bg-info bg-opacity-10 text-info"><i class="bi bi-sliders"></i></div>
+            <div><div class="text-muted small">Profile</div><div class="fw-bold">{{ batch.profile.name }}</div></div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">Voucher Codes</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr><th>Code</th><th>Status</th><th>Created</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                {% for v in vouchers %}
+                <tr>
+                    <td class="font-monospace fw-bold">{{ v.code }}</td>
+                    <td>
+                        {% if v.status == 'UNUSED' %}<span class="badge badge-unused">Unused</span>
+                        {% elif v.status == 'USED' %}<span class="badge badge-used">Used</span>
+                        {% else %}<span class="badge badge-disabled">{{ v.status }}</span>{% endif %}
+                    </td>
+                    <td class="text-muted small">{{ v.created_at|date:"d M Y H:i" }}</td>
+                    <td>
+                        {% if v.status == 'UNUSED' %}
+                        <form method="POST" action="{% url 'voucher_disable' v.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Disable voucher {{ v.code }}?')">
+                                <i class="bi bi-slash-circle"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
