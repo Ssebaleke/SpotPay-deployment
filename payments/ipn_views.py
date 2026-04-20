@@ -382,10 +382,12 @@ def live_verify(request, reference):
     result = client.check_status(our_reference)
     logger.warning("LIVEPAY VERIFY: ref=%s result=%s", reference, result)
 
-    if not result.get("success"):
+    if not result.get("success") and str(result.get("status", "")).lower() not in ("success", "failed", "pending"):
         return HttpResponse(f"Status check failed: {result.get('message', 'Unknown error')}", status=400)
 
-    status = str(result.get("status", "")).lower()
+    # LivePay status response may be nested under "data"
+    nested = result.get("data") or result
+    status = str(nested.get("status") or result.get("status", "")).lower()
     is_success = status == "success"
     is_failed = status == "failed"
 
@@ -467,18 +469,16 @@ def live_ipn(request):
     # Contacted LivePay to confirm correct signing format
     provider = PaymentProvider.objects.filter(provider_type="LIVE", is_active=True).first()
 
-    # Extract transaction details
-    customer_reference = data.get("customer_reference", "")
-    internal_reference = data.get("internal_reference", "")
+    # LivePay actual webhook fields (confirmed from logs):
+    # {"status":"Success", "reference":"<our 32-char uuid ref>", "transaction_id":"TXN...", ...}
+    reference = data.get("reference", "")
+    transaction_id = data.get("transaction_id", "")
     status = str(data.get("status", "")).lower()
-    
-    # Normalize status values
+
     is_success = status == "success"
     is_failed = status == "failed"
 
-    # Try to find payment by customer_reference (our original reference) or internal_reference
-    reference = customer_reference or internal_reference
-    if not reference:
+    if not reference and not transaction_id:
         logger.warning("LIVEPAY IPN: no reference found — ignoring")
         return HttpResponse("OK")
 
@@ -486,28 +486,32 @@ def live_ipn(request):
     run_success_handler = False
 
     with transaction.atomic():
-        # First try to find by provider_reference (internal_reference)
-        payment = Payment.objects.select_for_update().filter(provider_reference=internal_reference).first()
-        
-        # If not found, try by UUID (customer_reference might be our UUID without hyphens)
-        if not payment and customer_reference:
-            if len(customer_reference) == 32 and customer_reference.isalnum():
-                # Convert back to UUID format
-                formatted_uuid = f"{customer_reference[:8]}-{customer_reference[8:12]}-{customer_reference[12:16]}-{customer_reference[16:20]}-{customer_reference[20:]}"
+        payment = None
+
+        # 1. Try provider_reference match (transaction_id stored by adapter)
+        if transaction_id:
+            payment = Payment.objects.select_for_update().filter(provider_reference=transaction_id).first()
+
+        # 2. Try our UUID ref (32-char hex → reformat to UUID)
+        if not payment and reference:
+            if len(reference) == 32 and reference.isalnum():
+                formatted_uuid = f"{reference[:8]}-{reference[8:12]}-{reference[12:16]}-{reference[16:20]}-{reference[20:]}"
                 payment = Payment.objects.select_for_update().filter(uuid=formatted_uuid).first()
-            else:
-                # Try direct UUID match
-                payment = Payment.objects.select_for_update().filter(uuid=customer_reference).first()
+            if not payment:
+                payment = (
+                    Payment.objects.select_for_update().filter(provider_reference=reference).first()
+                    or Payment.objects.select_for_update().filter(uuid=reference).first()
+                )
 
         if not payment:
-            logger.warning("LIVEPAY IPN: no payment found for customer_ref=%s internal_ref=%s", customer_reference, internal_reference)
+            logger.warning("LIVEPAY IPN: no payment found for reference=%s transaction_id=%s", reference, transaction_id)
             return HttpResponse("OK")
 
         if payment.status == "SUCCESS":
             logger.warning("LIVEPAY IPN: payment %s already SUCCESS — skipping", payment.uuid)
             return HttpResponse("OK")  # idempotent
 
-        logger.warning("LIVEPAY IPN: found payment %s status=%s is_success=%s", payment.uuid, payment.status, is_success)
+        logger.warning("LIVEPAY IPN: found payment %s status=%s is_success=%s ref=%s txn=%s", payment.uuid, payment.status, is_success, reference, transaction_id)
 
         payment.raw_callback_data = data
 
