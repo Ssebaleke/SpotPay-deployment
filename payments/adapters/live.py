@@ -70,7 +70,5 @@ class LiveAdapter:
             # Other errors or max retries reached
             raise ValueError(f"LivePay error: {error_msg}")
 
-        # LivePay returns data nested under "data" key
-        # e.g. {"status":"success", "data":{"reference":"...", "transaction_id":"TXN..."}}
-        nested = result.get("data") or {}
-        return nested.get("transaction_id") or nested.get("reference") or result.get("internal_reference") or reference
+        # Use internal_reference for webhook matching
+        return result.get("internal_reference") or reference

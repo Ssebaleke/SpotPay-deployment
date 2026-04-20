@@ -34,15 +34,6 @@ def activate_monthly_subscription(location: HotspotLocation):
 # PAYMENT ENTRY POINT (REAL GATEWAY MODE)
 # =====================================================
 
-def _normalize_phone(phone: str) -> str:
-    phone = str(phone).strip().replace(" ", "").replace("-", "").replace("+", "")
-    if phone.startswith("0"):
-        phone = "256" + phone[1:]
-    elif not phone.startswith("256"):
-        phone = "256" + phone
-    return phone
-
-
 def initiate_payment(*, location: HotspotLocation, package: Package, phone: str, source=None, mac_address=None, ip_address=None):
     """
     1) Create PENDING Payment
@@ -56,8 +47,6 @@ def initiate_payment(*, location: HotspotLocation, package: Package, phone: str,
 
     if not phone:
         raise Exception("Phone is required")
-
-    phone = _normalize_phone(phone)
 
     # Ensure amount is Decimal
     amount = Decimal(str(package.price))
