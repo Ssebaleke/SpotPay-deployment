@@ -168,6 +168,31 @@ class LivePayClient:
             logger.error("LIVEPAY STATUS BY INTERNAL REF error: %s", exc)
             return {"success": False, "message": str(exc)}
 
+    def validate_number(self, phone: str) -> dict:
+        """
+        Validate a phone number and retrieve the registered customer name.
+
+        Returns:
+            dict with keys: success, customer_name (if found), message
+        """
+        try:
+            resp = requests.post(
+                f"{_BASE_URL}/validate-number",
+                json={"phoneNumber": self._normalize_phone(phone)},
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                timeout=_TIMEOUT,
+            )
+            logger.warning("LIVEPAY VALIDATE ← HTTP %s | %.300s", resp.status_code, resp.text)
+            return resp.json()
+        except requests.RequestException as exc:
+            logger.error("LIVEPAY VALIDATE network error: %s", exc)
+            return {"success": False, "message": str(exc)}
+        except ValueError:
+            return {"success": False, "message": "Invalid JSON response from LivePay"}
+
     def collect(self, amount: int, phone: str, reference: str = None, description: str = "Payment for internet voucher") -> dict:
         """
         Initiate a mobile money collection (USSD push to customer).

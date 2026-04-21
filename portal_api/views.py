@@ -599,6 +599,22 @@ def register_vpn(request):
         location.vpn_configured = True
         location.save(update_fields=['vpn_configured'])
 
+        # Auto-create RouterConnection so mikrotik voucher module works immediately
+        from mikrotik.models import RouterConnection
+        RouterConnection.objects.update_or_create(
+            location=location,
+            defaults={
+                'vendor': location.vendor,
+                'name': location.site_name,
+                'host': assigned_ip,
+                'port': 8728,
+                'api_username': location.vpn_api_user,
+                'api_password': location.vpn_api_password,
+                'api_mode': 'binary',
+                'is_active': True,
+            }
+        )
+
         logger.info(f"VPN registered for location {location_id} ({'OpenVPN v6' if is_ovpn else 'WireGuard v7'}) — IP {assigned_ip}")
         return JsonResponse({
             'status': 'success',

@@ -64,4 +64,4 @@ jobs:
             docker compose down --remove-orphans --volumes --timeout 10 || true
             docker network rm spotpay-deployment_default 2>/dev/null || true
             docker rmi spotpay-deployment-scheduler spotpay-deployment-web || true
-            docker compose up -d --build
+            docker compose up -d --build --force-recreate

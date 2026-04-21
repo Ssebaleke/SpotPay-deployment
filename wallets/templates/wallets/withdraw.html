@@ -59,19 +59,21 @@
         <label class="form-label">Mobile Money Number / Account No.</label>
         <div class="input-group">
             <span class="input-group-text"><i class="bi bi-telephone"></i></span>
-            <input type="text" class="form-control" name="payout_phone"
+            <input type="text" class="form-control" name="payout_phone" id="payout_phone"
                    placeholder="e.g. 0771234567" required>
+            <span class="input-group-text" id="verifySpinner" style="display:none;"><span class="spinner-border spinner-border-sm"></span></span>
         </div>
+        <div id="verify_status" class="mt-1" style="font-size:0.8rem;"></div>
     </div>
 
     <div class="mb-4">
         <label class="form-label">Account Holder Name</label>
         <div class="input-group">
             <span class="input-group-text"><i class="bi bi-person"></i></span>
-            <input type="text" class="form-control" name="payout_name"
+            <input type="text" class="form-control" name="payout_name" id="payout_name"
                    placeholder="Full name on account" required>
         </div>
-        <div class="form-text">Enter the name exactly as registered on the account.</div>
+        <div class="form-text">Auto-filled when you verify the number above.</div>
     </div>
 
     <div class="d-flex gap-2">
@@ -93,19 +95,61 @@
 {% block extra_js %}
 <script>
 const maxBalance = {{ wallet.balance }};
+const gatewayFee = {{ gateway_fee }};
+const spotpayFee = {{ spotpay_fee }};
+const totalFees = {{ total_fees }};
+
 const amountInput = document.getElementById('amount');
 const amountError = document.getElementById('amount_error');
 const submitBtn = document.getElementById('submitBtn');
+const feeBreakdown = document.getElementById('fee-breakdown');
+const phoneInput = document.getElementById('payout_phone');
+const nameInput = document.getElementById('payout_name');
+const verifyStatus = document.getElementById('verify_status');
 
 amountInput.addEventListener('input', function () {
     const val = parseFloat(this.value);
     if (val > maxBalance) {
         amountError.classList.remove('d-none');
         submitBtn.disabled = true;
+        feeBreakdown.innerHTML = '';
     } else {
         amountError.classList.add('d-none');
         submitBtn.disabled = false;
+        if (val > 0 && totalFees > 0) {
+            const payout = val - totalFees;
+            feeBreakdown.innerHTML = payout > 0
+                ? `Gateway fee: UGX ${gatewayFee.toLocaleString()} &nbsp;|&nbsp; SpotPay fee: UGX ${spotpayFee.toLocaleString()} &nbsp;|&nbsp; <strong>You receive: UGX ${payout.toLocaleString()}</strong>`
+                : `<span style="color:#dc2626;">Amount too low to cover fees of UGX ${totalFees.toLocaleString()}</span>`;
+        } else {
+            feeBreakdown.innerHTML = '';
+        }
     }
+});
+
+phoneInput.addEventListener('blur', function () {
+    const phone = this.value.trim();
+    if (!phone) return;
+    const spinner = document.getElementById('verifySpinner');
+    spinner.style.display = 'flex';
+    verifyStatus.innerHTML = '';
+
+    fetch(`/wallets/lookup-name/?phone=${encodeURIComponent(phone)}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.name) {
+                nameInput.value = data.name;
+                verifyStatus.innerHTML = `<span style="color:#16a34a;"><i class="bi bi-check-circle me-1"></i>Verified: <strong>${data.name}</strong></span>`;
+            } else {
+                verifyStatus.innerHTML = `<span style="color:#d97706;"><i class="bi bi-exclamation-triangle me-1"></i>${data.error || 'Could not verify. Enter name manually.'}</span>`;
+            }
+        })
+        .catch(() => {
+            verifyStatus.innerHTML = '<span style="color:#dc2626;">Verification failed. Enter name manually.</span>';
+        })
+        .finally(() => {
+            spinner.style.display = 'none';
+        });
 });
 </script>
 {% endblock %}

@@ -1,0 +1,8 @@
+{% extends "admin/change_list.html" %}
+
+{% block result_list %}
+    {% if summary_html %}
+        {{ summary_html|safe }}
+    {% endif %}
+    {{ block.super }}
+{% endblock %}

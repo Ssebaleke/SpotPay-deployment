@@ -1,0 +1,39 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div style="max-width:520px;">
+    <h2>Send Manual SMS</h2>
+    <p style="color:#6b7280;">Send an SMS directly to any phone number. This uses the active SMS provider.</p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:4px;">Vendor (optional)</label>
+            <select name="vendor_id" style="width:100%;padding:6px 10px;border:1px solid #d1d5db;border-radius:4px;">
+                <option value="">— No vendor (system SMS) —</option>
+                {% for v in vendors %}
+                    <option value="{{ v.id }}">{{ v.company_name }}</option>
+                {% endfor %}
+            </select>
+            <p style="font-size:12px;color:#6b7280;margin-top:4px;">Select a vendor if this SMS should be charged to their SMS wallet. Leave blank to send as a system SMS.</p>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:4px;">{{ form.phone.label }}</label>
+            {{ form.phone }}
+            <p style="font-size:12px;color:#6b7280;margin-top:4px;">{{ form.phone.help_text }}</p>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:4px;">{{ form.message.label }}</label>
+            {{ form.message }}
+            <p style="font-size:12px;color:#6b7280;margin-top:4px;">Max 500 characters.</p>
+        </div>
+
+        <div style="display:flex;gap:8px;">
+            <input type="submit" value="Send SMS" class="default" style="background:#2563eb;color:#fff;border:none;padding:8px 20px;border-radius:4px;cursor:pointer;font-weight:600;">
+            <a href="../" style="padding:8px 20px;border:1px solid #d1d5db;border-radius:4px;text-decoration:none;color:#374151;">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

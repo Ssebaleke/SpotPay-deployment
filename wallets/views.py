@@ -465,33 +465,24 @@ def wallet_withdraw(request):
 @login_required
 def lookup_name(request):
     from django.http import JsonResponse
-    import requests as http_requests
     from payments.models import PaymentProvider
 
     phone = request.GET.get('phone', '').strip()
-    method = request.GET.get('method', '').upper()
-
     if not phone:
         return JsonResponse({'success': False, 'error': 'Phone number required'})
 
-    # Try MakyPay name lookup if provider is configured
-    provider = PaymentProvider.objects.filter(is_active=True).first()
-    if provider and provider.base_url:
+    provider = (
+        PaymentProvider.objects.filter(provider_type='LIVE', is_active=True).first()
+        or PaymentProvider.objects.filter(provider_type='LIVE').first()
+    )
+    if provider:
         try:
-            resp = http_requests.post(
-                f"{provider.base_url.rstrip('/')}/name-lookup",
-                json={'phone': phone},
-                headers={
-                    'Authorization': f'Bearer {provider.api_key}',
-                    'Content-Type': 'application/json',
-                },
-                timeout=8,
-            )
-            if resp.status_code == 200:
-                data = resp.json()
-                name = data.get('name') or data.get('account_name') or data.get('full_name')
-                if name:
-                    return JsonResponse({'success': True, 'name': name})
+            from payments.live_client import LivePayClient
+            client = LivePayClient(public_key=provider.api_key, secret_key=provider.api_secret)
+            result = client.validate_number(phone)
+            name = result.get('customer_name')
+            if result.get('success') and name:
+                return JsonResponse({'success': True, 'name': name})
         except Exception:
             pass
 

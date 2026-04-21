@@ -1,0 +1,24 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div style="max-width:500px;">
+    <h2>Top Up SMS — {{ wallet.vendor.company_name }}</h2>
+    <p style="color:#6b7280;">Current balance: <strong>{{ wallet.balance_units }} SMS units</strong></p>
+
+    <form method="post">
+        {% csrf_token %}
+        <div style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:4px;">{{ form.sms_units.label }}</label>
+            {{ form.sms_units }}
+            <p style="font-size:12px;color:#6b7280;margin-top:4px;">{{ form.sms_units.help_text }}</p>
+        </div>
+        <div style="margin-bottom:16px;">
+            <label style="display:block;font-weight:600;margin-bottom:4px;">{{ form.note.label }}</label>
+            {{ form.note }}
+        </div>
+        <div style="display:flex;gap:8px;">
+            <input type="submit" value="Credit SMS Units" class="default" style="background:#16a34a;color:#fff;border:none;padding:8px 20px;border-radius:4px;cursor:pointer;font-weight:600;">
+            <a href="../" style="padding:8px 20px;border:1px solid #d1d5db;border-radius:4px;text-decoration:none;color:#374151;">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
