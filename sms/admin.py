@@ -160,7 +160,7 @@ class VendorSMSWalletAdmin(admin.ModelAdmin):
             self.message_user(request, 'Please select exactly one vendor wallet to top up.', level=messages.WARNING)
             return
         wallet = queryset.first()
-        return redirect(f'topup/')
+        return redirect(f'../{wallet.pk}/topup/')
     topup_sms_units.short_description = 'Top up SMS units for selected vendor'
 
     def topup_view(self, request, wallet_id):
